@@ -789,21 +789,21 @@
                 </div>
               </div>
 
-              <!-- Cor 5: Branco Puro Clean -->
+              <!-- Cor 5: Cinza Suave -->
               <div class="theme-card-option" data-theme="theme-5" onclick="App.applyTheme('theme-5')">
                 <div class="theme-preview-circle theme-color-5">
                   <i class="fa-solid fa-check theme-check-icon"></i>
                 </div>
                 <div class="theme-card-content">
-                  <div class="theme-card-title">5. Branco Suave</div>
-                  <div class="theme-card-sub">Off-White Gelo</div>
+                  <div class="theme-card-title">5. Cinza Suave</div>
+                  <div class="theme-card-sub">Cinza Grafite Claro</div>
                 </div>
               </div>
             </div>
           </div>
 
           <!-- 3. BACKUP & RESTAURAÇÃO -->
-              <button class="btn-secondary" onclick="window.wipeFirestoreDemoData()" style="color: #ef4444; border-color: rgba(239, 68, 68, 0.4); margin-top: 10px;" onmouseover="this.style.background='rgba(239, 68, 68, 0.15)'" onmouseout="this.style.background='transparent'">
+              <button class="btn-secondary admin-only" onclick="window.wipeFirestoreDemoData()" style="color: #ef4444; border-color: rgba(239, 68, 68, 0.4); margin-top: 10px;" onmouseover="this.style.background='rgba(239, 68, 68, 0.15)'" onmouseout="this.style.background='transparent'">
                 <i class="fa-solid fa-trash-can"></i> Limpar Dados Antigos do Firebase
               </button>
           <div class="admin-only" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px;">
@@ -1387,6 +1387,10 @@
   <script>
     // Rotina de limpeza profunda do Firestore (acionada via console ou botão)
     window.wipeFirestoreDemoData = async function() {
+      if (typeof AuthService !== 'undefined' && !AuthService.isAdmin()) {
+        alert('Apenas o Administrador pode limpar o banco de dados.');
+        return;
+      }
       if (!confirm("Deseja apagar TODOS os agendamentos e analistas do banco Firebase?")) return;
       try {
         const agSnap = await db.collection("agendamentos").get();
