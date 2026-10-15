@@ -98,33 +98,21 @@ const FirestoreSync = {
     }, err => console.warn("Erro ao sincronizar escolas:", err));
     this.unsubscribers.push(unsubSchools);
 
-    // 2. Analistas
+    // 2. Analistas (espelho fiel do Firestore - cadastro manual pelo Admin)
     const unsubAnalysts = db.collection("analistas").onSnapshot(snapshot => {
       const analysts = [];
       snapshot.forEach(doc => analysts.push(doc.data()));
-      if (analysts.length > 0) {
-        localStorage.setItem(STORAGE_KEYS.ANALYSTS, JSON.stringify(analysts));
-        if (onDataUpdated) onDataUpdated("analysts");
-      }
+      localStorage.setItem(STORAGE_KEYS.ANALYSTS, JSON.stringify(analysts));
+      if (onDataUpdated) onDataUpdated("analysts");
     }, err => console.warn("Erro ao sincronizar analistas:", err));
     this.unsubscribers.push(unsubAnalysts);
 
-    // 3. Agendamentos
+    // 3. Agendamentos (espelho fiel do Firestore)
     const unsubSchedules = db.collection("agendamentos").onSnapshot(snapshot => {
-      if (!snapshot.empty) {
-        const schedules = [];
-        snapshot.forEach(doc => schedules.push(doc.data()));
-        localStorage.setItem(STORAGE_KEYS.SCHEDULES, JSON.stringify(schedules));
-        if (onDataUpdated) onDataUpdated("schedules");
-      } else {
-        // Se o Firestore estiver vazio, subir os agendamentos existentes no localStorage
-        const localSchedules = JSON.parse(localStorage.getItem(STORAGE_KEYS.SCHEDULES) || "[]");
-        if (localSchedules.length > 0) {
-          localSchedules.forEach(s => {
-            db.collection("agendamentos").doc(String(s.id)).set(s).catch(() => {});
-          });
-        }
-      }
+      const schedules = [];
+      snapshot.forEach(doc => schedules.push(doc.data()));
+      localStorage.setItem(STORAGE_KEYS.SCHEDULES, JSON.stringify(schedules));
+      if (onDataUpdated) onDataUpdated("schedules");
     }, err => console.warn("Erro ao sincronizar agendamentos:", err));
     this.unsubscribers.push(unsubSchedules);
 

@@ -23,90 +23,7 @@ const PREDEFINED_SUBJECTS = [
 ];
 
 // Dados iniciais padrão (8 Analistas)
-const SEED_ANALYSTS = [
-  {
-    id: 'ana-silva',
-    role: 'Analista Pleno',
-    name: 'Ana Silva',
-    phone: '(11) 98765-4321',
-    neighborhood: 'Vila Mariana',
-    startDate: '2022-03-10',
-    status: 'ativo',
-    color: '#3b82f6',
-    avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=80'
-  },
-  {
-    id: 'bruno-costa',
-    role: 'Analista Junior II',
-    name: 'Bruno Costa',
-    phone: '(11) 97654-3210',
-    neighborhood: 'Pinheiros',
-    startDate: '2021-08-15',
-    status: 'ativo',
-    color: '#8b5cf6',
-    avatar: ''
-  },
-  {
-    id: 'carla-oliveira',
-    name: 'Carla Oliveira',
-    phone: '(11) 96543-2109',
-    neighborhood: 'Santana',
-    startDate: '2023-01-20',
-    status: 'ativo',
-    color: '#ec4899',
-    avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80'
-  },
-  {
-    id: 'daniel-santos',
-    name: 'Daniel Santos',
-    phone: '(11) 95432-1098',
-    neighborhood: 'Tatuapé',
-    startDate: '2022-06-01',
-    status: 'ativo',
-    color: '#10b981',
-    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80'
-  },
-  {
-    id: 'eduardo-rocha',
-    name: 'Eduardo Rocha',
-    phone: '(11) 94321-0987',
-    neighborhood: 'Ipiranga',
-    startDate: '2023-04-12',
-    status: 'ativo',
-    color: '#f59e0b',
-    avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80'
-  },
-  {
-    id: 'fernanda-lima',
-    name: 'Fernanda Lima',
-    phone: '(11) 93210-9876',
-    neighborhood: 'Mooca',
-    startDate: '2022-11-05',
-    status: 'ativo',
-    color: '#06b6d4',
-    avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150&auto=format&fit=crop&q=80'
-  },
-  {
-    id: 'gabriel-souza',
-    name: 'Gabriel Souza',
-    phone: '(11) 92109-8765',
-    neighborhood: 'Bela Vista',
-    startDate: '2023-08-01',
-    status: 'ativo',
-    color: '#6366f1',
-    avatar: ''
-  },
-  {
-    id: 'helena-martins',
-    name: 'Helena Martins',
-    phone: '(11) 91098-7654',
-    neighborhood: 'Perdizes',
-    startDate: '2021-05-18',
-    status: 'ativo',
-    color: '#14b8a6',
-    avatar: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=150&auto=format&fit=crop&q=80'
-  }
-];
+const SEED_ANALYSTS = [];
 
 const SEED_SCHOOLS = [
   {
@@ -832,159 +749,7 @@ const SEED_SCHOOLS = [
 ];
 
 function generateInitialSchedules() {
-  const schedules = [];
-  const now = new Date();
-  const currentYear = now.getFullYear();
-  const currentMonth = now.getMonth();
-  const todayStr = now.toISOString().split('T')[0];
-
-  let osCounter = 1000;
-
-  // 1. Agendas de Hoje (17 ordens no total, incluindo os 8 analistas da foto)
-  const todayAssignments = [
-    { analyst: 'ana-silva', schoolCie: '012345', subject: 'Conectividade / Rede Wi-Fi', type: 'manutencao', completed: true, obs: 'Reparo no Access Point do 2º andar e conector do switch central.' },
-    { analyst: 'bruno-costa', schoolCie: '023456', subject: 'Inventário de Equipamentos', type: 'inventario', completed: true, obs: 'Levantamento de 42 notebooks novos recebidos.' },
-    { analyst: 'carla-oliveira', schoolCie: '034567', subject: 'Manutenção Corretiva', type: 'manutencao', completed: false, obs: 'Computadores da secretaria sem conexão de rede local.' },
-    { analyst: 'daniel-santos', schoolCie: '045678', subject: 'Conectividade / Rede Wi-Fi', type: 'manutencao', completed: false, obs: 'Configuração do SSID administrativo e de alunos.' },
-    { analyst: 'eduardo-rocha', schoolCie: '056789', subject: 'Inventário de Equipamentos', type: 'inventario', completed: true, obs: 'Inventário dos desktops do laboratório de ciências.' },
-    { analyst: 'fernanda-lima', schoolCie: '067890', subject: 'Manutenção Preventiva', type: 'manutencao', completed: true, obs: 'Limpeza e teste da bancada do laboratório de TI.' },
-    { analyst: 'gabriel-souza', schoolCie: '078901', subject: 'Inventário e Tombamento', type: 'inventario', completed: false, obs: 'Colocação de etiquetas patrimoniais nas impressoras.' },
-    { analyst: 'helena-martins', schoolCie: '089012', subject: 'Conectividade / Switch e Racks', type: 'manutencao', completed: true, obs: 'Organização do cabeamento estruturado no rack da diretoria.' }
-  ];
-
-  todayAssignments.forEach((item, idx) => {
-    const school = SEED_SCHOOLS.find(s => s.cie === item.schoolCie) || SEED_SCHOOLS[0];
-    schedules.push({
-      id: 'sched-today-' + (idx + 1),
-      osNumber: 'OS-' + currentYear + '-' + String(osCounter++).padStart(4, '0'),
-      analystId: item.analyst,
-      schoolCie: school.cie,
-      schoolName: school.name,
-      directorName: school.director,
-      subject: item.subject,
-      serviceType: item.type,
-      date: todayStr,
-      completed: item.completed,
-      needsReturn: idx === 2,
-      returnDate: idx === 2 ? new Date(now.getTime() + 86400000 * 2).toISOString().split('T')[0] : '',
-      obs: item.obs
-    });
-  });
-
-  // Mais 9 agendamentos hoje para somar 17 ordens hoje (idêntico ao card na foto!)
-  const extraAnalysts = ['ana-silva', 'bruno-costa', 'carla-oliveira', 'daniel-santos', 'eduardo-rocha', 'fernanda-lima', 'gabriel-souza', 'helena-martins', 'ana-silva'];
-  for (let i = 0; i < 9; i++) {
-    const school = SEED_SCHOOLS[(i + 2) % SEED_SCHOOLS.length];
-    const isManut = i % 2 === 0;
-    schedules.push({
-      id: 'sched-today-extra-' + (i + 1),
-      osNumber: 'OS-' + currentYear + '-' + String(osCounter++).padStart(4, '0'),
-      analystId: extraAnalysts[i],
-      schoolCie: school.cie,
-      schoolName: school.name,
-      directorName: school.director,
-      subject: isManut ? 'Manutenção Preventiva' : 'Inventário de Equipamentos',
-      serviceType: isManut ? 'manutencao' : 'inventario',
-      date: todayStr,
-      completed: i < 5,
-      needsReturn: false,
-      returnDate: '',
-      obs: 'Atendimento de rotina conforme cronograma semanal.'
-    });
-  }
-
-  // 2. Histórico do Mês Atual (Totalizando exatamente 342 concluídas no mês: 158 manutenção e 184 inventário)
-  // Desempenho dos analistas como na foto: Ana Silva (65), Bruno Costa (58), Carla Oliveira (52), Daniel Santos (49), Eduardo Rocha (41) + outros 3
-  const monthPerformance = [
-    { analyst: 'ana-silva', total: 65, manut: 30, inv: 35 },
-    { analyst: 'bruno-costa', total: 58, manut: 27, inv: 31 },
-    { analyst: 'carla-oliveira', total: 52, manut: 24, inv: 28 },
-    { analyst: 'daniel-santos', total: 49, manut: 23, inv: 26 },
-    { analyst: 'eduardo-rocha', total: 41, manut: 19, inv: 22 },
-    { analyst: 'fernanda-lima', total: 34, manut: 16, inv: 18 },
-    { analyst: 'gabriel-souza', total: 25, manut: 11, inv: 14 },
-    { analyst: 'helena-martins', total: 18, manut: 8, inv: 10 }
-  ]; // Soma: 65+58+52+49+41+34+25+18 = 342! Manutenção: 30+27+24+23+19+16+11+8 = 158! Inventário: 184!
-
-  monthPerformance.forEach((perf) => {
-    const alreadyToday = schedules.filter(s => s.analystId === perf.analyst && s.completed && s.date === todayStr).length;
-    const toGenerate = Math.max(0, perf.total - alreadyToday);
-
-    let generatedManut = schedules.filter(s => s.analystId === perf.analyst && s.completed && s.date === todayStr && s.serviceType === 'manutencao').length;
-    const targetManut = perf.manut;
-
-    for (let k = 0; k < toGenerate; k++) {
-      const dayOffset = (k % 27) + 1;
-      const d = new Date(currentYear, currentMonth, dayOffset);
-      const dateStr = d.toISOString().split('T')[0];
-      const isManut = generatedManut < targetManut;
-      if (isManut) generatedManut++;
-      const school = SEED_SCHOOLS[(k + perf.total) % SEED_SCHOOLS.length];
-
-      schedules.push({
-        id: 'sched-m-' + perf.analyst + '-' + k,
-        osNumber: 'OS-' + currentYear + '-' + String(osCounter++).padStart(4, '0'),
-        analystId: perf.analyst,
-        schoolCie: school.cie,
-        schoolName: school.name,
-        directorName: school.director,
-        subject: isManut ? (k % 2 === 0 ? 'Manutenção Preventiva' : 'Conectividade / Rede Wi-Fi') : 'Inventário de Equipamentos',
-        serviceType: isManut ? 'manutencao' : 'inventario',
-        date: dateStr,
-        completed: true,
-        needsReturn: k % 14 === 0,
-        returnDate: '',
-        obs: 'Atendimento concluído com sucesso e assinado pela coordenação.'
-      });
-    }
-  });
-
-  // 3. Histórico dos 5 meses anteriores para o gráfico comparativo
-  const pastMonthsCounts = [
-    { offset: 5, manut: 118, inv: 135 },
-    { offset: 4, manut: 130, inv: 148 },
-    { offset: 3, manut: 145, inv: 160 },
-    { offset: 2, manut: 149, inv: 172 },
-    { offset: 1, manut: 154, inv: 178 }
-  ];
-
-  pastMonthsCounts.forEach(({ offset, manut, inv }) => {
-    const pastDate = new Date(currentYear, currentMonth - offset, 15);
-    const pYear = pastDate.getFullYear();
-    const pMonth = pastDate.getMonth();
-
-    // Guardamos amostra compacta para simulação histórica fiel
-    const totalCount = manut + inv;
-    const sampleFactor = 4;
-    const sampleTotal = Math.round(totalCount / sampleFactor);
-    const sampleManut = Math.round(manut / sampleFactor);
-
-    for (let i = 0; i < sampleTotal; i++) {
-      const isManut = i < sampleManut;
-      const day = (i % 26) + 1;
-      const d = new Date(pYear, pMonth, day);
-      const analyst = SEED_ANALYSTS[i % SEED_ANALYSTS.length];
-      const school = SEED_SCHOOLS[i % SEED_SCHOOLS.length];
-
-      schedules.push({
-        id: 'sched-past-' + offset + '-' + i,
-        osNumber: 'OS-' + pYear + '-' + String(osCounter++).padStart(4, '0'),
-        analystId: analyst.id,
-        schoolCie: school.cie,
-        schoolName: school.name,
-        directorName: school.director,
-        subject: isManut ? 'Manutenção / Conectividade' : 'Inventário de Equipamentos',
-        serviceType: isManut ? 'manutencao' : 'inventario',
-        date: d.toISOString().split('T')[0],
-        completed: true,
-        needsReturn: false,
-        returnDate: '',
-        obs: 'Registro histórico de atendimento.'
-      });
-    }
-  });
-
-  return schedules;
+  return []; // Sistema limpo: sem agendamentos fictícios gerados automaticamente
 }
 
 class DataStore {
@@ -994,13 +759,13 @@ class DataStore {
 
   init() {
     if (!localStorage.getItem(STORAGE_KEYS.ANALYSTS)) {
-      this.setAnalysts(SEED_ANALYSTS);
+      this.setAnalysts([]);
     }
     if (!localStorage.getItem(STORAGE_KEYS.SCHOOLS)) {
       this.setSchools(SEED_SCHOOLS);
     }
     if (!localStorage.getItem(STORAGE_KEYS.SCHEDULES)) {
-      this.setSchedules(generateInitialSchedules());
+      this.setSchedules([]);
     }
   }
 
@@ -1183,45 +948,7 @@ class DataStore {
   }
 
   getInitialQueueSeed() {
-    const today = new Date().toISOString().split('T')[0];
-    return [
-      {
-        id: 'q_seed_1',
-        schoolCie: '001234',
-        schoolName: 'EE PROFESSOR JOÃO BATISTA',
-        directorName: 'Maria Helena',
-        category: 'manutencao',
-        subject: 'Manutenção de Computadores',
-        osNumber: 'STI-26/81619',
-        dateAdded: today,
-        priority: 'normal',
-        obs: 'Laboratório de informática com 6 máquinas que não ligam após queda de energia.'
-      },
-      {
-        id: 'q_seed_2',
-        schoolCie: '005678',
-        schoolName: 'EE DONA CARMEN',
-        directorName: 'Carlos Eduardo',
-        category: 'conectividade',
-        subject: 'Conectividade / Rede Wi-Fi',
-        osNumber: 'STI-26/81620',
-        dateAdded: today,
-        priority: 'urgente',
-        obs: 'Ponto de rede da secretaria sem sinal de internet e AP dos professores reiniciando.'
-      },
-      {
-        id: 'q_seed_3',
-        schoolCie: '009012',
-        schoolName: 'EE SANTOS DUMONT',
-        directorName: 'Patrícia Oliveira',
-        category: 'inventario',
-        subject: 'Inventário Escolar',
-        osNumber: 'STI-26/81621',
-        dateAdded: today,
-        priority: 'normal',
-        obs: 'Levantamento e etiquetagem dos novos chromebooks e desktops recebidos.'
-      }
-    ];
+    return []; // Fila inicial limpa sem registros fictícios
   }
 
   // --- MODELO DE MENSAGEM DO WHATSAPP ---
