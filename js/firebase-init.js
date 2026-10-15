@@ -76,13 +76,24 @@ const FirestoreSync = {
   startSync(onDataUpdated) {
     this.stopSync();
 
-    // 1. Escolas
+    // 1. Escolas (com auto-seed das 80 escolas se Firestore estiver vazio)
     const unsubSchools = db.collection("escolas").onSnapshot(snapshot => {
-      const schools = [];
-      snapshot.forEach(doc => schools.push(doc.data()));
-      if (schools.length > 0) {
+      if (!snapshot.empty && snapshot.size >= 10) {
+        const schools = [];
+        snapshot.forEach(doc => schools.push(doc.data()));
         localStorage.setItem(STORAGE_KEYS.SCHOOLS, JSON.stringify(schools));
         if (onDataUpdated) onDataUpdated("schools");
+      } else {
+        // Se Firestore estiver vazio ou com menos escolas, sincroniza as 80 escolas oficiais
+        const initialSchools = typeof SEED_SCHOOLS !== 'undefined' ? SEED_SCHOOLS : [];
+        if (initialSchools.length > 0) {
+          localStorage.setItem(STORAGE_KEYS.SCHOOLS, JSON.stringify(initialSchools));
+          if (onDataUpdated) onDataUpdated("schools");
+          // Subir para o Firestore em batches
+          initialSchools.forEach(sc => {
+            db.collection("escolas").doc(String(sc.cie)).set(sc, { merge: true }).catch(() => {});
+          });
+        }
       }
     }, err => console.warn("Erro ao sincronizar escolas:", err));
     this.unsubscribers.push(unsubSchools);
