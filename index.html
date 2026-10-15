@@ -84,10 +84,9 @@
             <div class="user-avatar" id="sidebar-user-avatar"><i class="fa-solid fa-user-shield"></i></div>
             <div class="sidebar-footer-text">
               <div class="user-name" id="sidebar-user-name">Carregando...</div>
-              <div id="sidebar-user-role" style="font-size: 0.72rem; color: #60a5fa; font-weight: 600;">...</div>
             </div>
           </div>
-          <button type="button" class="btn-sidebar-settings admin-only" data-view="configuracoes" onclick="App.navigateTo('configuracoes')" title="Configurações do Sistema">
+          <button type="button" class="btn-sidebar-settings" data-view="configuracoes" onclick="App.navigateTo('configuracoes')" title="Configurações do Sistema">
             <i class="fa-solid fa-gear"></i>
           </button>
           <button type="button" class="btn-sidebar-settings" onclick="App.handleLogout()" title="Sair / Fazer Logout" style="color: #f87171;" onmouseover="this.style.color='#ef4444'" onmouseout="this.style.color='#f87171'">
@@ -804,7 +803,7 @@
           </div>
 
           <!-- 3. BACKUP & RESTAURAÇÃO -->
-          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px;">
+          <div class="admin-only" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px;">
             <div class="dash-panel">
               <div class="panel-title" style="margin-bottom: 14px;">
                 <i class="fa-solid fa-database" style="color:#60a5fa;"></i> Backup & Exportação
@@ -1353,7 +1352,7 @@
           <label style="display: block; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600; color: #94a3b8; margin-bottom: 6px;">Usuário</label>
           <div style="position: relative; display: flex; align-items: center;">
             <i class="fa-solid fa-user" style="position: absolute; left: 14px; color: #64748b; font-size: 0.9rem;"></i>
-            <input type="text" id="login-username" required placeholder="Digite seu Usuário" style="width: 100%; height: 42px; background: #0c1220; border: 1px solid #23314f; border-radius: 8px; color: #f8fafc; padding-left: 40px; padding-right: 14px; font-size: 0.9rem; outline: none; transition: border-color 0.2s;" onfocus="this.style.borderColor='#3b82f6'" onblur="this.style.borderColor='#23314f'">
+            <input type="text" id="login-username" required placeholder="Digite seu Usuário" style="width: 100%; height: 42px; background: #0c1220; border: 1px solid #23314f; border-radius: 8px; color: #f8fafc; padding-left: 40px; padding-right: 14px; font-size: 0.9rem; outline: none; transition: border-color 0.2s;" onfocus="this.style.borderColor='#3b82f6'" onblur="this.style.borderColor='#23314f'" onkeydown="if(event.key==='Enter'){event.preventDefault(); document.getElementById('login-password').focus();}">
           </div>
         </div>
 
@@ -1361,7 +1360,7 @@
           <label style="display: block; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600; color: #94a3b8; margin-bottom: 6px;">Senha</label>
           <div style="position: relative; display: flex; align-items: center;">
             <i class="fa-solid fa-lock" style="position: absolute; left: 14px; color: #64748b; font-size: 0.9rem;"></i>
-            <input type="password" id="login-password" required placeholder="Digite sua senha" style="width: 100%; height: 42px; background: #0c1220; border: 1px solid #23314f; border-radius: 8px; color: #f8fafc; padding-left: 40px; padding-right: 40px; font-size: 0.9rem; outline: none; transition: border-color 0.2s;" onfocus="this.style.borderColor='#3b82f6'" onblur="this.style.borderColor='#23314f'">
+            <input type="password" id="login-password" required placeholder="Digite sua senha" style="width: 100%; height: 42px; background: #0c1220; border: 1px solid #23314f; border-radius: 8px; color: #f8fafc; padding-left: 40px; padding-right: 40px; font-size: 0.9rem; outline: none; transition: border-color 0.2s;" onfocus="this.style.borderColor='#3b82f6'" onblur="this.style.borderColor='#23314f'" onkeydown="if(event.key==='Enter'){event.preventDefault(); App.handleLogin(event);}">
             <button type="button" onclick="App.toggleLoginPassVisibility()" style="position: absolute; right: 12px; background: transparent; border: none; color: #64748b; cursor: pointer; font-size: 0.9rem;" title="Mostrar/ocultar senha">
               <i id="icon-toggle-pass" class="fa-solid fa-eye"></i>
             </button>
@@ -1370,7 +1369,7 @@
 
         <div id="login-error-msg" style="display: none; background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.3); color: #f87171; padding: 10px 14px; border-radius: 8px; font-size: 0.8rem; text-align: center;"></div>
 
-        <button type="button" onclick="App.handleLogin(event)" id="btn-submit-login" style="height: 44px; margin-top: 6px; background: #2563eb; color: #ffffff; border: none; border-radius: 8px; font-weight: 600; font-size: 0.95rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: background 0.2s;" onmouseover="this.style.background='#1d4ed8'" onmouseout="this.style.background='#2563eb'">
+        <button type="submit" id="btn-submit-login" style="height: 44px; margin-top: 6px; background: #2563eb; color: #ffffff; border: none; border-radius: 8px; font-weight: 600; font-size: 0.95rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: background 0.2s;" onmouseover="this.style.background='#1d4ed8'" onmouseout="this.style.background='#2563eb'">
           <i class="fa-solid fa-arrow-right-to-bracket"></i> Entrar no Sistema
         </button>
       </form>

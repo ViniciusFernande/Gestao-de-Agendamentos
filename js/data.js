@@ -405,10 +405,11 @@ class DataStore {
 
   toggleScheduleCompleted(id) {
     const list = this.getSchedules();
-    const item = list.find(s => s.id === id);
+    const item = list.find(s => String(s.id).trim() === String(id).trim());
     if (item) {
       item.completed = !item.completed;
       this.setSchedules(list);
+      if (typeof FirestoreSync !== 'undefined') FirestoreSync.saveSchedule(item);
       return item.completed;
     }
     return false;

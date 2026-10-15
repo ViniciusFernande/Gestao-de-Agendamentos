@@ -118,14 +118,9 @@ const App = {
     if (!userProfile) return;
 
     const nameEl = document.getElementById('sidebar-user-name');
-    const roleEl = document.getElementById('sidebar-user-role');
     const avatarEl = document.getElementById('sidebar-user-avatar');
 
     if (nameEl) nameEl.textContent = userProfile.name;
-    if (roleEl) {
-      roleEl.textContent = userProfile.label;
-      roleEl.style.color = userProfile.role === 'admin' ? '#fbbf24' : '#60a5fa';
-    }
     if (avatarEl) {
       avatarEl.innerHTML = userProfile.role === 'admin' 
         ? '<i class="fa-solid fa-user-shield" style="color:#fbbf24;"></i>' 
@@ -138,8 +133,12 @@ const App = {
       el.style.display = isAdmin ? '' : 'none';
     });
 
-    if (!isAdmin && this.currentView === 'configuracoes') {
-      this.navigateTo('agenda');
+    // Subtítulo da página de configurações ajustado dinamicamente
+    const configSubtitle = document.querySelector('#view-configuracoes .page-subtitle');
+    if (configSubtitle) {
+      configSubtitle.textContent = isAdmin 
+        ? 'Aparência, personalização de mensagens, backup e restauração' 
+        : 'Escolha o tema e a cor de aparência do site';
     }
 
     this.renderAnalystsTable();
@@ -778,6 +777,8 @@ const App = {
     const filterSearch = (document.getElementById('filter-sched-search')?.value || '').toLowerCase().trim();
 
     const filtered = schedules.filter(s => {
+      // Não exibe agendamento de retorno duplicado no Histórico
+      if (s.isReturnVisit) return false;
       if (filterAnalyst !== 'all' && s.analystId !== filterAnalyst) return false;
       if (filterDate && s.date !== filterDate) return false;
       if (filterStatus === 'completed' && !s.completed) return false;
@@ -1253,6 +1254,8 @@ const App = {
     const filterSearch = (document.getElementById('filter-all-search')?.value || '').toLowerCase().trim();
 
     const filtered = schedules.filter(s => {
+      // Não exibe agendamento de retorno duplicado no Histórico
+      if (s.isReturnVisit) return false;
       if (filterAnalyst !== 'all' && s.analystId !== filterAnalyst) return false;
       if (filterDate && s.date !== filterDate) return false;
       if (filterStatus === 'completed' && !s.completed) return false;
@@ -1650,7 +1653,26 @@ const App = {
     const item = list.find(s => String(s.id).trim() === String(scheduleId).trim());
     if (item) {
       item.completed = true;
+      item.needsReturn = false; // Ao concluir, encerra a necessidade de retorno
+      
+      // Se este card concluído for um retorno vinculado a uma ordem original,
+      // atualiza também a ordem original para Concluída!
+      if (item.parentScheduleId) {
+        let root = list.find(s => String(s.id).trim() === String(item.parentScheduleId).trim());
+        while (root && root.parentScheduleId) {
+          const parent = list.find(s => String(s.id).trim() === String(root.parentScheduleId).trim());
+          if (!parent) break;
+          root = parent;
+        }
+        if (root) {
+          root.completed = true;
+          root.needsReturn = false;
+          if (typeof FirestoreSync !== 'undefined') FirestoreSync.saveSchedule(root);
+        }
+      }
+
       store.setSchedules(list);
+      if (typeof FirestoreSync !== 'undefined') FirestoreSync.saveSchedule(item);
       this.renderAnalystDailyCards();
       this.renderAllSchedulesTable();
       this.updateDashboard();
@@ -1704,12 +1726,30 @@ const App = {
     sourceSched.returnDate = returnDate;
     store.saveSchedule(sourceSched);
 
-    // 2. CRIA AUTOMATICAMENTE A NOVA O.S. PARA O DIA DO RETORNO INFORMADO!
-    const currentYear = new Date().getFullYear();
+    // Se sourceSched já for um retorno anterior, localiza a ordem original raiz para atualizar a data do último retorno nela também
+    let rootSchedule = null;
+    if (sourceSched.parentScheduleId) {
+      rootSchedule = schedules.find(s => String(s.id).trim() === String(sourceSched.parentScheduleId).trim());
+      while (rootSchedule && rootSchedule.parentScheduleId) {
+        const parent = schedules.find(s => String(s.id).trim() === String(rootSchedule.parentScheduleId).trim());
+        if (!parent) break;
+        rootSchedule = parent;
+      }
+      if (rootSchedule) {
+        rootSchedule.needsReturn = true;
+        rootSchedule.returnDate = returnDate; // Atualiza no histórico para exibir a nova data de retorno mais recente!
+        store.saveSchedule(rootSchedule);
+      }
+    }
+
+    // 2. CRIA AUTOMATICAMENTE O CARD DE RETORNO PARA O DIA DO RETORNO INFORMADO (com flag isReturnVisit: true)
+    const rootId = (rootSchedule ? rootSchedule.id : (sourceSched.parentScheduleId || sourceSched.id));
     const returnOsNumber = sourceSched.osNumber ? sourceSched.osNumber.replace(/(-RET)+$/gi, '').trim() : '';
     
     const newReturnSchedule = {
       id: 'sched-ret-' + Date.now(),
+      parentScheduleId: rootId,
+      isReturnVisit: true, // Identifica que é continuação de atendimento/retorno e não uma nova ordem
       analystId: sourceSched.analystId,
       schoolCie: sourceSched.schoolCie,
       schoolName: sourceSched.schoolName,
@@ -2352,8 +2392,9 @@ const App = {
       };
     });
 
-    // 2. Contabiliza todos os agendamentos existentes
+    // 2. Contabiliza apenas agendamentos reais (ignora retornos/isReturnVisit)
     schedules.forEach(s => {
+      if (s.isReturnVisit) return; // Retornos não contam como novo agendamento da escola
       const cie = s.schoolCie || 'SEM_CIE';
       if (!schoolStats[cie]) {
         schoolStats[cie] = {

@@ -100,10 +100,20 @@ const FirestoreSync = {
 
     // 3. Agendamentos
     const unsubSchedules = db.collection("agendamentos").onSnapshot(snapshot => {
-      const schedules = [];
-      snapshot.forEach(doc => schedules.push(doc.data()));
-      localStorage.setItem(STORAGE_KEYS.SCHEDULES, JSON.stringify(schedules));
-      if (onDataUpdated) onDataUpdated("schedules");
+      if (!snapshot.empty) {
+        const schedules = [];
+        snapshot.forEach(doc => schedules.push(doc.data()));
+        localStorage.setItem(STORAGE_KEYS.SCHEDULES, JSON.stringify(schedules));
+        if (onDataUpdated) onDataUpdated("schedules");
+      } else {
+        // Se o Firestore estiver vazio, subir os agendamentos existentes no localStorage
+        const localSchedules = JSON.parse(localStorage.getItem(STORAGE_KEYS.SCHEDULES) || "[]");
+        if (localSchedules.length > 0) {
+          localSchedules.forEach(s => {
+            db.collection("agendamentos").doc(String(s.id)).set(s).catch(() => {});
+          });
+        }
+      }
     }, err => console.warn("Erro ao sincronizar agendamentos:", err));
     this.unsubscribers.push(unsubSchedules);
 
