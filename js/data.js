@@ -320,6 +320,7 @@ class DataStore {
   }
 
   saveAnalyst(analyst) {
+    if (typeof FirestoreSync !== 'undefined') FirestoreSync.saveAnalyst(analyst);
     const list = this.getAnalysts();
     const idx = list.findIndex(a => a.id === analyst.id);
     if (idx >= 0) {
@@ -331,6 +332,7 @@ class DataStore {
   }
 
   deleteAnalyst(id) {
+    if (typeof FirestoreSync !== 'undefined') FirestoreSync.deleteAnalyst(id);
     const list = this.getAnalysts().filter(a => a.id !== id);
     this.setAnalysts(list);
   }
@@ -353,6 +355,7 @@ class DataStore {
   }
 
   saveSchool(school) {
+    if (typeof FirestoreSync !== 'undefined') FirestoreSync.saveSchool(school);
     const list = this.getSchools();
     const idx = list.findIndex(s => String(s.cie).trim() === String(school.cie).trim());
     if (idx >= 0) {
@@ -364,6 +367,7 @@ class DataStore {
   }
 
   deleteSchool(cie) {
+    if (typeof FirestoreSync !== 'undefined') FirestoreSync.deleteSchool(cie);
     const list = this.getSchools().filter(s => String(s.cie).trim() !== String(cie).trim());
     this.setSchools(list);
   }
@@ -382,6 +386,7 @@ class DataStore {
   }
 
   saveSchedule(sched) {
+    if (typeof FirestoreSync !== 'undefined') FirestoreSync.saveSchedule(sched);
     const list = this.getSchedules();
     const idx = list.findIndex(s => s.id === sched.id);
     if (idx >= 0) {
@@ -393,6 +398,7 @@ class DataStore {
   }
 
   deleteSchedule(id) {
+    if (typeof FirestoreSync !== 'undefined') FirestoreSync.deleteSchedule(id);
     const list = this.getSchedules().filter(s => String(s.id).trim() !== String(id).trim());
     this.setSchedules(list);
   }
@@ -432,6 +438,7 @@ class DataStore {
   }
 
   saveQueueItem(item) {
+    if (typeof FirestoreSync !== 'undefined') FirestoreSync.saveQueueItem(item);
     const list = this.getQueue();
     const now = Date.now();
     if (!item.createdAt) {
@@ -458,6 +465,7 @@ class DataStore {
   }
 
   deleteQueueItem(id) {
+    if (typeof FirestoreSync !== 'undefined') FirestoreSync.deleteQueueItem(id);
     const list = this.getQueue().filter(q => String(q.id).trim() !== String(id).trim());
     this.setQueue(list);
   }
@@ -530,6 +538,7 @@ _Por favor, confirme o recebimento e anexe a ordem concluída._`;
   }
 
   setWhatsappTemplate(template) {
+    if (typeof FirestoreSync !== 'undefined') FirestoreSync.saveWhatsappTemplate(template);
     try {
       localStorage.setItem(STORAGE_KEYS.WHATSAPP_TEMPLATE, template);
     } catch (e) {

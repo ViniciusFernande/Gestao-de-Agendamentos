@@ -16,6 +16,7 @@ const App = {
   activeDailyAgendaDate: null,
 
   init() {
+    this.initAuth();
     this.initTheme();
     this.sanitizeReturnOsNumbers();
     this.setupNavigation();
@@ -2082,12 +2083,13 @@ const App = {
           </td>
           <td style="text-align: center;">
             <div class="action-buttons-group" style="justify-content: center;">
+              ${(typeof AuthService !== 'undefined' && AuthService.isAdmin()) ? `
               <button class="btn-icon-action btn-edit" title="Editar Analista" onclick="App.openEditAnalystModal('${a.id}')">
                 <i class="fa-solid fa-pen"></i>
               </button>
               <button class="btn-icon-action btn-delete" title="Excluir Analista" onclick="App.deleteAnalyst('${a.id}')">
                 <i class="fa-solid fa-trash"></i>
-              </button>
+              </button>` : `<span style="font-size:0.75rem; color:var(--text-muted);"><i class="fa-solid fa-lock"></i> Somente Leitura</span>`}
             </div>
           </td>
         </tr>
@@ -2098,6 +2100,7 @@ const App = {
   },
 
   openNewAnalystModal() {
+    if (typeof AuthService !== 'undefined' && !AuthService.isAdmin()) { alert('Apenas o Administrador pode cadastrar analistas.'); return; }
     const form = document.getElementById('form-analyst');
     if (!form) return;
     form.reset();
@@ -2169,6 +2172,7 @@ const App = {
   },
 
   deleteAnalyst(id) {
+    if (typeof AuthService !== 'undefined' && !AuthService.isAdmin()) { alert('Apenas o Administrador pode excluir analistas.'); return; }
     if (confirm('Tem certeza que deseja excluir este analista?')) {
       store.deleteAnalyst(id);
       this.populateSelects();
@@ -2507,12 +2511,13 @@ const App = {
           <td>${s.neighborhood || '-'}</td>
           <td style="text-align: center;">
             <div class="action-buttons-group" style="justify-content: center;">
+              ${(typeof AuthService !== 'undefined' && AuthService.isAdmin()) ? `
               <button class="btn-icon-action btn-edit" title="Editar Escola" onclick="App.openEditSchoolModal('${s.cie}')">
                 <i class="fa-solid fa-pen"></i>
               </button>
               <button class="btn-icon-action btn-delete" title="Excluir Escola" onclick="App.deleteSchool('${s.cie}')">
                 <i class="fa-solid fa-trash"></i>
-              </button>
+              </button>` : `<span style="font-size:0.75rem; color:var(--text-muted);"><i class="fa-solid fa-lock"></i> Somente Leitura</span>`}
             </div>
           </td>
         </tr>
@@ -2523,6 +2528,7 @@ const App = {
   },
 
   openNewSchoolModal() {
+    if (typeof AuthService !== 'undefined' && !AuthService.isAdmin()) { alert('Apenas o Administrador pode cadastrar escolas.'); return; }
     const form = document.getElementById('form-school');
     if (!form) return;
     form.reset();
@@ -2567,6 +2573,7 @@ const App = {
   },
 
   deleteSchool(cie) {
+    if (typeof AuthService !== 'undefined' && !AuthService.isAdmin()) { alert('Apenas o Administrador pode excluir escolas.'); return; }
     if (confirm(`Tem certeza que deseja excluir a escola com CIE ${cie}?`)) {
       store.deleteSchool(cie);
       this.renderSchoolsTable();

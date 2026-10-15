@@ -4306,3 +4306,19 @@ html, body {
     max-width: 100% !important;
   }
 }
+
+/* ==========================================================================
+   TELA DE LOGIN E PERMISSÕES DE ACESSO
+   ========================================================================== */
+#auth-modal {
+  user-select: none;
+  font-family: var(--font-sans, system-ui, -apple-system, sans-serif);
+}
+
+.admin-only {
+  transition: opacity 0.2s ease;
+}
+
+body.role-analista .admin-only {
+  display: none !important;
+}
