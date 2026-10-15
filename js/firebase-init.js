@@ -3,7 +3,7 @@
 // ==========================================================================
 
 const firebaseConfig = {
-  apiKey: "AIzaSyCm7dWAj3dszht5X3mM6HxroOur54cw4X8",
+  apiKey: "AIzaSyCm7dWAj3dszhT5X3mM6HxroOur54cw4X8",
   authDomain: "gestao-de-agendamentos-3d19c.firebaseapp.com",
   projectId: "gestao-de-agendamentos-3d19c",
   storageBucket: "gestao-de-agendamentos-3d19c.firebasestorage.app",
