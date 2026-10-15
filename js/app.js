@@ -15,6 +15,157 @@ const App = {
   activeDailyAgendaOrders: [],
   activeDailyAgendaDate: null,
 
+
+  // ==========================================================================
+  // AUTENTICAÇÃO E PERMISSÕES (FIREBASE AUTH)
+  // ==========================================================================
+  initAuth() {
+    if (typeof AuthService === 'undefined') return;
+
+    AuthService.init(userProfile => {
+      const authModal = document.getElementById('auth-modal');
+      if (userProfile) {
+        if (authModal) authModal.style.display = 'none';
+        this.applyUserRoleUI(userProfile);
+        if (typeof FirestoreSync !== 'undefined') {
+          FirestoreSync.startSync(collection => {
+            this.refreshAfterSync(collection);
+          });
+        }
+      } else {
+        if (authModal) {
+          authModal.style.display = 'flex';
+          const loginUser = document.getElementById('login-username');
+          if (loginUser) loginUser.focus();
+        }
+        if (typeof FirestoreSync !== 'undefined') {
+          FirestoreSync.stopSync();
+        }
+      }
+    });
+  },
+
+  async handleLogin(e) {
+    if (e && e.preventDefault) e.preventDefault();
+    const userInput = (document.getElementById('login-username')?.value || '').trim();
+    const passInput = document.getElementById('login-password')?.value || '';
+    const errorBox = document.getElementById('login-error-msg');
+    const submitBtn = document.getElementById('btn-submit-login');
+
+    if (!userInput || !passInput) {
+      if (errorBox) {
+        errorBox.textContent = 'Por favor, preencha o usuário e a senha.';
+        errorBox.style.display = 'block';
+      }
+      return false;
+    }
+
+    if (errorBox) errorBox.style.display = 'none';
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Entrando...';
+    }
+
+    try {
+      await AuthService.login(userInput, passInput);
+      // Login com sucesso! onAuthStateChanged irá fechar a tela automaticamente
+    } catch (err) {
+      console.error("Erro detalhado no login:", err);
+      let msg = "Falha ao autenticar. Verifique usuário e senha.";
+      if (err.code === "auth/user-not-found" || err.code === "auth/wrong-password" || err.code === "auth/invalid-credential" || err.code === "auth/invalid-login-credentials") {
+        msg = "Usuário ou senha incorretos.";
+      } else if (err.code === "auth/unauthorized-domain") {
+        msg = "Domínio não autorizado no Firebase. Adicione o domínio no console.";
+      } else if (err.code === "auth/network-request-failed") {
+        msg = "Erro de conexão com o Firebase. Verifique sua conexão.";
+      } else if (err.message) {
+        msg = err.message;
+      }
+      if (errorBox) {
+        errorBox.textContent = msg;
+        errorBox.style.display = 'block';
+      }
+    } finally {
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = '<i class="fa-solid fa-arrow-right-to-bracket"></i> Entrar no Sistema';
+      }
+    }
+    return false;
+  },
+
+  async handleLogout() {
+    if (confirm("Deseja realmente sair do sistema?")) {
+      await AuthService.logout();
+      window.location.reload();
+    }
+  },
+
+  toggleLoginPassVisibility() {
+    const input = document.getElementById('login-password');
+    const icon = document.getElementById('icon-toggle-pass');
+    if (!input || !icon) return;
+    if (input.type === 'password') {
+      input.type = 'text';
+      icon.className = 'fa-solid fa-eye-slash';
+    } else {
+      input.type = 'password';
+      icon.className = 'fa-solid fa-eye';
+    }
+  },
+
+  applyUserRoleUI(userProfile) {
+    if (!userProfile) return;
+
+    const nameEl = document.getElementById('sidebar-user-name');
+    const roleEl = document.getElementById('sidebar-user-role');
+    const avatarEl = document.getElementById('sidebar-user-avatar');
+
+    if (nameEl) nameEl.textContent = userProfile.name;
+    if (roleEl) {
+      roleEl.textContent = userProfile.label;
+      roleEl.style.color = userProfile.role === 'admin' ? '#fbbf24' : '#60a5fa';
+    }
+    if (avatarEl) {
+      avatarEl.innerHTML = userProfile.role === 'admin' 
+        ? '<i class="fa-solid fa-user-shield" style="color:#fbbf24;"></i>' 
+        : '<i class="fa-solid fa-user-tie" style="color:#60a5fa;"></i>';
+    }
+
+    const isAdmin = userProfile.role === 'admin';
+    const adminElements = document.querySelectorAll('.admin-only');
+    adminElements.forEach(el => {
+      el.style.display = isAdmin ? '' : 'none';
+    });
+
+    if (!isAdmin && this.currentView === 'configuracoes') {
+      this.navigateTo('agenda');
+    }
+
+    this.renderAnalystsTable();
+    this.renderSchoolsTable();
+  },
+
+  refreshAfterSync(collection) {
+    this.populateSelects();
+    if (this.currentView === 'agenda') {
+      this.renderAgenda();
+    } else if (this.currentView === 'todos-agendamentos') {
+      this.renderAllSchedulesTable();
+    } else if (this.currentView === 'fila') {
+      this.renderQueue();
+    } else if (this.currentView === 'analistas') {
+      this.renderAnalystsTable();
+    } else if (this.currentView === 'escolas') {
+      this.renderSchoolsTable();
+    } else if (this.currentView === 'ranking') {
+      this.renderRanking();
+    } else if (this.currentView === 'relatorios') {
+      this.generateReport();
+    }
+    this.updateDashboard();
+  },
+
   init() {
     this.initAuth();
     this.initTheme();

@@ -1348,7 +1348,7 @@
       <h2 style="color: #f8fafc; font-size: 1.35rem; font-weight: 700; margin-bottom: 6px; letter-spacing: 0.3px;">Gestão de Agendamentos</h2>
       <p style="color: #94a3b8; font-size: 0.85rem; margin-bottom: 26px;">Faça login para acessar o sistema</p>
 
-      <form id="form-login" onsubmit="App.handleLogin(event)" style="text-align: left; display: flex; flex-direction: column; gap: 16px;">
+      <form id="form-login" onsubmit="event.preventDefault(); App.handleLogin(event); return false;" style="text-align: left; display: flex; flex-direction: column; gap: 16px;">
         <div>
           <label style="display: block; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600; color: #94a3b8; margin-bottom: 6px;">Usuário</label>
           <div style="position: relative; display: flex; align-items: center;">
@@ -1370,7 +1370,7 @@
 
         <div id="login-error-msg" style="display: none; background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.3); color: #f87171; padding: 10px 14px; border-radius: 8px; font-size: 0.8rem; text-align: center;"></div>
 
-        <button type="submit" id="btn-submit-login" style="height: 44px; margin-top: 6px; background: #2563eb; color: #ffffff; border: none; border-radius: 8px; font-weight: 600; font-size: 0.95rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: background 0.2s;" onmouseover="this.style.background='#1d4ed8'" onmouseout="this.style.background='#2563eb'">
+        <button type="button" onclick="App.handleLogin(event)" id="btn-submit-login" style="height: 44px; margin-top: 6px; background: #2563eb; color: #ffffff; border: none; border-radius: 8px; font-weight: 600; font-size: 0.95rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: background 0.2s;" onmouseover="this.style.background='#1d4ed8'" onmouseout="this.style.background='#2563eb'">
           <i class="fa-solid fa-arrow-right-to-bracket"></i> Entrar no Sistema
         </button>
       </form>
