@@ -2682,6 +2682,9 @@ const App = {
     const schools = store.getSchools();
     const search = (document.getElementById('input-search-school')?.value || '').toLowerCase().trim();
 
+    // Ordenar escolas em ordem alfabética de A a Z
+    schools.sort((a, b) => a.name.localeCompare(b.name, 'pt-BR', { sensitivity: 'base' }));
+
     const filtered = schools.filter(s => {
       if (!search) return true;
       return s.cie.toLowerCase().includes(search) || s.name.toLowerCase().includes(search);

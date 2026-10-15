@@ -1050,7 +1050,8 @@ class DataStore {
   // --- ESCOLAS ---
   getSchools() {
     try {
-      return JSON.parse(localStorage.getItem(STORAGE_KEYS.SCHOOLS)) || [];
+      const list = JSON.parse(localStorage.getItem(STORAGE_KEYS.SCHOOLS)) || [];
+      return list.sort((a, b) => (a.name || '').localeCompare(b.name || '', 'pt-BR', { sensitivity: 'base' }));
     } catch {
       return [];
     }
