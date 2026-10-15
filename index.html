@@ -803,6 +803,9 @@
           </div>
 
           <!-- 3. BACKUP & RESTAURAÇÃO -->
+              <button class="btn-secondary" onclick="window.wipeFirestoreDemoData()" style="color: #ef4444; border-color: rgba(239, 68, 68, 0.4); margin-top: 10px;" onmouseover="this.style.background='rgba(239, 68, 68, 0.15)'" onmouseout="this.style.background='transparent'">
+                <i class="fa-solid fa-trash-can"></i> Limpar Dados Antigos do Firebase
+              </button>
           <div class="admin-only" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px;">
             <div class="dash-panel">
               <div class="panel-title" style="margin-bottom: 14px;">
@@ -1379,6 +1382,39 @@
       </div>
     </div>
   </div>
+
+
+  <script>
+    // Rotina de limpeza profunda do Firestore (acionada via console ou botão)
+    window.wipeFirestoreDemoData = async function() {
+      if (!confirm("Deseja apagar TODOS os agendamentos e analistas do banco Firebase?")) return;
+      try {
+        const agSnap = await db.collection("agendamentos").get();
+        const batch1 = db.batch();
+        agSnap.forEach(d => batch1.delete(d.ref));
+        await batch1.commit();
+
+        const anSnap = await db.collection("analistas").get();
+        const batch2 = db.batch();
+        anSnap.forEach(d => batch2.delete(d.ref));
+        await batch2.commit();
+
+        const fSnap = await db.collection("fila").get();
+        const batch3 = db.batch();
+        fSnap.forEach(d => batch3.delete(d.ref));
+        await batch3.commit();
+
+        localStorage.removeItem(STORAGE_KEYS.SCHEDULES);
+        localStorage.removeItem(STORAGE_KEYS.ANALYSTS);
+        localStorage.removeItem(STORAGE_KEYS.QUEUE);
+
+        alert("Banco de dados do Firebase completamente limpo!");
+        window.location.reload();
+      } catch (e) {
+        alert("Erro ao limpar banco: " + e.message);
+      }
+    };
+  </script>
 
 </body>
 </html>
