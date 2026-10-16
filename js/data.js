@@ -25,7 +25,9 @@ const PREDEFINED_SUBJECTS = [
 ];
 
 // Dados iniciais padrão (8 Analistas)
-const SEED_ANALYSTS = [];
+const SEED_ANALYSTS = (typeof window !== 'undefined' && window.HISTORICAL_SEED_DATA && window.HISTORICAL_SEED_DATA.analysts)
+  ? window.HISTORICAL_SEED_DATA.analysts
+  : [];
 
 const SEED_SCHOOLS = [
   {
@@ -760,14 +762,31 @@ class DataStore {
   }
 
   init() {
-    if (!localStorage.getItem(STORAGE_KEYS.ANALYSTS)) {
-      this.setAnalysts([]);
+    const existingAnalysts = this.getAnalysts();
+    const seedAnalysts = (typeof window !== 'undefined' && window.HISTORICAL_SEED_DATA && window.HISTORICAL_SEED_DATA.analysts) ? window.HISTORICAL_SEED_DATA.analysts : (typeof SEED_ANALYSTS !== 'undefined' ? SEED_ANALYSTS : []);
+    
+    // Se a lista de analistas estiver vazia ou menor que os analistas da equipe (10 analistas), funde/repopula
+    if (!existingAnalysts || existingAnalysts.length < (seedAnalysts.length || 10)) {
+      const mergedMap = new Map();
+      seedAnalysts.forEach(a => mergedMap.set(a.id, a));
+      if (existingAnalysts) {
+        existingAnalysts.forEach(a => mergedMap.set(a.id, { ...mergedMap.get(a.id), ...a }));
+      }
+      this.setAnalysts(Array.from(mergedMap.values()));
     }
+
     if (!localStorage.getItem(STORAGE_KEYS.SCHOOLS)) {
       this.setSchools(SEED_SCHOOLS);
     }
-    if (!localStorage.getItem(STORAGE_KEYS.SCHEDULES)) {
-      this.setSchedules([]);
+    const existingSchedules = this.getSchedules();
+    if (!existingSchedules || existingSchedules.length === 0) {
+      this.setSchedules(generateInitialSchedules());
+    }
+    if (!localStorage.getItem(STORAGE_KEYS.ABSENCES)) {
+      const initAbsences = (typeof window !== 'undefined' && window.HISTORICAL_SEED_DATA && window.HISTORICAL_SEED_DATA.absences) ? window.HISTORICAL_SEED_DATA.absences : [];
+      if (initAbsences.length > 0) {
+        localStorage.setItem(STORAGE_KEYS.ABSENCES, JSON.stringify(initAbsences));
+      }
     }
   }
 
@@ -852,16 +871,58 @@ class DataStore {
   }
 
   // --- AGENDAMENTOS ---
+  deduplicateSchedules(schedules) {
+    if (!Array.isArray(schedules) || schedules.length === 0) return [];
+    const byOs = {};
+    const orderOfKeys = [];
+
+    for (let i = 0; i < schedules.length; i++) {
+      const s = schedules[i];
+      const osRaw = (s.osNumber || '').trim().toUpperCase();
+      const key = (osRaw && osRaw !== '-' && osRaw !== 'N/A') ? osRaw : ('NO_OS_' + (s.id || i));
+      if (!byOs[key]) {
+        byOs[key] = [];
+        orderOfKeys.push(key);
+      }
+      byOs[key].push(s);
+    }
+
+    const result = [];
+    for (let k = 0; k < orderOfKeys.length; k++) {
+      const key = orderOfKeys[k];
+      const group = byOs[key];
+      if (group.length === 1) {
+        result.push(group[0]);
+        continue;
+      }
+      // Regra de deduplicação solicitada:
+      // Se houver ordem com status concluída, mantém somente ela.
+      const completedList = group.filter(item => item.completed);
+      if (completedList.length > 0) {
+        // Se houver mais de uma concluída, mantém a da data mais recente
+        completedList.sort((a, b) => (b.date || '').localeCompare(a.date || '') || (b.sequence || 0) - (a.sequence || 0));
+        result.push(completedList[0]);
+      } else {
+        // Se nenhuma estiver concluída, mantém somente 1, a primeira que apareceu (data mais antiga)
+        group.sort((a, b) => (a.date || '').localeCompare(b.date || '') || (a.sequence || 0) - (b.sequence || 0));
+        result.push(group[0]);
+      }
+    }
+    return result;
+  }
+
   getSchedules() {
     try {
-      return JSON.parse(localStorage.getItem(STORAGE_KEYS.SCHEDULES)) || [];
+      const raw = JSON.parse(localStorage.getItem(STORAGE_KEYS.SCHEDULES)) || [];
+      return this.deduplicateSchedules(raw);
     } catch {
       return [];
     }
   }
 
   setSchedules(schedules) {
-    localStorage.setItem(STORAGE_KEYS.SCHEDULES, JSON.stringify(schedules));
+    const cleanList = this.deduplicateSchedules(schedules);
+    localStorage.setItem(STORAGE_KEYS.SCHEDULES, JSON.stringify(cleanList));
   }
 
   saveSchedule(sched) {

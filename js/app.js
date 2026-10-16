@@ -532,10 +532,12 @@ const App = {
   },
 
   renderPerformanceChart(completedSchedules, analysts) {
-    // Agrupa concluídas por analista
-    const countsMap = {};
-    analysts.forEach(a => countsMap[a.id] = { name: a.name, count: 0 });
+    // Considera apenas analistas ativos (remove analistas inativos do gráfico)
+    const activeAnalysts = analysts.filter(a => a.status !== 'inativo');
 
+    // Agrupa concluídas por analista ativo
+    const countsMap = {};
+    activeAnalysts.forEach(a => countsMap[a.id] = { name: a.name, count: 0 });
     completedSchedules.forEach(s => {
       if (countsMap[s.analystId]) {
         countsMap[s.analystId].count++;
@@ -822,6 +824,16 @@ const App = {
       return true;
     });
 
+        // Ordena da data mais recente (dia atual) para a mais antiga (descendente)
+    filtered.sort((a, b) => {
+      const dateA = a.date || '';
+      const dateB = b.date || '';
+      if (dateA !== dateB) {
+        return dateB.localeCompare(dateA);
+      }
+      return (a.sequence || 0) - (b.sequence || 0);
+    });
+
     if (filtered.length === 0) {
       tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding:30px; color:var(--text-muted);">Nenhum agendamento encontrado com os filtros selecionados.</td></tr>';
       return;
@@ -829,7 +841,7 @@ const App = {
 
     let rows = '';
     filtered.forEach(item => {
-      const analyst = analysts.find(a => a.id === item.analystId) || { name: 'Analista' };
+      const analyst = analysts.find(a => a.id === item.analystId) || (item.analystName ? { name: item.analystName } : { name: 'Analista' });
       const statusBadge = item.completed 
         ? '<span class="table-status-badge status-completed"><i class="fa-solid fa-check"></i> Concluída</span>'
         : '<span class="table-status-badge status-pending"><i class="fa-regular fa-clock"></i> Pendente</span>';
@@ -1310,6 +1322,16 @@ const App = {
       return true;
     });
 
+        // Ordena da data mais recente (dia atual) para a mais antiga (descendente)
+    filtered.sort((a, b) => {
+      const dateA = a.date || '';
+      const dateB = b.date || '';
+      if (dateA !== dateB) {
+        return dateB.localeCompare(dateA);
+      }
+      return (a.sequence || 0) - (b.sequence || 0);
+    });
+
     if (filtered.length === 0) {
       tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:30px; color:var(--text-muted);">Nenhum agendamento encontrado com os filtros selecionados.</td></tr>';
       return;
@@ -1317,7 +1339,7 @@ const App = {
 
     let rows = '';
     filtered.forEach(item => {
-      const analyst = analysts.find(a => a.id === item.analystId) || { name: 'Analista' };
+      const analyst = analysts.find(a => a.id === item.analystId) || (item.analystName ? { name: item.analystName } : { name: 'Analista' });
       const statusBadge = item.completed 
         ? '<span class="table-status-badge status-completed"><i class="fa-solid fa-check"></i> Concluída</span>'
         : (item.needsReturn
@@ -1573,7 +1595,7 @@ const App = {
           const seqBarHtml = analystOrders.length > 1
             ? `<div class="card-seq-bar">
                  <div class="card-seq-left">
-                   <span class="seq-pill"><i class="fa-solid fa-route"></i> ${index + 1}º Atendimento</span>
+                   <span class="seq-pill"><i class="fa-solid fa-route"></i> ${index + 1}— Atendimento</span>
                    ${osInputHtml}
                  </div>
                  <div class="seq-btns">
@@ -1587,7 +1609,7 @@ const App = {
                </div>`
             : `<div class="card-seq-bar">
                  <div class="card-seq-left">
-                   <span class="seq-pill" style="opacity:0.85; font-size:0.72rem;"><i class="fa-solid fa-location-dot"></i> Atendimento Único</span>
+                   <span class="seq-pill" style="opacity:0.85; font-size:0.72rem;"><i class="fa-solid fa-location-dot"></i> Atendimento único</span>
                    ${osInputHtml}
                  </div>
                </div>`;
@@ -2022,7 +2044,7 @@ const App = {
     });
 
     this.renderAnalystDailyCards();
-    this.showToast(`Sequência alterada: ${target.schoolName} agora é o ${newIndex + 1}º atendimento.`);
+    this.showToast(`Sequência alterada: ${target.schoolName} agora é o ${newIndex + 1}— atendimento.`);
   },
 
   openDailyAgendaModal(analystId, customDate) {
@@ -2080,7 +2102,7 @@ const App = {
         <div class="daily-agenda-item">
           <div class="daily-agenda-item-header">
             <div style="display:flex; align-items:center; gap:8px;">
-              <span class="item-seq-badge">${i + 1}º ATENDIMENTO</span>
+              <span class="item-seq-badge">${i + 1}— ATENDIMENTO</span>
               ${statusBadge}
             </div>
             <span class="item-os-badge">O.S.: ${ord.osNumber || 'Não informada'}</span>
@@ -2199,7 +2221,7 @@ const App = {
       `━━━━━━━━━━━━━━━━━━━━━━\n\n`;
 
     orders.forEach((ord, i) => {
-      message += `📍 *${i + 1}º ATENDIMENTO*\n`;
+      message += `📍 *${i + 1}— ATENDIMENTO*\n`;
       message += `🏫 *Escola:* ${ord.schoolName}\n`;
       message += `🔢 *CIE:* ${ord.schoolCie} | *Diretor(a):* ${ord.directorName || 'Coordenação'}\n`;
       message += `🔧 *Serviço:* ${(ord.subject || '').replace(/^Retorno:\s*/gi, '').trim()}\n`;
@@ -2534,10 +2556,10 @@ const App = {
     const third = rankingList[2];
 
     return `
-      <!-- 2º LUGAR: PRATA -->
+      <!-- 2ª LUGAR: PRATA -->
       <div class="podium-card podium-silver">
         <div class="podium-medal-icon">🥈</div>
-        <div class="podium-badge medal-badge-silver"><i class="fa-solid fa-medal"></i> 2º Lugar • Prata</div>
+        <div class="podium-badge medal-badge-silver"><i class="fa-solid fa-medal"></i> 2º Lugar — Prata</div>
         <div class="podium-school-name" title="${second.name}">${second.name}</div>
         <div class="podium-school-meta">CIE: ${second.cie} &bull; ${second.neighborhood}</div>
         <div class="podium-count-box">
@@ -2546,11 +2568,11 @@ const App = {
         </div>
       </div>
 
-      <!-- 1º LUGAR: OURO (DESTAQUE CENTRAL) -->
+      <!-- 1ª LUGAR: OURO (DESTAQUE CENTRAL) -->
       <div class="podium-card podium-gold">
         <div class="podium-crown"><i class="fa-solid fa-crown"></i></div>
         <div class="podium-medal-icon">🥇</div>
-        <div class="podium-badge medal-badge-gold"><i class="fa-solid fa-medal"></i> 1º Lugar • Ouro</div>
+        <div class="podium-badge medal-badge-gold"><i class="fa-solid fa-medal"></i> 1º Lugar — Ouro</div>
         <div class="podium-school-name" title="${first.name}">${first.name}</div>
         <div class="podium-school-meta">CIE: ${first.cie} &bull; ${first.neighborhood}</div>
         <div class="podium-count-box">
@@ -2559,10 +2581,10 @@ const App = {
         </div>
       </div>
 
-      <!-- 3º LUGAR: BRONZE -->
+      <!-- 3ª LUGAR: BRONZE -->
       <div class="podium-card podium-bronze">
         <div class="podium-medal-icon">🥉</div>
-        <div class="podium-badge medal-badge-bronze"><i class="fa-solid fa-medal"></i> 3º Lugar • Bronze</div>
+        <div class="podium-badge medal-badge-bronze"><i class="fa-solid fa-medal"></i> 3º Lugar — Bronze</div>
         <div class="podium-school-name" title="${third.name}">${third.name}</div>
         <div class="podium-school-meta">CIE: ${third.cie} &bull; ${third.neighborhood}</div>
         <div class="podium-count-box">
@@ -2585,11 +2607,11 @@ const App = {
     }
 
     const medalsConfig = [
-      { class: 'rank-gold', badgeClass: 'badge-gold', pos: '1º', icon: 'fa-medal', hasCrown: true },
-      { class: 'rank-silver', badgeClass: 'badge-silver', pos: '2º', icon: 'fa-medal', hasCrown: false },
-      { class: 'rank-bronze', badgeClass: 'badge-bronze', pos: '3º', icon: 'fa-medal', hasCrown: false },
-      { class: 'rank-fourth', badgeClass: 'badge-fourth', pos: '4º', icon: 'fa-award', hasCrown: false },
-      { class: 'rank-fifth', badgeClass: 'badge-fifth', pos: '5º', icon: 'fa-award', hasCrown: false }
+      { class: 'rank-gold', badgeClass: 'badge-gold', pos: '1ª', icon: 'fa-medal', hasCrown: true },
+      { class: 'rank-silver', badgeClass: 'badge-silver', pos: '2ª', icon: 'fa-medal', hasCrown: false },
+      { class: 'rank-bronze', badgeClass: 'badge-bronze', pos: '3ª', icon: 'fa-medal', hasCrown: false },
+      { class: 'rank-fourth', badgeClass: 'badge-fourth', pos: '4ª', icon: 'fa-award', hasCrown: false },
+      { class: 'rank-fifth', badgeClass: 'badge-fifth', pos: '5ª', icon: 'fa-award', hasCrown: false }
     ];
 
     let html = '';
@@ -2609,7 +2631,7 @@ const App = {
           </div>
           <div class="dash-rank-info">
             <div class="dash-rank-name" title="${safeName}">${safeName}</div>
-            <div class="dash-rank-meta">CIE: ${item.cie || '-'} • ${item.neighborhood || ''}</div>
+            <div class="dash-rank-meta">CIE: ${item.cie || '-'} — ${item.neighborhood || ''}</div>
           </div>
           <div class="dash-rank-val">
             <span class="dash-rank-num">${item.total}</span>
@@ -2741,7 +2763,7 @@ const App = {
       return;
     }
 
-    // 6. Linhas da tabela a partir do 4º lugar
+    // 6. Linhas da tabela a partir do 4ª lugar
     let rows = '';
     filteredTableList.forEach((item) => {
       const rankIndex = rankingList.indexOf(item) + 1;
@@ -2749,13 +2771,13 @@ const App = {
       let rowHighlightClass = '';
 
       if (rankIndex === 1) {
-        positionHtml = '<span class="medal-badge medal-badge-gold"><i class="fa-solid fa-medal"></i> 🥇 1º Ouro</span>';
+        positionHtml = '<span class="medal-badge medal-badge-gold"><i class="fa-solid fa-medal"></i> 🥇 1ª Ouro</span>';
         rowHighlightClass = 'ranking-row-gold';
       } else if (rankIndex === 2) {
-        positionHtml = '<span class="medal-badge medal-badge-silver"><i class="fa-solid fa-medal"></i> 🥈 2º Prata</span>';
+        positionHtml = '<span class="medal-badge medal-badge-silver"><i class="fa-solid fa-medal"></i> 🥈 2ª Prata</span>';
         rowHighlightClass = 'ranking-row-silver';
       } else if (rankIndex === 3) {
-        positionHtml = '<span class="medal-badge medal-badge-bronze"><i class="fa-solid fa-medal"></i> 🥉 3º Bronze</span>';
+        positionHtml = '<span class="medal-badge medal-badge-bronze"><i class="fa-solid fa-medal"></i> 🥉 3ª Bronze</span>';
         rowHighlightClass = 'ranking-row-bronze';
       } else {
         positionHtml = `<span class="ranking-position-num">${rankIndex}º</span>`;
@@ -3005,7 +3027,7 @@ const App = {
     // Preenche tabela única 100% contínua na tela
     let rows = '';
     filtered.forEach(item => {
-      const analyst = analysts.find(a => a.id === item.analystId) || { name: 'Analista' };
+      const analyst = analysts.find(a => a.id === item.analystId) || (item.analystName ? { name: item.analystName } : { name: 'Analista' });
       const dateFmt = item.date.split('-').reverse().join('/');
 
       rows += `
@@ -3178,7 +3200,7 @@ const App = {
         const names = {
           'theme-1': '1. Escuro Slate (Original)',
           'theme-2': '2. Marinho Suave (25% claro)',
-          'theme-3': '3. Crepúsculo (50% médio)',
+          'theme-3': '3. Crepúsculo (50% m—dio)',
           'theme-4': '4. Cinza Metálico',
           'theme-5': '5. Branco Suave (Off-White Gelo)'
         };
@@ -3456,7 +3478,7 @@ const App = {
     }
     if (!dateFmt) dateFmt = new Date().toLocaleDateString('pt-BR');
 
-    // Ícone de acordo com a categoria
+    // ícone de acordo com a categoria
     let catIcon = 'fa-screwdriver-wrench';
     if (item.category === 'conectividade') catIcon = 'fa-wifi';
     if (item.category === 'inventario') catIcon = 'fa-boxes-stacked';

@@ -98,21 +98,49 @@ const FirestoreSync = {
     }, err => console.warn("Erro ao sincronizar escolas:", err));
     this.unsubscribers.push(unsubSchools);
 
-    // 2. Analistas (espelho fiel do Firestore - cadastro manual pelo Admin)
+            // 2. Analistas (com auto-seeding historico se Firestore estiver vazio)
     const unsubAnalysts = db.collection("analistas").onSnapshot(snapshot => {
-      const analysts = [];
-      snapshot.forEach(doc => analysts.push(doc.data()));
-      localStorage.setItem(STORAGE_KEYS.ANALYSTS, JSON.stringify(analysts));
-      if (onDataUpdated) onDataUpdated("analysts");
+      if (!snapshot.empty) {
+        const analysts = [];
+        snapshot.forEach(doc => analysts.push(doc.data()));
+        localStorage.setItem(STORAGE_KEYS.ANALYSTS, JSON.stringify(analysts));
+        if (onDataUpdated) onDataUpdated("analysts");
+      } else {
+        const initialAnalysts = (typeof window !== 'undefined' && window.HISTORICAL_SEED_DATA && window.HISTORICAL_SEED_DATA.analysts) ? window.HISTORICAL_SEED_DATA.analysts : (typeof SEED_ANALYSTS !== 'undefined' ? SEED_ANALYSTS : []);
+        if (initialAnalysts.length > 0) {
+          localStorage.setItem(STORAGE_KEYS.ANALYSTS, JSON.stringify(initialAnalysts));
+          if (onDataUpdated) onDataUpdated("analysts");
+          initialAnalysts.forEach(a => {
+            db.collection("analistas").doc(String(a.id)).set(a, { merge: true }).catch(() => {});
+          });
+        }
+      }
     }, err => console.warn("Erro ao sincronizar analistas:", err));
     this.unsubscribers.push(unsubAnalysts);
 
-    // 3. Agendamentos (espelho fiel do Firestore)
+    // 3. Agendamentos (com auto-seeding historico em batches se Firestore estiver vazio)
     const unsubSchedules = db.collection("agendamentos").onSnapshot(snapshot => {
-      const schedules = [];
-      snapshot.forEach(doc => schedules.push(doc.data()));
-      localStorage.setItem(STORAGE_KEYS.SCHEDULES, JSON.stringify(schedules));
-      if (onDataUpdated) onDataUpdated("schedules");
+      if (!snapshot.empty) {
+        const schedules = [];
+        snapshot.forEach(doc => schedules.push(doc.data()));
+        localStorage.setItem(STORAGE_KEYS.SCHEDULES, JSON.stringify(schedules));
+        if (onDataUpdated) onDataUpdated("schedules");
+      } else {
+        const initialSchedules = (typeof window !== 'undefined' && window.HISTORICAL_SEED_DATA && window.HISTORICAL_SEED_DATA.schedules) ? window.HISTORICAL_SEED_DATA.schedules : [];
+        if (initialSchedules.length > 0) {
+          localStorage.setItem(STORAGE_KEYS.SCHEDULES, JSON.stringify(initialSchedules));
+          if (onDataUpdated) onDataUpdated("schedules");
+          for (let i = 0; i < initialSchedules.length; i += 400) {
+            const chunk = initialSchedules.slice(i, i + 400);
+            const batch = db.batch();
+            chunk.forEach(sch => {
+              const docRef = db.collection("agendamentos").doc(String(sch.id));
+              batch.set(docRef, sch, { merge: true });
+            });
+            batch.commit().catch(e => console.warn("Erro batch agendamentos:", e));
+          }
+        }
+      }
     }, err => console.warn("Erro ao sincronizar agendamentos:", err));
     this.unsubscribers.push(unsubSchedules);
 
