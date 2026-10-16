@@ -124,6 +124,14 @@ const FirestoreSync = {
       if (onDataUpdated) onDataUpdated("queue");
     }, err => console.warn("Erro ao sincronizar fila:", err));
     this.unsubscribers.push(unsubQueue);
+    // 4.1 Atendimentos URE (Interno)
+    const unsubUre = db.collection("ure_atendimentos").onSnapshot(snapshot => {
+      const ureList = [];
+      snapshot.forEach(doc => ureList.push(doc.data()));
+      localStorage.setItem(STORAGE_KEYS.URE_ATTENDANCES, JSON.stringify(ureList));
+      if (onDataUpdated) onDataUpdated("ure");
+    }, err => console.warn("Erro ao sincronizar URE:", err));
+    this.unsubscribers.push(unsubUre);
 
     // 5. Configurações gerais (WhatsApp template, etc.)
     const unsubConfig = db.collection("config").doc("geral").onSnapshot(doc => {
@@ -210,7 +218,23 @@ const FirestoreSync = {
     }
   },
 
-  async saveWhatsappTemplate(template) {
+  async saveUreAttendance(attendance) {
+    try {
+      await db.collection("ure_atendimentos").doc(String(attendance.id)).set(attendance);
+    } catch (e) {
+      console.warn("Falha ao salvar atendimento URE no Firestore:", e);
+    }
+  },
+
+  async deleteUreAttendance(id) {
+    try {
+      await db.collection("ure_atendimentos").doc(String(id)).delete();
+    } catch (e) {
+      console.warn("Falha ao excluir atendimento URE no Firestore:", e);
+    }
+  },
+
+    async saveWhatsappTemplate(template) {
     try {
       await db.collection("config").doc("geral").set({ whatsappTemplate: template }, { merge: true });
     } catch (e) {

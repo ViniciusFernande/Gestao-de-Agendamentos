@@ -162,6 +162,9 @@ const App = {
     } else if (this.currentView === 'relatorios') {
       this.generateReport();
     }
+    if (this.currentView === 'atendimento-ure') {
+      this.renderUreView();
+    }
     this.updateDashboard();
   },
 
@@ -216,6 +219,16 @@ const App = {
     const currentMonth = String(today.getMonth() + 1).padStart(2, '0');
     const selAnalystMonth = document.getElementById('filter-analyst-month');
     if (selAnalystMonth) selAnalystMonth.value = currentMonth;
+
+    // Inicialização dos filtros do Atendimento URE com a data/mês/ano atual
+    const inputUreDate = document.getElementById('filter-ure-date');
+    if (inputUreDate && !inputUreDate.value) {
+      inputUreDate.value = todayStr;
+    }
+    const selectUreMonth = document.getElementById('filter-ure-month');
+    if (selectUreMonth && (!selectUreMonth.value || selectUreMonth.value === 'all')) {
+      selectUreMonth.value = String(today.getMonth() + 1);
+    }
   },
 
   sanitizeReturnOsNumbers() {
@@ -278,6 +291,8 @@ const App = {
       this.renderQueueView(); this.renderDashboardQueue();
     } else if (viewId === 'todos-agendamentos') {
       this.renderAllSchedulesTable();
+    } else if (viewId === 'atendimento-ure') {
+      this.renderUreView();
     } else if (viewId === 'ranking-escolas') {
       this.renderSchoolsRanking();
     } else if (viewId === 'analistas') {
@@ -388,6 +403,16 @@ const App = {
       filterAllAnalyst.innerHTML = '<option value="all">Todos os Analistas</option>' +
         analysts.map(a => `<option value="${a.id}">${a.name}</option>`).join('');
     }
+
+    // Analistas Plenos para Atendimento URE
+    const plenoAnalysts = analysts.filter(a => (a.role || '').toLowerCase().includes('pleno'));
+    const quickUreAnalyst = document.getElementById('quick-ure-analyst');
+    const editUreAnalyst = document.getElementById('edit-ure-analyst');
+    const plenoOptions = '<option value="">Selecione o analista...</option>' +
+      plenoAnalysts.map(a => `<option value="${a.id}">${a.name}</option>`).join('');
+
+    if (quickUreAnalyst) quickUreAnalyst.innerHTML = plenoOptions;
+    if (editUreAnalyst) editUreAnalyst.innerHTML = plenoOptions;
 
     if (reportAnalyst) {
       reportAnalyst.innerHTML = '<option value="all">Todos os Analistas</option>' +
@@ -3869,7 +3894,519 @@ const App = {
     } else if (v.length > 0) {
       input.value = `(${v}`;
     }
-  }
+  },
+
+
+    // =========================================================================
+  // ATENDIMENTO URE (INTERNO)
+  // =========================================================================
+  escapeHtml(str) {
+    if (!str) return '';
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  },
+
+  handleUreTypeChange(val, customInputId) {
+    const customInput = document.getElementById(customInputId);
+    if (!customInput) return;
+    if (val === 'Outro') {
+      customInput.style.display = 'block';
+      customInput.required = true;
+      customInput.focus();
+    } else {
+      customInput.style.display = 'none';
+      customInput.required = false;
+      customInput.value = '';
+    }
+  },
+
+renderUreView() {
+    this.populateSelects();
+    const all = store.getUreAttendances();
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth() + 1; // 1-indexed
+    const todayStr = now.toISOString().split('T')[0];
+
+    // Popular select de anos disponíveis se ainda não populado
+    const selectYear = document.getElementById('filter-ure-year');
+    if (selectYear && selectYear.options.length <= 1) {
+      const years = new Set([currentYear]);
+      all.forEach(item => {
+        if (item.date) {
+          const yr = new Date(item.date).getFullYear();
+          if (!isNaN(yr)) years.add(yr);
+        }
+      });
+      const sortedYears = Array.from(years).sort((a, b) => b - a);
+      let yearOpts = '<option value="all">Todos os Anos</option>';
+      sortedYears.forEach(y => {
+        yearOpts += `<option value="${y}" ${y === currentYear ? 'selected' : ''}>${y}</option>`;
+      });
+      selectYear.innerHTML = yearOpts;
+    }
+
+    // 1. Ler Filtros Ativos (Dia, Mês, Ano e Busca)
+    const elDate = document.getElementById('filter-ure-date');
+    const elMonth = document.getElementById('filter-ure-month');
+    const elYear = document.getElementById('filter-ure-year');
+    const elSearch = document.getElementById('filter-ure-search');
+
+    // Se estiver vazio ao carregar, atribui a data e mês atuais
+    if (elDate && !elDate.value) {
+      elDate.value = todayStr;
+    }
+    if (elMonth && (!elMonth.value || elMonth.value === 'all')) {
+      elMonth.value = String(currentMonth);
+    }
+    if (elYear && (!elYear.value || elYear.value === 'all')) {
+      elYear.value = String(currentYear);
+    }
+
+    const filterDate = elDate ? elDate.value : '';
+    const filterMonth = elMonth ? elMonth.value : 'all';
+    const filterYear = elYear ? elYear.value : 'all';
+    const filterSearch = (elSearch?.value || '').toLowerCase().trim();
+
+    // Nomes dos meses para os rótulos
+    const monthNames = ['', 'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+
+    // 2. Calcular Métricas dos 3 Cards sincronizados com os filtros
+    // Card 1: Dia Selecionado (ou Hoje)
+    let countDay = 0;
+    const targetDayStr = filterDate || todayStr;
+    all.forEach(item => {
+      if (!item.date) return;
+      if (item.date.split('T')[0] === targetDayStr) countDay++;
+    });
+
+    // Card 2: Mês Selecionado (no Ano Selecionado ou Ano Atual)
+    let countMonth = 0;
+    const targetYearNum = (filterYear !== 'all') ? parseInt(filterYear, 10) : currentYear;
+    all.forEach(item => {
+      if (!item.date) return;
+      const d = new Date(item.date);
+      const itemYear = d.getFullYear();
+      const itemMonth = d.getMonth() + 1;
+
+      if (filterMonth !== 'all') {
+        const targetMonthNum = parseInt(filterMonth, 10);
+        if (itemMonth === targetMonthNum && (filterYear === 'all' || itemYear === targetYearNum)) {
+          countMonth++;
+        }
+      } else {
+        // Se 'Todos os Meses' estiver selecionado, conta o acumulado do ano
+        if (filterYear === 'all' || itemYear === targetYearNum) {
+          countMonth++;
+        }
+      }
+    });
+
+    // Card 3: Ano Selecionado
+    let countYear = 0;
+    all.forEach(item => {
+      if (!item.date) return;
+      const d = new Date(item.date);
+      if (filterYear !== 'all') {
+        if (d.getFullYear() === parseInt(filterYear, 10)) countYear++;
+      } else {
+        countYear++;
+      }
+    });
+
+    // Atualizar Valores nos Cards
+    const elCardDay = document.getElementById('ure-count-today');
+    const elCardMonth = document.getElementById('ure-count-month');
+    const elCardYear = document.getElementById('ure-count-year');
+    if (elCardDay) elCardDay.textContent = countDay.toLocaleString('pt-BR');
+    if (elCardMonth) elCardMonth.textContent = countMonth.toLocaleString('pt-BR');
+    if (elCardYear) elCardYear.textContent = countYear.toLocaleString('pt-BR');
+
+    // Atualizar Rótulos Dinamicamente nos Cards
+    const elLabelDay = document.getElementById('ure-label-today');
+    const elSubDay = document.getElementById('ure-sub-today');
+    const elLabelMonth = document.getElementById('ure-label-month');
+    const elSubMonth = document.getElementById('ure-sub-month');
+    const elLabelYear = document.getElementById('ure-label-year');
+    const elSubYear = document.getElementById('ure-sub-year');
+
+    if (elLabelDay && elSubDay) {
+      if (filterDate) {
+        const parts = filterDate.split('-');
+        const dateFormatted = `${parts[2]}/${parts[1]}/${parts[0]}`;
+        elLabelDay.textContent = `ATENDIMENTOS EM ${dateFormatted}`;
+        elSubDay.textContent = `Atendimentos no dia ${dateFormatted}`;
+      } else {
+        elLabelDay.textContent = 'ATENDIMENTOS HOJE';
+        elSubDay.textContent = 'Atendimentos de hoje';
+      }
+    }
+
+    if (elLabelMonth && elSubMonth) {
+      if (filterMonth !== 'all') {
+        const mName = monthNames[parseInt(filterMonth, 10)] || '';
+        elLabelMonth.textContent = `TOTAL EM ${mName.toUpperCase()}`;
+        elSubMonth.textContent = `Atendimentos em ${mName} (${filterYear !== 'all' ? filterYear : 'geral'})`;
+      } else {
+        elLabelMonth.textContent = 'TOTAL NO PERÍODO';
+        elSubMonth.textContent = 'Atendimentos em todos os meses';
+      }
+    }
+
+    if (elLabelYear && elSubYear) {
+      if (filterYear !== 'all') {
+        elLabelYear.textContent = `TOTAL NO ANO ${filterYear}`;
+        elSubYear.textContent = `Atendimentos acumulados em ${filterYear}`;
+      } else {
+        elLabelYear.textContent = 'TOTAL GERAL';
+        elSubYear.textContent = 'Todos os atendimentos registrados';
+      }
+    }
+
+    // 3. Aplicar Filtros para a Tabela de Histórico
+    let filtered = all.filter(item => {
+      if (!item.date) return false;
+      const d = new Date(item.date);
+      const itemDateStr = item.date.split('T')[0];
+
+      // Filtro por dia específico
+      if (filterDate && itemDateStr !== filterDate) return false;
+
+      // Filtro por mês
+      if (filterMonth !== 'all') {
+        const m = d.getMonth() + 1;
+        if (m !== parseInt(filterMonth, 10)) return false;
+      }
+
+      // Filtro por ano
+      if (filterYear !== 'all') {
+        const y = d.getFullYear();
+        if (y !== parseInt(filterYear, 10)) return false;
+      }
+
+      // Filtro textual (analista, setor, tipo, descrição)
+      if (filterSearch) {
+        const targetStr = `${item.analystName || ''} ${item.sector || ''} ${item.type || ''} ${item.description || ''}`.toLowerCase();
+        if (!targetStr.includes(filterSearch)) return false;
+      }
+
+      return true;
+    });
+
+    // Ordenar decrescente por data/hora
+    filtered.sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
+
+    // Atualizar badge de total filtrado
+    const badgeEl = document.getElementById('ure-total-filtered-badge');
+    if (badgeEl) {
+      badgeEl.textContent = `${filtered.length} ${filtered.length === 1 ? 'registro' : 'registros'}`;
+    }
+
+    // 4. Renderizar Linhas da Tabela
+    const tbody = document.getElementById('tbody-ure-attendances');
+    if (!tbody) return;
+
+    if (filtered.length === 0) {
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="6" style="text-align:center; padding: 40px 20px; color: #64748b;">
+            <i class="fa-solid fa-inbox" style="font-size: 2rem; margin-bottom: 10px; display: block; opacity: 0.5;"></i>
+            Nenhum atendimento interno registrado para os filtros selecionados.
+          </td>
+        </tr>
+      `;
+      return;
+    }
+
+    tbody.innerHTML = filtered.map(item => {
+      let formattedDate = '---';
+      if (item.date) {
+        const dt = new Date(item.date);
+        const dia = String(dt.getDate()).padStart(2, '0');
+        const mes = String(dt.getMonth() + 1).padStart(2, '0');
+        const ano = dt.getFullYear();
+        const hor = String(dt.getHours()).padStart(2, '0');
+        const min = String(dt.getMinutes()).padStart(2, '0');
+        formattedDate = `${dia}/${mes}/${ano} ${hor}:${min}`;
+      }
+
+      return `
+        <tr>
+          <td style="font-weight: 600; color: #cbd5e1; white-space: nowrap;">
+            <i class="fa-regular fa-clock" style="color: #64748b; margin-right: 6px; font-size: 0.85rem;"></i>${formattedDate}
+          </td>
+          <td style="font-weight: 600; color: #60a5fa; white-space: nowrap;">
+            <i class="fa-solid fa-user-gear" style="margin-right: 6px; opacity: 0.8;"></i>${this.escapeHtml(item.analystName || 'Não informado')}
+          </td>
+          <td style="font-weight: 600; color: #f8fafc;">
+            ${this.escapeHtml(item.sector || '---')}
+          </td>
+          <td style="color: #cbd5e1; white-space: nowrap; font-weight: 500; width: 250px;">
+            ${this.escapeHtml(item.type || '-')}
+          </td>
+          <td style="color: #cbd5e1; line-height: 1.4;">
+            ${this.escapeHtml(item.description || '-')}
+          </td>
+          <td style="text-align: center;">
+            ${(typeof AuthService === 'undefined' || AuthService.isAdmin()) ? `
+              <div style="display: flex; gap: 8px; justify-content: center; align-items: center;">
+                <button class="btn-icon-action btn-edit" title="Editar Atendimento" onclick="App.openEditUreModal('${item.id}')">
+                  <i class="fa-solid fa-pen"></i>
+                </button>
+                <button class="btn-icon-action btn-delete" title="Excluir Atendimento" onclick="App.deleteUreAttendance('${item.id}')">
+                  <i class="fa-solid fa-trash"></i>
+                </button>
+              </div>
+            ` : `<span style="font-size: 0.75rem; color: #64748b; font-style: italic;">Somente Leitura</span>`}
+          </td>
+        </tr>
+      `;
+    }).join('');
+  },
+
+    clearUreFilters() {
+    const elDate = document.getElementById('filter-ure-date');
+    const elMonth = document.getElementById('filter-ure-month');
+    const elYear = document.getElementById('filter-ure-year');
+    const elSearch = document.getElementById('filter-ure-search');
+    if (elDate) elDate.value = '';
+    if (elMonth) elMonth.value = 'all';
+    if (elYear) elYear.value = new Date().getFullYear();
+    if (elSearch) elSearch.value = '';
+    this.renderUreView();
+  },
+
+  saveQuickUre(event) {
+    if (typeof AuthService !== 'undefined' && !AuthService.isAdmin()) {
+      alert('Apenas o Administrador pode registrar atendimentos na URE.');
+      return false;
+    }
+    if (event) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+    const analystSelect = document.getElementById('quick-ure-analyst');
+    const sectorInput = document.getElementById('quick-ure-sector');
+    const typeSelect = document.getElementById('quick-ure-type');
+    const customTypeInput = document.getElementById('quick-ure-type-custom');
+    const descInput = document.getElementById('quick-ure-desc');
+
+    if (!analystSelect || !sectorInput || !typeSelect) return false;
+
+    const analystId = analystSelect.value;
+    const analystObj = store.getAnalystById(analystId);
+    const analystName = analystObj ? analystObj.name : analystSelect.options[analystSelect.selectedIndex]?.text || '';
+    const sector = sectorInput.value.trim();
+    
+    let type = typeSelect.value.trim();
+    if (type === 'Outro') {
+      type = (customTypeInput?.value || '').trim();
+      if (!type) {
+        alert('Por favor, informe o tipo de atendimento no campo que se abriu.');
+        customTypeInput?.focus();
+        return false;
+      }
+    }
+
+    const description = descInput ? descInput.value.trim() : '';
+
+    if (!analystId) {
+      alert('Por favor, selecione o Analista.');
+      analystSelect.focus();
+      return false;
+    }
+
+    if (!sector) {
+      alert('Por favor, informe o Solicitante ou Setor.');
+      sectorInput.focus();
+      return false;
+    }
+
+    if (!type) {
+      alert('Por favor, selecione ou informe o Tipo de Atendimento.');
+      typeSelect.focus();
+      return false;
+    }
+
+    const newAttendance = {
+      id: 'ure_' + Date.now(),
+      date: new Date().toISOString(),
+      analystId: analystId,
+      analystName: analystName,
+      sector: sector,
+      type: type,
+      description: description, // Descrição opcional
+      createdAt: Date.now()
+    };
+
+    store.saveUreAttendance(newAttendance);
+
+    // Resetar campos
+    analystSelect.value = '';
+    sectorInput.value = '';
+    typeSelect.value = '';
+    if (customTypeInput) {
+      customTypeInput.value = '';
+      customTypeInput.style.display = 'none';
+      customTypeInput.required = false;
+    }
+    if (descInput) descInput.value = '';
+    analystSelect.focus();
+
+    this.renderUreView();
+    this.showToast('Atendimento URE registrado com sucesso!');
+    return false;
+  },
+
+  openEditUreModal(id) {
+    this.populateSelects();
+    const item = store.getUreAttendances().find(a => String(a.id).trim() === String(id).trim());
+    if (!item) return;
+
+    document.getElementById('edit-ure-id').value = item.id;
+    document.getElementById('edit-ure-created-at').value = item.createdAt || Date.now();
+    document.getElementById('edit-ure-sector').value = item.sector || '';
+    document.getElementById('edit-ure-desc').value = item.description || '';
+
+    // Analista Pleno
+    const editAnalystSelect = document.getElementById('edit-ure-analyst');
+    if (editAnalystSelect) {
+      editAnalystSelect.value = item.analystId || '';
+    }
+
+    // Tipo de Atendimento
+    const editTypeSelect = document.getElementById('edit-ure-type');
+    const customEditType = document.getElementById('edit-ure-type-custom');
+    const predefinedTypes = [
+      'Formatação de Maquina',
+      'Instalado Impressora',
+      'Verificado Impressora',
+      'Trocado Teclado',
+      'Verificado Monitor',
+      'Trocado Desktop',
+      'Remanejado Desktop de sala',
+      'Configurado Quick',
+      'Auxiliado servidor'
+    ];
+
+    if (predefinedTypes.includes(item.type)) {
+      if (editTypeSelect) editTypeSelect.value = item.type;
+      if (customEditType) {
+        customEditType.style.display = 'none';
+        customEditType.value = '';
+        customEditType.required = false;
+      }
+    } else {
+      if (editTypeSelect) editTypeSelect.value = 'Outro';
+      if (customEditType) {
+        customEditType.style.display = 'block';
+        customEditType.value = item.type || '';
+        customEditType.required = true;
+      }
+    }
+
+    // Data/hora
+    let dtVal = '';
+    if (item.date) {
+      const d = new Date(item.date);
+      const yyyy = d.getFullYear();
+      const mm = String(d.getMonth() + 1).padStart(2, '0');
+      const dd = String(d.getDate()).padStart(2, '0');
+      const hh = String(d.getHours()).padStart(2, '0');
+      const min = String(d.getMinutes()).padStart(2, '0');
+      dtVal = `${yyyy}-${mm}-${dd}T${hh}:${min}`;
+    } else {
+      dtVal = new Date().toISOString().slice(0, 16);
+    }
+    document.getElementById('edit-ure-datetime').value = dtVal;
+
+    this.openModal('modal-ure-edit');
+  },
+
+  saveEditUreForm(event) {
+    if (typeof AuthService !== 'undefined' && !AuthService.isAdmin()) {
+      alert('Apenas o Administrador pode editar atendimentos da URE.');
+      return false;
+    }
+    if (event) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+    const id = document.getElementById('edit-ure-id').value;
+    const createdAt = parseInt(document.getElementById('edit-ure-created-at').value, 10) || Date.now();
+    const dtInput = document.getElementById('edit-ure-datetime').value;
+    const analystSelect = document.getElementById('edit-ure-analyst');
+    const sector = document.getElementById('edit-ure-sector').value.trim();
+    const typeSelect = document.getElementById('edit-ure-type');
+    const customTypeInput = document.getElementById('edit-ure-type-custom');
+    const description = document.getElementById('edit-ure-desc').value.trim();
+
+    const analystId = analystSelect ? analystSelect.value : '';
+    const analystObj = store.getAnalystById(analystId);
+    const analystName = analystObj ? analystObj.name : (analystSelect?.options[analystSelect.selectedIndex]?.text || '');
+
+    let type = typeSelect ? typeSelect.value.trim() : '';
+    if (type === 'Outro') {
+      type = (customTypeInput?.value || '').trim();
+      if (!type) {
+        alert('Por favor, informe o tipo de atendimento no campo que se abriu.');
+        customTypeInput?.focus();
+        return false;
+      }
+    }
+
+    if (!analystId) {
+      alert('Por favor, selecione o Analista.');
+      analystSelect?.focus();
+      return false;
+    }
+
+    if (!sector) {
+      alert('Por favor, informe o Solicitante ou Setor.');
+      return false;
+    }
+
+    if (!type) {
+      alert('Por favor, selecione ou informe o Tipo de Atendimento.');
+      return false;
+    }
+
+    const isoDate = dtInput ? new Date(dtInput).toISOString() : new Date().toISOString();
+
+    const updated = {
+      id: id,
+      date: isoDate,
+      analystId: analystId,
+      analystName: analystName,
+      sector: sector,
+      type: type,
+      description: description, // opcional
+      createdAt: createdAt
+    };
+
+    store.saveUreAttendance(updated);
+    this.closeModal('modal-ure-edit');
+    this.renderUreView();
+    this.showToast('Atendimento URE atualizado com sucesso!');
+    return false;
+  },
+
+  deleteUreAttendance(id) {
+    if (typeof AuthService !== 'undefined' && !AuthService.isAdmin()) {
+      alert('Apenas o Administrador pode excluir atendimentos da URE.');
+      return;
+    }
+    if (confirm('Tem certeza que deseja excluir este atendimento da URE?')) {
+      store.deleteUreAttendance(id);
+      this.renderUreView();
+      this.showToast('Atendimento excluído com sucesso.');
+    }
+  },
+
 };
 
 // Inicialização ao carregar a página

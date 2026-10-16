@@ -8,7 +8,8 @@ const STORAGE_KEYS = {
   SETTINGS: 'sg_configuracoes',
   QUEUE: 'sg_filas_visita',
   WHATSAPP_TEMPLATE: 'sg_whatsapp_template',
-  THEME: 'sg_selected_theme'
+  THEME: 'sg_selected_theme',
+  URE_ATTENDANCES: 'sg_ure_atendimentos'
 };
 
 // Categorias padrão de assuntos
@@ -908,6 +909,54 @@ class DataStore {
 
   setQueue(queue) {
     localStorage.setItem(STORAGE_KEYS.QUEUE, JSON.stringify(queue));
+  }
+
+  // ==========================================
+  // ATENDIMENTOS URE (INTERNO)
+  // ==========================================
+  getUreAttendances() {
+    try {
+      return JSON.parse(localStorage.getItem(STORAGE_KEYS.URE_ATTENDANCES)) || [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  saveUreAttendances(list) {
+    try {
+      localStorage.setItem(STORAGE_KEYS.URE_ATTENDANCES, JSON.stringify(list));
+    } catch (e) {
+      console.error('Erro ao salvar atendimentos URE:', e);
+    }
+  }
+
+  saveUreAttendance(attendance) {
+    if (typeof FirestoreSync !== 'undefined' && FirestoreSync.saveUreAttendance) {
+      FirestoreSync.saveUreAttendance(attendance);
+    }
+    const list = this.getUreAttendances();
+    if (!attendance.id) {
+      attendance.id = 'ure_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4);
+    }
+    if (!attendance.createdAt) {
+      attendance.createdAt = Date.now();
+    }
+    const idx = list.findIndex(a => String(a.id).trim() === String(attendance.id).trim());
+    if (idx >= 0) {
+      list[idx] = { ...list[idx], ...attendance };
+    } else {
+      list.unshift(attendance);
+    }
+    this.saveUreAttendances(list);
+    return attendance;
+  }
+
+  deleteUreAttendance(id) {
+    if (typeof FirestoreSync !== 'undefined' && FirestoreSync.deleteUreAttendance) {
+      FirestoreSync.deleteUreAttendance(id);
+    }
+    const list = this.getUreAttendances().filter(a => String(a.id).trim() !== String(id).trim());
+    this.saveUreAttendances(list);
   }
 
   getQueueItemById(id) {

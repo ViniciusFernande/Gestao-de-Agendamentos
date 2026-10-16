@@ -61,6 +61,10 @@
           <i class="fa-solid fa-list-check"></i>
           <span class="nav-text">Histórico de Agendamentos</span>
         </a>
+        <a href="#" class="nav-item" data-view="atendimento-ure">
+          <i class="fa-solid fa-laptop"></i>
+          <span class="nav-text">Atendimento URE</span>
+        </a>
         <a href="#" class="nav-item" data-view="ranking-escolas">
           <i class="fa-solid fa-trophy"></i>
           <span class="nav-text">Ranking Escolas</span>
@@ -213,12 +217,12 @@
               </div>
             </div>
 
-            <!-- 2. TOP 5 ESCOLAS (Lista Compacta) -->
+            <!-- 2. TOP 5 ESCOLAS MAIS VISITADAS (Lista Compacta) -->
             <div class="dash-panel dash-top-schools-panel">
               <div class="panel-header">
                 <div class="panel-title">
                   <i class="fa-solid fa-trophy" style="color:#fbbf24;"></i>
-                  <span>TOP 5 ESCOLAS</span>
+                  <span>TOP 5 ESCOLAS MAIS VISITADAS</span>
                 </div>
                 <button class="btn-panel-link" onclick="App.navigateTo('ranking-escolas')" title="Ver Ranking Completo">
                   <span>Ver todas</span> <i class="fa-solid fa-arrow-right"></i>
@@ -490,11 +494,181 @@
           </div>
         </section>
 
+        <!-- VIEW: ATENDIMENTO URE (INTERNO) -->
+        <section id="view-atendimento-ure" class="view-section">
+          <!-- Cabeçalho -->
+          <div class="page-header-actions" style="margin-bottom: 24px;">
+            <div>
+              <h2 class="page-title" style="display: flex; align-items: center; gap: 10px;">
+                <i class="fa-solid fa-user-tie" style="color: #3b82f6;"></i> Atendimento URE
+              </h2>
+              <p class="page-subtitle">Registro e acompanhamento de atendimentos internos</p>
+            </div>
+            
+            <!-- Filtros Compactos por Período / Busca -->
+            <div class="schedules-header-filters" data-html2canvas-ignore="true">
+              <input type="date" id="filter-ure-date" class="compact-input" onchange="App.renderUreView()" title="Filtrar por Dia Específico">
+
+              <select id="filter-ure-month" class="compact-select" onchange="App.renderUreView()" title="Filtrar por Mês">
+                <option value="all">Todos os Meses</option>
+                <option value="1">Janeiro</option>
+                <option value="2">Fevereiro</option>
+                <option value="3">Março</option>
+                <option value="4">Abril</option>
+                <option value="5">Maio</option>
+                <option value="6">Junho</option>
+                <option value="7">Julho</option>
+                <option value="8">Agosto</option>
+                <option value="9">Setembro</option>
+                <option value="10">Outubro</option>
+                <option value="11">Novembro</option>
+                <option value="12">Dezembro</option>
+              </select>
+
+              <select id="filter-ure-year" class="compact-select" onchange="App.renderUreView()" title="Filtrar por Ano">
+                <!-- Preenchido dinamicamente -->
+              </select>
+
+              <div class="header-search-wrap">
+                <i class="fa-solid fa-magnifying-glass"></i>
+                <input type="text" id="filter-ure-search" class="compact-input" placeholder="Buscar analista, setor ou descrição..." oninput="App.renderUreView()" title="Buscar nos atendimentos">
+              </div>
+
+
+            </div>
+          </div>
+
+          <!-- Cards de Métricas (Hoje, Mês, Ano) -->
+          <div class="ure-metrics-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 20px; margin-bottom: 26px;">
+            
+            <!-- Card 1: Hoje -->
+            <div class="ure-metric-card" style="background: var(--bg-card); border: 1px solid rgba(255,255,255,0.06); border-radius: 12px; padding: 20px 24px; position: relative; box-shadow: 0 4px 16px rgba(0,0,0,0.18);">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                <span id="ure-label-today" style="font-size: 0.78rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: #94a3b8;">ATENDIMENTOS HOJE</span>
+                <div style="width: 34px; height: 34px; border-radius: 8px; background: rgba(59, 130, 246, 0.15); display: flex; align-items: center; justify-content: center; color: #3b82f6;">
+                  <i class="fa-regular fa-calendar-check"></i>
+                </div>
+              </div>
+              <div id="ure-count-today" style="font-size: 2.2rem; font-weight: 800; color: #f8fafc; line-height: 1.1; margin-bottom: 6px;">0</div>
+              <div id="ure-sub-today" style="font-size: 0.8rem; color: #64748b;">Atendimentos do dia</div>
+            </div>
+
+            <!-- Card 2: Mês -->
+            <div class="ure-metric-card" style="background: var(--bg-card); border: 1px solid rgba(255,255,255,0.06); border-radius: 12px; padding: 20px 24px; position: relative; box-shadow: 0 4px 16px rgba(0,0,0,0.18);">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                <span id="ure-label-month" style="font-size: 0.78rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: #94a3b8;">TOTAL NO MÊS</span>
+                <div style="width: 34px; height: 34px; border-radius: 8px; background: rgba(168, 85, 247, 0.15); display: flex; align-items: center; justify-content: center; color: #a855f7;">
+                  <i class="fa-regular fa-calendar-days"></i>
+                </div>
+              </div>
+              <div id="ure-count-month" style="font-size: 2.2rem; font-weight: 800; color: #f8fafc; line-height: 1.1; margin-bottom: 6px;">0</div>
+              <div id="ure-sub-month" style="font-size: 0.8rem; color: #64748b;">Atendimentos no mês atual</div>
+            </div>
+
+            <!-- Card 3: Ano -->
+            <div class="ure-metric-card" style="background: var(--bg-card); border: 1px solid rgba(255,255,255,0.06); border-radius: 12px; padding: 20px 24px; position: relative; box-shadow: 0 4px 16px rgba(0,0,0,0.18);">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                <span id="ure-label-year" style="font-size: 0.78rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: #94a3b8;">TOTAL NO ANO</span>
+                <div style="width: 34px; height: 34px; border-radius: 8px; background: rgba(14, 165, 233, 0.15); display: flex; align-items: center; justify-content: center; color: #0ea5e9;">
+                  <i class="fa-solid fa-briefcase"></i>
+                </div>
+              </div>
+              <div id="ure-count-year" style="font-size: 2.2rem; font-weight: 800; color: #f8fafc; line-height: 1.1; margin-bottom: 6px;">0</div>
+              <div id="ure-sub-year" style="font-size: 0.8rem; color: #64748b;">Atendimentos acumulados no ano</div>
+            </div>
+
+          </div>
+
+          <!-- Card: Rápido Registro de Atendimento -->
+          <div class="admin-only" style="background: var(--bg-card); border: 1px solid rgba(255,255,255,0.07); border-radius: 12px; padding: 22px 24px; margin-bottom: 26px; box-shadow: 0 4px 20px rgba(0,0,0,0.2);">
+            <div style="display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 0.95rem; text-transform: uppercase; letter-spacing: 0.04em; color: #f1f5f9; margin-bottom: 16px;">
+              <i class="fa-solid fa-laptop-file" style="color: #3b82f6;"></i> REGISTRO DE ATENDIMENTO
+            </div>
+            <form id="form-quick-ure" onsubmit="event.preventDefault(); App.saveQuickUre(event); return false;" style="display: grid; grid-template-columns: 1.2fr 1.2fr 1.4fr 2fr auto; gap: 14px; align-items: end;">
+              <div>
+                <label style="display: block; font-size: 0.78rem; font-weight: 600; color: #94a3b8; margin-bottom: 6px;">Analista <span style="color:#ef4444;">*</span></label>
+                <select id="quick-ure-analyst" class="compact-select" style="width: 100%; height: 42px; border-radius: 8px; padding: 0 14px; font-size: 0.88rem;" required>
+                  <option value="">Selecione o analista...</option>
+                </select>
+              </div>
+              <div>
+                <label style="display: block; font-size: 0.78rem; font-weight: 600; color: #94a3b8; margin-bottom: 6px;">Setor <span style="color:#ef4444;">*</span></label>
+                <select id="quick-ure-sector" class="compact-select" style="width: 100%; height: 42px; border-radius: 8px; padding: 0 14px; font-size: 0.88rem;" required>
+                  <option value="">Selecione o setor...</option>
+                  <option value="Protocolo">Protocolo</option>
+                  <option value="CRH">CRH</option>
+                  <option value="Supervisão">Supervisão</option>
+                  <option value="Segre">Segre</option>
+                  <option value="Seom / Sefisc">Seom / Sefisc</option>
+                  <option value="Sefin / Seafin">Sefin / Seafin</option>
+                  <option value="Pec">Pec</option>
+                  <option value="Asure">Asure</option>
+                  <option value="Seintec / Setec">Seintec / Setec</option>
+                </select>
+              </div>
+              <div>
+                <label style="display: block; font-size: 0.78rem; font-weight: 600; color: #94a3b8; margin-bottom: 6px;">Tipo de Atendimento <span style="color:#ef4444;">*</span></label>
+                <select id="quick-ure-type" class="compact-select" style="width: 100%; height: 42px; border-radius: 8px; padding: 0 14px; font-size: 0.88rem;" onchange="App.handleUreTypeChange(this.value, 'quick-ure-type-custom')" required>
+                  <option value="">Selecione o tipo...</option>
+                  <option value="Formatação de Maquina">Formatação de Maquina</option>
+                  <option value="Instalado Impressora">Instalado Impressora</option>
+                  <option value="Verificado Impressora">Verificado Impressora</option>
+                  <option value="Trocado Teclado">Trocado Teclado</option>
+                  <option value="Verificado Monitor">Verificado Monitor</option>
+                  <option value="Trocado Desktop">Trocado Desktop</option>
+                  <option value="Remanejado Desktop de sala">Remanejado Desktop de sala</option>
+                  <option value="Configurado Quick">Configurado Quick</option>
+                  <option value="Auxiliado servidor">Auxiliado servidor</option>
+                  <option value="Outro">Outro</option>
+                </select>
+                <input type="text" id="quick-ure-type-custom" class="compact-input" style="display: none; width: 100%; height: 38px; border-radius: 8px; padding: 0 14px; font-size: 0.85rem; margin-top: 6px; border-color: #3b82f6;" placeholder="Digite o tipo de atendimento...">
+              </div>
+              <div>
+                <label style="display: block; font-size: 0.78rem; font-weight: 600; color: #94a3b8; margin-bottom: 6px;">Descrição <span style="color:#64748b; font-size:0.75rem;">(Opcional)</span></label>
+                <input type="text" id="quick-ure-desc" class="compact-input" style="width: 100%; height: 42px; border-radius: 8px; padding: 0 14px; font-size: 0.88rem;" placeholder="Observações ou detalhes (opcional)...">
+              </div>
+              <div>
+                <button type="submit" class="btn-primary" style="height: 42px; padding: 0 20px; font-size: 0.88rem; font-weight: 600; border-radius: 8px; display: flex; align-items: center; gap: 8px; white-space: nowrap;">
+                  <i class="fa-solid fa-plus"></i> Registrar Atendimento
+                </button>
+              </div>
+            </form>
+          </div>
+
+          <!-- Histórico Recente de Atendimentos -->
+          <div style="background: var(--bg-card); border: 1px solid rgba(255,255,255,0.07); border-radius: 12px; padding: 22px 24px; box-shadow: 0 4px 20px rgba(0,0,0,0.2);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+              <div style="display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 0.95rem; text-transform: uppercase; letter-spacing: 0.04em; color: #f1f5f9;">
+                <i class="fa-solid fa-clock-rotate-left" style="color: #3b82f6;"></i> HISTÓRICO DE ATENDIMENTOS
+              </div>
+              <div id="ure-total-filtered-badge" style="font-size: 0.8rem; color: #94a3b8; font-weight: 500;">0 registros</div>
+            </div>
+
+            <div class="mobile-scroll-hint" data-html2canvas-ignore="true"><i class="fa-solid fa-arrows-left-right"></i> Arraste para o lado para ver mais colunas</div>
+            <div class="table-responsive">
+              <table class="custom-table">
+                <thead>
+                  <tr>
+                    <th style="width: 150px;">DATA / HORA</th>
+                    <th style="width: 180px;">ANALISTA</th>
+                    <th style="width: 150px;">SETOR</th>
+                    <th style="width: 250px; white-space: nowrap;">TIPO</th>
+                    <th>DESCRIÇÃO</th>
+                    <th style="text-align: center; width: 100px;">AÇÃO</th>
+                  </tr>
+                </thead>
+                <tbody id="tbody-ure-attendances"></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+
 <!-- VIEW: RANKING ESCOLAS -->
         <section id="view-ranking-escolas" class="view-section">
           <div class="page-header-actions">
             <div>
-              <h2 class="page-title"><i class="fa-solid fa-trophy" style="color:#fbbf24; margin-right:8px;"></i> Ranking de Escolas</h2>
+              <h2 class="page-title"><i class="fa-solid fa-trophy" style="color:#fbbf24; margin-right:8px;"></i> RANKING DE ESCOLAS MAIS VISITADAS</h2>
               <p class="page-subtitle">Classificação das unidades escolares por volume total de agendamentos realizados</p>
             </div>
 
@@ -1419,6 +1593,76 @@
       }
     };
   </script>
+
+
+  <!-- MODAL: EDITAR ATENDIMENTO URE -->
+  <div class="modal-overlay" id="modal-ure-edit">
+    <div class="modal-box" style="max-width: 560px;">
+      <div class="modal-header">
+        <div class="modal-title" id="modal-ure-title">Editar Atendimento URE</div>
+        <button class="btn-modal-close" onclick="App.closeModal('modal-ure-edit')">&times;</button>
+      </div>
+      <form id="form-ure-edit" onsubmit="event.preventDefault(); App.saveEditUreForm(event); return false;">
+        <div class="modal-body">
+          <input type="hidden" id="edit-ure-id">
+          <input type="hidden" id="edit-ure-created-at">
+          <div class="form-grid">
+            <div class="form-group">
+              <label class="form-label">Data e Hora <span class="required">*</span></label>
+              <input type="datetime-local" id="edit-ure-datetime" class="form-input" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Analista <span class="required">*</span></label>
+              <select id="edit-ure-analyst" class="form-select" required>
+                <option value="">Selecione o analista...</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-grid">
+            <div class="form-group">
+              <label class="form-label">Setor <span class="required">*</span></label>
+              <select id="edit-ure-sector" class="form-select" required>
+                <option value="">Selecione o setor...</option>
+                <option value="Protocolo">Protocolo</option>
+                <option value="CRH">CRH</option>
+                <option value="Supervisão">Supervisão</option>
+                <option value="Segre">Segre</option>
+                <option value="Seom / Sefisc">Seom / Sefisc</option>
+                <option value="Sefin / Seafin">Sefin / Seafin</option>
+                <option value="Pec">Pec</option>
+                <option value="Asure">Asure</option>
+                <option value="Seintec / Setec">Seintec / Setec</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Tipo de Atendimento <span class="required">*</span></label>
+              <select id="edit-ure-type" class="form-select" onchange="App.handleUreTypeChange(this.value, 'edit-ure-type-custom')" required>
+                <option value="Formatação de Maquina">Formatação de Maquina</option>
+                <option value="Instalado Impressora">Instalado Impressora</option>
+                <option value="Verificado Impressora">Verificado Impressora</option>
+                <option value="Trocado Teclado">Trocado Teclado</option>
+                <option value="Verificado Monitor">Verificado Monitor</option>
+                <option value="Trocado Desktop">Trocado Desktop</option>
+                <option value="Remanejado Desktop de sala">Remanejado Desktop de sala</option>
+                <option value="Configurado Quick">Configurado Quick</option>
+                <option value="Auxiliado servidor">Auxiliado servidor</option>
+                <option value="Outro">Outro</option>
+              </select>
+              <input type="text" id="edit-ure-type-custom" class="form-input" style="display: none; margin-top: 6px; border-color: #3b82f6;" placeholder="Digite o tipo de atendimento...">
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Descrição do Atendimento <span style="color:#64748b; font-weight:normal; font-size:0.8rem;">(Opcional)</span></label>
+            <textarea id="edit-ure-desc" class="form-textarea" rows="3" placeholder="Observações ou detalhes do atendimento (opcional)..."></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn-secondary" onclick="App.closeModal('modal-ure-edit')">Cancelar</button>
+          <button type="submit" class="btn-primary">Salvar Alterações</button>
+        </div>
+      </form>
+    </div>
+  </div>
 
 </body>
 </html>
