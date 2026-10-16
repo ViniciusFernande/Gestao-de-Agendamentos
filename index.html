@@ -1664,5 +1664,51 @@
     </div>
   </div>
 
+  <!-- MODAL: REGISTRAR AUSÊNCIA DO ANALISTA (DAY OFF, ATESTADO, AUSENTE) -->
+  <div class="modal-overlay" id="modal-analyst-absence">
+    <div class="modal-box" style="max-width: 460px;">
+      <div class="modal-header">
+        <div class="modal-title" id="modal-absence-title">Disponibilidade do Analista</div>
+        <button class="btn-modal-close" onclick="App.closeModal('modal-analyst-absence')">&times;</button>
+      </div>
+      <form id="form-analyst-absence" onsubmit="event.preventDefault(); App.saveAnalystAbsence(event); return false;">
+        <div class="modal-body">
+          <input type="hidden" id="absence-analyst-id">
+          <input type="hidden" id="absence-date">
+
+          <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(255,255,255,0.06); border-radius: 10px; padding: 14px 16px; margin-bottom: 16px;">
+            <div style="font-size: 0.8rem; color: #94a3b8; margin-bottom: 2px;">Analista:</div>
+            <div id="absence-analyst-name" style="font-size: 1.05rem; font-weight: 700; color: #f8fafc; margin-bottom: 6px;">-</div>
+            <div style="font-size: 0.8rem; color: #94a3b8;">Data: <span id="absence-date-display" style="color: #60a5fa; font-weight: 600;">-</span></div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Status do Analista no Dia <span class="required">*</span></label>
+            <select id="absence-reason" class="form-select" onchange="App.handleAbsenceReasonChange(this.value)" required>
+              <option value="presente">✅ Presente (Trabalhando Normalmente)</option>
+              <option value="day_off">🏖️ Day Off (Folga)</option>
+              <option value="atestado">🩺 Atestado Médico</option>
+              <option value="ausente">🚫 Ausente / Falta Justificada</option>
+            </select>
+          </div>
+
+          <div class="form-group" id="group-absence-note" style="display: none;">
+            <label class="form-label">Observações / Detalhes <span style="color:#64748b; font-size:0.75rem;">(Opcional)</span></label>
+            <input type="text" id="absence-note" class="form-input" placeholder="Ex: Atestado de 1 dia, compensação de horas...">
+          </div>
+
+          <div id="absence-warning-box" style="display: none; background: rgba(239, 68, 68, 0.12); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 8px; padding: 10px 14px; font-size: 0.8rem; color: #fca5a5; line-height: 1.4; margin-top: 10px;">
+            <i class="fa-solid fa-triangle-exclamation" style="margin-right: 6px;"></i>
+            Ao marcar como ausente, o card deste analista no dia será bloqueado para novos agendamentos e transferências.
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn-secondary" onclick="App.closeModal('modal-analyst-absence')">Cancelar</button>
+          <button type="submit" class="btn-primary">Confirmar Disponibilidade</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
 </body>
 </html>

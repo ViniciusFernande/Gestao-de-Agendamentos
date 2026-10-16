@@ -133,6 +133,15 @@ const FirestoreSync = {
     }, err => console.warn("Erro ao sincronizar URE:", err));
     this.unsubscribers.push(unsubUre);
 
+    // 4.2 Ausências dos Analistas (Day Off, Atestado, Ausente)
+    const unsubAbsences = db.collection("ausencias_analistas").onSnapshot(snapshot => {
+      const absencesList = [];
+      snapshot.forEach(doc => absencesList.push(doc.data()));
+      localStorage.setItem(STORAGE_KEYS.ABSENCES, JSON.stringify(absencesList));
+      if (onDataUpdated) onDataUpdated("absences");
+    }, err => console.warn("Erro ao sincronizar ausências:", err));
+    this.unsubscribers.push(unsubAbsences);
+
     // 5. Configurações gerais (WhatsApp template, etc.)
     const unsubConfig = db.collection("config").doc("geral").onSnapshot(doc => {
       if (doc.exists) {
@@ -215,6 +224,22 @@ const FirestoreSync = {
       await db.collection("fila").doc(String(id)).delete();
     } catch (e) {
       console.warn("Falha ao excluir item da fila no Firestore:", e);
+    }
+  },
+
+  async saveAbsence(absence) {
+    try {
+      await db.collection("ausencias_analistas").doc(String(absence.id)).set(absence);
+    } catch (e) {
+      console.warn("Falha ao salvar ausência no Firestore:", e);
+    }
+  },
+
+  async deleteAbsence(id) {
+    try {
+      await db.collection("ausencias_analistas").doc(String(id)).delete();
+    } catch (e) {
+      console.warn("Falha ao excluir ausência no Firestore:", e);
     }
   },
 

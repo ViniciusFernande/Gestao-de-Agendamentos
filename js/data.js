@@ -9,7 +9,8 @@ const STORAGE_KEYS = {
   QUEUE: 'sg_filas_visita',
   WHATSAPP_TEMPLATE: 'sg_whatsapp_template',
   THEME: 'sg_selected_theme',
-  URE_ATTENDANCES: 'sg_ure_atendimentos'
+  URE_ATTENDANCES: 'sg_ure_atendimentos',
+  ABSENCES: 'sg_analistas_ausencias'
 };
 
 // Categorias padrão de assuntos
@@ -781,7 +782,8 @@ class DataStore {
   // --- ANALISTAS ---
   getAnalysts() {
     try {
-      return JSON.parse(localStorage.getItem(STORAGE_KEYS.ANALYSTS)) || [];
+      const list = JSON.parse(localStorage.getItem(STORAGE_KEYS.ANALYSTS)) || [];
+      return list.sort((a, b) => (a.name || '').localeCompare(b.name || '', 'pt-BR', { sensitivity: 'base' }));
     } catch {
       return [];
     }
@@ -911,7 +913,55 @@ class DataStore {
     localStorage.setItem(STORAGE_KEYS.QUEUE, JSON.stringify(queue));
   }
 
+// ==========================================
+  // AUSÊNCIAS DOS ANALISTAS (DAY OFF, ATESTADO, ETC)
   // ==========================================
+  getAbsences() {
+    try {
+      return JSON.parse(localStorage.getItem(STORAGE_KEYS.ABSENCES)) || [];
+    } catch {
+      return [];
+    }
+  }
+
+  saveAbsences(list) {
+    try {
+      localStorage.setItem(STORAGE_KEYS.ABSENCES, JSON.stringify(list));
+    } catch (e) {
+      console.error('Erro ao salvar ausências:', e);
+    }
+  }
+
+  getAbsence(analystId, dateStr) {
+    const list = this.getAbsences();
+    return list.find(a => String(a.analystId).trim() === String(analystId).trim() && a.date === dateStr);
+  }
+
+  setAbsence(analystId, dateStr, reason, note = '') {
+    if (typeof FirestoreSync !== 'undefined' && FirestoreSync.saveAbsence) {
+      FirestoreSync.saveAbsence({ id: `${analystId}_${dateStr}`, analystId, date: dateStr, reason, note, updatedAt: Date.now() });
+    }
+    const list = this.getAbsences();
+    const idx = list.findIndex(a => String(a.analystId).trim() === String(analystId).trim() && a.date === dateStr);
+    const item = { id: `${analystId}_${dateStr}`, analystId, date: dateStr, reason, note, updatedAt: Date.now() };
+    if (idx >= 0) {
+      list[idx] = item;
+    } else {
+      list.push(item);
+    }
+    this.saveAbsences(list);
+    return item;
+  }
+
+  removeAbsence(analystId, dateStr) {
+    if (typeof FirestoreSync !== 'undefined' && FirestoreSync.deleteAbsence) {
+      FirestoreSync.deleteAbsence(`${analystId}_${dateStr}`);
+    }
+    const list = this.getAbsences().filter(a => !(String(a.analystId).trim() === String(analystId).trim() && a.date === dateStr));
+    this.saveAbsences(list);
+  }
+
+    // ==========================================
   // ATENDIMENTOS URE (INTERNO)
   // ==========================================
   getUreAttendances() {
