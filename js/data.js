@@ -1,4 +1,4 @@
-// Gerenciamento de Dados e Persistência Local (LocalStorage)
+﻿// Gerenciamento de Dados e Persistência Local (LocalStorage)
 // Sistema de Gestão de Agendas - Analistas
 
 const STORAGE_KEYS = {
@@ -873,44 +873,9 @@ class DataStore {
   // --- AGENDAMENTOS ---
   deduplicateSchedules(schedules) {
     if (!Array.isArray(schedules) || schedules.length === 0) return [];
-    const byOs = {};
-    const orderOfKeys = [];
-
-    for (let i = 0; i < schedules.length; i++) {
-      const s = schedules[i];
-      const osRaw = (s.osNumber || '').trim().toUpperCase();
-      const key = (osRaw && osRaw !== '-' && osRaw !== 'N/A') ? osRaw : ('NO_OS_' + (s.id || i));
-      if (!byOs[key]) {
-        byOs[key] = [];
-        orderOfKeys.push(key);
-      }
-      byOs[key].push(s);
-    }
-
-    const result = [];
-    for (let k = 0; k < orderOfKeys.length; k++) {
-      const key = orderOfKeys[k];
-      const group = byOs[key];
-      if (group.length === 1) {
-        result.push(group[0]);
-        continue;
-      }
-      // Regra de deduplicação solicitada:
-      // Se houver ordem com status concluída, mantém somente ela.
-      const completedList = group.filter(item => item.completed);
-      if (completedList.length > 0) {
-        // Se houver mais de uma concluída, mantém a da data mais recente
-        completedList.sort((a, b) => (b.date || '').localeCompare(a.date || '') || (b.sequence || 0) - (a.sequence || 0));
-        result.push(completedList[0]);
-      } else {
-        // Se nenhuma estiver concluída, mantém somente 1, a primeira que apareceu (data mais antiga)
-        group.sort((a, b) => (a.date || '').localeCompare(b.date || '') || (a.sequence || 0) - (b.sequence || 0));
-        result.push(group[0]);
-      }
-    }
-    return result;
+    // Retorna todos os agendamentos cadastrados preservando retornos e ordens com mesma O.S.
+    return schedules;
   }
-
   getSchedules() {
     try {
       const raw = JSON.parse(localStorage.getItem(STORAGE_KEYS.SCHEDULES)) || [];
@@ -941,6 +906,10 @@ class DataStore {
     if (typeof FirestoreSync !== 'undefined') FirestoreSync.deleteSchedule(id);
     const list = this.getSchedules().filter(s => String(s.id).trim() !== String(id).trim());
     this.setSchedules(list);
+  }
+
+  clearAllSchedules() {
+    this.setSchedules([]);
   }
 
   toggleScheduleCompleted(id) {

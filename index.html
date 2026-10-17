@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
@@ -268,7 +268,7 @@
                   
                   <div class="date-nav-display" onclick="const p = document.getElementById('agenda-hidden-date-picker'); if(p.showPicker){ p.showPicker(); } else { p.focus(); }" title="Clique para escolher uma data específica no calendário">
                     <i class="fa-regular fa-calendar"></i>
-                    <span id="agenda-card-date-badge">Hoje (06/10/2026)</span>
+                    <span id="agenda-card-date-badge">--/--/----</span>
                     <input type="date" id="agenda-hidden-date-picker" style="position:absolute; opacity:0; width:1px; height:1px; pointer-events:auto;" onchange="App.setAgendaDate(this.value)">
                   </div>
                   
@@ -976,11 +976,20 @@
             </div>
           </div>
 
-          <!-- 3. BACKUP & RESTAURAÇÃO -->
-              <button class="btn-secondary admin-only" onclick="window.wipeFirestoreDemoData()" style="color: #ef4444; border-color: rgba(239, 68, 68, 0.4); margin-top: 10px;" onmouseover="this.style.background='rgba(239, 68, 68, 0.15)'" onmouseout="this.style.background='transparent'">
-                <i class="fa-solid fa-trash-can"></i> Limpar Dados Antigos do Firebase
-              </button>
+          <!-- 3. GERENCIAMENTO DE DADOS & BACKUP -->
           <div class="admin-only" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px;">
+            <div class="dash-panel" style="border: 1px solid rgba(239, 68, 68, 0.4); background: rgba(239, 68, 68, 0.04);">
+              <div class="panel-title" style="margin-bottom: 14px; color: #ef4444;">
+                <i class="fa-solid fa-calendar-xmark" style="color:#ef4444;"></i> Zerar Histórico de Agendamentos
+              </div>
+              <p style="color:var(--text-muted); font-size:0.86rem; margin-bottom: 16px;">
+                Exclui todas as Ordens de Serviço (passadas e futuras) cadastradas no sistema e no Firebase para que você possa preencher tudo manualmente do zero.
+                <br><strong style="color:var(--text-primary); font-size:0.8rem;">Escolas, Analistas, Filas e Atendimentos URE continuam intactos.</strong>
+              </p>
+              <button class="btn-secondary" onclick="App.clearAllSchedules()" style="color: #ef4444; border-color: rgba(239, 68, 68, 0.5);" onmouseover="this.style.background='rgba(239, 68, 68, 0.15)'" onmouseout="this.style.background='transparent'">
+                <i class="fa-solid fa-trash-can"></i> Zerar Histórico de Agendamentos
+              </button>
+            </div>
             <div class="dash-panel">
               <div class="panel-title" style="margin-bottom: 14px;">
                 <i class="fa-solid fa-database" style="color:#60a5fa;"></i> Backup & Exportação
@@ -1559,28 +1568,40 @@
 
 
   <script>
+    window.clearAllSchedules = function() {
+      if (typeof App !== 'undefined' && App.clearAllSchedules) {
+        return App.clearAllSchedules();
+      }
+    };
+
     // Rotina de limpeza profunda do Firestore (acionada via console ou botão)
     window.wipeFirestoreDemoData = async function() {
       if (typeof AuthService !== 'undefined' && !AuthService.isAdmin()) {
         alert('Apenas o Administrador pode limpar o banco de dados.');
         return;
       }
-      if (!confirm("Deseja apagar TODOS os agendamentos e analistas do banco Firebase?")) return;
+      if (!confirm("Deseja apagar TODOS os agendamentos, analistas e filas do banco Firebase?")) return;
       try {
         const agSnap = await db.collection("agendamentos").get();
-        const batch1 = db.batch();
-        agSnap.forEach(d => batch1.delete(d.ref));
-        await batch1.commit();
+        for (let i = 0; i < agSnap.docs.length; i += 400) {
+          const batch = db.batch();
+          agSnap.docs.slice(i, i + 400).forEach(d => batch.delete(d.ref));
+          await batch.commit();
+        }
 
         const anSnap = await db.collection("analistas").get();
-        const batch2 = db.batch();
-        anSnap.forEach(d => batch2.delete(d.ref));
-        await batch2.commit();
+        for (let i = 0; i < anSnap.docs.length; i += 400) {
+          const batch = db.batch();
+          anSnap.docs.slice(i, i + 400).forEach(d => batch.delete(d.ref));
+          await batch.commit();
+        }
 
         const fSnap = await db.collection("fila").get();
-        const batch3 = db.batch();
-        fSnap.forEach(d => batch3.delete(d.ref));
-        await batch3.commit();
+        for (let i = 0; i < fSnap.docs.length; i += 400) {
+          const batch = db.batch();
+          fSnap.docs.slice(i, i + 400).forEach(d => batch.delete(d.ref));
+          await batch.commit();
+        }
 
         localStorage.removeItem(STORAGE_KEYS.SCHEDULES);
         localStorage.removeItem(STORAGE_KEYS.ANALYSTS);

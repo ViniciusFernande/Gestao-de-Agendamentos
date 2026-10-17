@@ -1,4 +1,4 @@
-/* ==========================================================================
+﻿/* ==========================================================================
    SISTEMA DE GESTÃO DE AGENDAS - ANALISTAS
    Dark Modern Dashboard Style - 100% Responsivo (Desktop, Notebook, Tablet, Mobile)
    ========================================================================== */
@@ -2019,16 +2019,16 @@ html, body {
 .card-os-inline-group {
   display: inline-flex;
   align-items: center;
-  gap: 3px;
+  gap: 4px;
   background: #0f172a;
   border: 1px solid var(--border-color);
   border-radius: 5px;
-  padding: 1px 5px;
+  padding: 3px 6px;
+  height: 24px;
+  box-sizing: border-box;
   transition: var(--transition);
-  max-width: 135px;
-  flex-shrink: 0;
+  max-width: 145px;
 }
-
 .card-os-inline-group:focus-within {
   border-color: #38bdf8;
   box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.2);
@@ -2322,13 +2322,14 @@ html, body {
   color: #38bdf8;
   background: rgba(56, 189, 248, 0.12);
   border: 1px solid rgba(56, 189, 248, 0.28);
-  padding: 1px 5px;
+  padding: 3px 6px;
+  height: 24px;
+  box-sizing: border-box;
   border-radius: 5px;
   letter-spacing: 0.1px;
   white-space: nowrap;
   flex-shrink: 0;
 }
-
 .seq-btns {
   display: flex;
   align-items: center;

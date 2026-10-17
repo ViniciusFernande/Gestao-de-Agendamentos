@@ -1,4 +1,4 @@
-/**
+﻿/**
  * SISTEMA DE GESTÃO DE AGENDAS - ANALISTAS
  * Lógica principal da aplicação (SPA)
  */
@@ -532,23 +532,44 @@ const App = {
   },
 
   renderPerformanceChart(completedSchedules, analysts) {
-    // Considera apenas analistas ativos (remove analistas inativos do gráfico)
-    const activeAnalysts = analysts.filter(a => a.status !== 'inativo');
+    // Considera apenas analistas ativos e não plenos (exclui Analista Pleno do gráfico)
+    const activeAnalysts = analysts.filter(a => {
+      if (a.status === 'inativo') return false;
+      const roleStr = (a.role || '').toLowerCase();
+      if (roleStr.includes('pleno')) return false;
+      return true;
+    });
 
     // Agrupa concluídas por analista ativo
     const countsMap = {};
-    activeAnalysts.forEach(a => countsMap[a.id] = { name: a.name, count: 0 });
+    activeAnalysts.forEach(a => countsMap[a.id] = { id: a.id, fullName: a.name, count: 0 });
     completedSchedules.forEach(s => {
       if (countsMap[s.analystId]) {
         countsMap[s.analystId].count++;
       }
     });
 
-    // Ordena do maior para o menor e pega os principais (igual ao layout da foto)
+    // Ordena do maior para o menor
     const sorted = Object.values(countsMap).sort((a, b) => b.count - a.count);
-    const labels = sorted.map(i => i.name);
-    const dataValues = sorted.map(i => i.count);
 
+    // Mapeamento dos primeiros nomes para identificar duplicados
+    const firstNameCounts = {};
+    sorted.forEach(item => {
+      const parts = (item.fullName || '').trim().split(/\s+/);
+      const first = parts[0] || '';
+      firstNameCounts[first] = (firstNameCounts[first] || 0) + 1;
+    });
+
+    // Formata o label: apenas 1º nome; se houver primeiro nome repetido, adiciona primeira letra do 2º nome
+    const labels = sorted.map(item => {
+      const parts = (item.fullName || '').trim().split(/\s+/);
+      const first = parts[0] || '';
+      if (firstNameCounts[first] > 1 && parts.length > 1) {
+        return first + " " + parts[1].charAt(0).toUpperCase() + ".";
+      }
+      return first;
+    });
+    const dataValues = sorted.map(i => i.count);
     const ctx = document.getElementById('chart-analysts-performance');
     if (!ctx) return;
 
@@ -615,9 +636,9 @@ const App = {
             ticks: {
               autoSkip: false,
               color: '#94a3b8',
-              font: { size: window.innerWidth <= 768 ? 9 : (labels.length > 7 ? 10 : 11), family: 'Inter' },
-              maxRotation: 45,
-              minRotation: window.innerWidth <= 768 ? 35 : (labels.length > 6 ? 25 : 0)
+              font: { size: window.innerWidth <= 768 ? 9 : 11, family: 'Inter', weight: 500 },
+              maxRotation: 0,
+              minRotation: 0
             }
           },
           y: {
@@ -1453,10 +1474,10 @@ const App = {
     const diffDays = Math.round((targetTime - todayTime) / 86400000);
 
     let dateLabel = currentFmt;
-    if (diffDays === 0) dateLabel = `Hoje (${currentFmt})`;
-    else if (diffDays === -1) dateLabel = `Ontem (${currentFmt})`;
-    else if (diffDays === 1) dateLabel = `Amanhã (${currentFmt})`;
-    else dateLabel = `${currentFmt}`;
+    // Exibe apenas a data (sem Ontem, Hoje, Amanhã)
+
+
+
 
     const badgeDate = document.getElementById('agenda-card-date-badge');
     if (badgeDate) badgeDate.textContent = dateLabel;
@@ -1586,16 +1607,16 @@ const App = {
             : '';
 
           const osInputHtml = `
-            <div class="card-os-inline-group">
-              <span class="card-os-label">Nº O.S:</span>
-              <input type="text" class="card-os-inline-input" placeholder="" value="${(order.osNumber || '').replace(/(-RET)+$/gi, '')}" onchange="App.updateScheduleOs('${order.id}', this.value)" title="Digite o número da O.S. (Pressione Enter ou clique fora para salvar)">
+            <div class="card-os-inline-group" draggable="false" onmouseenter="App.disableCardDrag(this)" onmouseleave="App.enableCardDrag(this)" ondragstart="event.stopPropagation(); event.preventDefault(); return false;">
+              <span class="card-os-label" draggable="false">Nº O.S:</span>
+              <input type="text" class="card-os-inline-input" draggable="false" onfocus="App.disableCardDrag(this)" onblur="App.enableCardDrag(this)" ondragstart="event.stopPropagation(); event.preventDefault(); return false;" placeholder="" value="${(order.osNumber || '').replace(/(-RET)+$/gi, '')}" onchange="App.updateScheduleOs('${order.id}', this.value)" title="Digite o número da O.S. (Pressione Enter ou clique fora para salvar)">
             </div>
           `;
 
           const seqBarHtml = analystOrders.length > 1
             ? `<div class="card-seq-bar">
                  <div class="card-seq-left">
-                   <span class="seq-pill"><i class="fa-solid fa-route"></i> ${index + 1}— Atendimento</span>
+                   <span class="seq-pill"><i class="fa-solid fa-route"></i> ${index + 1}º Atendimento</span>
                    ${osInputHtml}
                  </div>
                  <div class="seq-btns">
@@ -1609,7 +1630,7 @@ const App = {
                </div>`
             : `<div class="card-seq-bar">
                  <div class="card-seq-left">
-                   <span class="seq-pill" style="opacity:0.85; font-size:0.72rem;"><i class="fa-solid fa-location-dot"></i> Atendimento único</span>
+                   <span class="seq-pill" style="opacity:0.85; font-size:0.72rem;"><i class="fa-solid fa-route"></i> 1º Atendimento</span>
                    ${osInputHtml}
                  </div>
                </div>`;
@@ -1772,21 +1793,6 @@ const App = {
       item.completed = true;
       item.needsReturn = false; // Ao concluir, encerra a necessidade de retorno
       
-      // Se este card concluído for um retorno vinculado a uma ordem original,
-      // atualiza também a ordem original para Concluída!
-      if (item.parentScheduleId) {
-        let root = list.find(s => String(s.id).trim() === String(item.parentScheduleId).trim());
-        while (root && root.parentScheduleId) {
-          const parent = list.find(s => String(s.id).trim() === String(root.parentScheduleId).trim());
-          if (!parent) break;
-          root = parent;
-        }
-        if (root) {
-          root.completed = true;
-          root.needsReturn = false;
-          if (typeof FirestoreSync !== 'undefined') FirestoreSync.saveSchedule(root);
-        }
-      }
 
       store.setSchedules(list);
       if (typeof FirestoreSync !== 'undefined') FirestoreSync.saveSchedule(item);
@@ -1896,7 +1902,26 @@ const App = {
   draggedScheduleId: null,
   toastTimeout: null,
 
+  disableCardDrag(el) {
+    if (!el) return;
+    const box = el.closest('.card-order-box');
+    if (box) {
+      box.setAttribute('draggable', 'false');
+    }
+  },
+
+  enableCardDrag(el) {
+    if (!el) return;
+    const box = el.closest('.card-order-box');
+    if (box && !box.classList.contains('is-locked')) {
+      box.setAttribute('draggable', 'true');
+    }
+  },
   handleOrderDragStart(event, scheduleId) {
+    if (event.target && (event.target.closest(".card-os-inline-group") || event.target.tagName === "INPUT" || event.target.tagName === "BUTTON")) {
+      if (event.preventDefault) event.preventDefault();
+      return false;
+    }
     const sched = store.getSchedules().find(s => String(s.id).trim() === String(scheduleId).trim());
     if (sched && (sched.completed || sched.needsReturn)) {
       if (event.preventDefault) event.preventDefault();
@@ -2044,7 +2069,7 @@ const App = {
     });
 
     this.renderAnalystDailyCards();
-    this.showToast(`Sequência alterada: ${target.schoolName} agora é o ${newIndex + 1}— atendimento.`);
+    this.showToast(`Sequência alterada: ${target.schoolName} agora é o ${newIndex + 1}º atendimento.`);
   },
 
   openDailyAgendaModal(analystId, customDate) {
@@ -2102,10 +2127,10 @@ const App = {
         <div class="daily-agenda-item">
           <div class="daily-agenda-item-header">
             <div style="display:flex; align-items:center; gap:8px;">
-              <span class="item-seq-badge">${i + 1}— ATENDIMENTO</span>
+              <span class="item-seq-badge">${i + 1}º ATENDIMENTO</span>
               ${statusBadge}
             </div>
-            <span class="item-os-badge">O.S.: ${ord.osNumber || 'Não informada'}</span>
+            <span class="item-os-badge">O.S: ${ord.osNumber || 'Não informada'}</span>
           </div>
 
           <div class="daily-agenda-item-school">${ord.schoolName}</div>
@@ -2221,7 +2246,7 @@ const App = {
       `━━━━━━━━━━━━━━━━━━━━━━\n\n`;
 
     orders.forEach((ord, i) => {
-      message += `📍 *${i + 1}— ATENDIMENTO*\n`;
+      message += `📍 *${i + 1}º ATENDIMENTO*\n`;
       message += `🏫 *Escola:* ${ord.schoolName}\n`;
       message += `🔢 *CIE:* ${ord.schoolCie} | *Diretor(a):* ${ord.directorName || 'Coordenação'}\n`;
       message += `🔧 *Serviço:* ${(ord.subject || '').replace(/^Retorno:\s*/gi, '').trim()}\n`;
@@ -2507,8 +2532,15 @@ const App = {
     const schools = store.getSchools();
     const schoolStats = {};
 
-    // 1. Inicializa com escolas cadastradas
+    const isUre = (name, cie) => {
+      const n = (name || '').toLowerCase().trim();
+      const c = (cie || '').toLowerCase().trim();
+      return n.includes('ure sorocaba') || (/\bure\b/i).test(n) || c === 'ure-sor' || c === 'ure';
+    };
+
+    // 1. Inicializa com escolas cadastradas (exceto URE)
     schools.forEach(sc => {
+      if (isUre(sc.name, sc.cie)) return;
       schoolStats[sc.cie] = {
         cie: sc.cie,
         name: sc.name,
@@ -2519,9 +2551,11 @@ const App = {
       };
     });
 
-    // 2. Contabiliza apenas agendamentos reais (ignora retornos/isReturnVisit)
+    // 2. Contabiliza apenas agendamentos reais (ignora retornos/isReturnVisit e ignora URE)
     schedules.forEach(s => {
       if (s.isReturnVisit) return; // Retornos não contam como novo agendamento da escola
+      if (isUre(s.schoolName, s.schoolCie)) return; // Ignora atendimentos da URE no Ranking
+
       const cie = s.schoolCie || 'SEM_CIE';
       if (!schoolStats[cie]) {
         schoolStats[cie] = {
@@ -3357,6 +3391,42 @@ const App = {
       store.resetToDefault();
       alert('Dados de demonstração restaurados com sucesso!');
       location.reload();
+    }
+  },
+
+  async clearAllSchedules() {
+    if (typeof AuthService !== 'undefined' && !AuthService.isAdmin()) {
+      alert('Apenas o Administrador pode zerar o histórico de agendamentos.');
+      return;
+    }
+
+    const confirm1 = confirm("⚠️ ATENÇÃO: Deseja realmente zerar TODO o histórico de agendamentos?\n\nTodas as Ordens de Serviço (passadas, de hoje e futuras) serão excluídas do sistema e do Firebase.\n\nEscolas, Analistas, Fila de Chamados e Atendimentos URE serão MANTIDOS intactos.");
+    if (!confirm1) return;
+
+    const confirm2 = confirm("Tem certeza absoluta? Essa ação não poderá ser desfeita.");
+    if (!confirm2) return;
+
+    try {
+      if (typeof FirestoreSync !== 'undefined' && FirestoreSync.clearAllSchedules) {
+        await FirestoreSync.clearAllSchedules();
+      }
+      if (typeof store !== 'undefined' && store.clearAllSchedules) {
+        store.clearAllSchedules();
+      } else {
+        localStorage.setItem(STORAGE_KEYS.SCHEDULES, JSON.stringify([]));
+      }
+
+      this.updateDashboard();
+      if (this.currentView === 'agendamentos') this.renderAnalystDailyCards();
+      if (this.currentView === 'todos-agendamentos') this.renderAllSchedulesTable();
+      if (this.currentView === 'ranking-escolas') this.renderSchoolsRanking();
+      if (this.currentView === 'relatorios') this.generateReport();
+
+      alert("✅ Histórico de agendamentos zerado com sucesso! Agora você pode começar a preencher seus agendamentos manualmente.");
+      window.location.reload();
+    } catch (err) {
+      console.error(err);
+      alert("Erro ao zerar agendamentos: " + (err.message || err));
     }
   },
 

@@ -120,27 +120,12 @@ const FirestoreSync = {
 
     // 3. Agendamentos (com auto-seeding historico em batches se Firestore estiver vazio)
     const unsubSchedules = db.collection("agendamentos").onSnapshot(snapshot => {
+      const schedules = [];
       if (!snapshot.empty) {
-        const schedules = [];
         snapshot.forEach(doc => schedules.push(doc.data()));
-        localStorage.setItem(STORAGE_KEYS.SCHEDULES, JSON.stringify(schedules));
-        if (onDataUpdated) onDataUpdated("schedules");
-      } else {
-        const initialSchedules = (typeof window !== 'undefined' && window.HISTORICAL_SEED_DATA && window.HISTORICAL_SEED_DATA.schedules) ? window.HISTORICAL_SEED_DATA.schedules : [];
-        if (initialSchedules.length > 0) {
-          localStorage.setItem(STORAGE_KEYS.SCHEDULES, JSON.stringify(initialSchedules));
-          if (onDataUpdated) onDataUpdated("schedules");
-          for (let i = 0; i < initialSchedules.length; i += 400) {
-            const chunk = initialSchedules.slice(i, i + 400);
-            const batch = db.batch();
-            chunk.forEach(sch => {
-              const docRef = db.collection("agendamentos").doc(String(sch.id));
-              batch.set(docRef, sch, { merge: true });
-            });
-            batch.commit().catch(e => console.warn("Erro batch agendamentos:", e));
-          }
-        }
       }
+      localStorage.setItem(STORAGE_KEYS.SCHEDULES, JSON.stringify(schedules));
+      if (onDataUpdated) onDataUpdated("schedules");
     }, err => console.warn("Erro ao sincronizar agendamentos:", err));
     this.unsubscribers.push(unsubSchedules);
 
@@ -293,16 +278,37 @@ const FirestoreSync = {
     } catch (e) {
       console.warn("Falha ao salvar config no Firestore:", e);
     }
+  },  async clearAllSchedules() {
+    try {
+      const snap = await db.collection("agendamentos").get();
+      const docs = snap.docs;
+      for (let i = 0; i < docs.length; i += 400) {
+        const chunk = docs.slice(i, i + 400);
+        const batch = db.batch();
+        chunk.forEach(d => batch.delete(d.ref));
+        await batch.commit();
+      }
+      return true;
+    } catch (e) {
+      console.warn("Falha ao zerar agendamentos no Firestore:", e);
+      throw e;
+    }
   },
+
+
 
   async wipeAll() {
     try {
       const collections = ["escolas", "analistas", "agendamentos", "fila"];
       for (const col of collections) {
         const snap = await db.collection(col).get();
-        const batch = db.batch();
-        snap.forEach(doc => batch.delete(doc.ref));
-        await batch.commit();
+        const docs = snap.docs;
+        for (let i = 0; i < docs.length; i += 400) {
+          const chunk = docs.slice(i, i + 400);
+          const batch = db.batch();
+          chunk.forEach(d => batch.delete(d.ref));
+          await batch.commit();
+        }
       }
     } catch (e) {
       console.warn("Falha ao zerar Firestore:", e);
