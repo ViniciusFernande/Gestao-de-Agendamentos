@@ -157,6 +157,9 @@ const App = {
       this.renderAnalystsTable();
     } else if (this.currentView === 'escolas') {
       this.renderSchoolsTable();
+    }
+    if (collection === 'schools') {
+      this.sanitizeSchoolPhones();
     } else if (this.currentView === 'ranking') {
       this.renderRanking();
     } else if (this.currentView === 'relatorios') {
@@ -174,6 +177,7 @@ const App = {
     this.initAuth();
     this.initTheme();
     this.sanitizeReturnOsNumbers();
+    this.sanitizeSchoolPhones();
     this.setupNavigation();
     this.setupSidebar();
     this.setupDateDefaults();
@@ -2415,7 +2419,7 @@ const App = {
           <td>${roleBadge}</td>
           <td>
             <a href="https://wa.me/55${(a.phone || '').replace(/\D/g, '')}" target="_blank" style="color:#4ade80; text-decoration:none; display:inline-flex; align-items:center; gap:6px;">
-              <i class="fa-brands fa-whatsapp"></i> ${a.phone}
+              <i class="fa-brands fa-whatsapp"></i> ${this.formatPhone(a.phone)}
             </a>
           </td>
           <td>${a.neighborhood || '-'}</td>
@@ -2464,7 +2468,8 @@ const App = {
     document.getElementById('analyst-id').value = a.id;
     document.getElementById('modal-analyst-title').textContent = 'Editar Analista';
     document.getElementById('analyst-name').value = a.name;
-    document.getElementById('analyst-phone').value = a.phone;
+    const formattedAnalystPhone = this.formatPhone(a.phone);
+    document.getElementById('analyst-phone').value = formattedAnalystPhone !== '-' ? formattedAnalystPhone : '';
     document.getElementById('analyst-neighborhood').value = a.neighborhood;
     document.getElementById('analyst-start-date').value = a.startDate;
     document.getElementById('analyst-status').value = a.status;
@@ -2479,7 +2484,8 @@ const App = {
 
     const id = document.getElementById('analyst-id').value || ('analyst-' + Date.now());
     const name = document.getElementById('analyst-name').value.trim();
-    const phone = document.getElementById('analyst-phone').value.trim();
+    const rawAnalystPhone = document.getElementById('analyst-phone').value.trim();
+    const phone = this.formatPhone(rawAnalystPhone) !== '-' ? this.formatPhone(rawAnalystPhone) : '';
     const neighborhood = document.getElementById('analyst-neighborhood').value.trim();
     const startDate = document.getElementById('analyst-start-date').value;
     const status = document.getElementById('analyst-status').value;
@@ -2863,7 +2869,7 @@ const App = {
           <td><strong style="color:#60a5fa;">${s.cie}</strong></td>
           <td><span style="font-weight:600; color:#ffffff;">${s.name}</span></td>
           <td>${s.director || '-'}</td>
-          <td>${s.phone || '-'}</td>
+          <td>${this.formatPhone(s.phone)}</td>
           <td>${s.neighborhood || '-'}</td>
           <td style="text-align: center;">
             <div class="action-buttons-group" style="justify-content: center;">
@@ -2903,7 +2909,8 @@ const App = {
     document.getElementById('school-cie').value = s.cie;
     document.getElementById('school-name').value = s.name;
     document.getElementById('school-director').value = s.director;
-    document.getElementById('school-phone').value = s.phone || '';
+    const formattedSchoolPhone = this.formatPhone(s.phone);
+    document.getElementById('school-phone').value = formattedSchoolPhone !== '-' ? formattedSchoolPhone : '';
     document.getElementById('school-neighborhood').value = s.neighborhood || '';
 
     this.openModal('modal-school');
@@ -2916,7 +2923,8 @@ const App = {
     const cie = document.getElementById('school-cie').value.trim();
     const name = document.getElementById('school-name').value.trim();
     const director = document.getElementById('school-director').value.trim();
-    const phone = document.getElementById('school-phone').value.trim();
+    const rawPhone = document.getElementById('school-phone').value.trim();
+    const phone = this.formatPhone(rawPhone) !== '-' ? this.formatPhone(rawPhone) : '';
     const neighborhood = document.getElementById('school-neighborhood').value.trim();
 
     if (originalCie && originalCie !== cie) {
@@ -4067,15 +4075,66 @@ const App = {
     document.getElementById(modalId)?.classList.remove('active');
   },
 
+  formatPhone(phone) {
+    if (!phone) return '-';
+    const v = String(phone).replace(/\D/g, '');
+    if (v.length === 11) {
+      // Celular móvel: (xx) xxxxx-xxxx
+      return `(${v.slice(0, 2)}) ${v.slice(2, 7)}-${v.slice(7)}`;
+    } else if (v.length === 10) {
+      // Telefone fixo: (xx) xxxx-xxxx
+      return `(${v.slice(0, 2)}) ${v.slice(2, 6)}-${v.slice(6)}`;
+    } else if (v.length === 8) {
+      // Fixo sem DDD: xxxx-xxxx
+      return `${v.slice(0, 4)}-${v.slice(4)}`;
+    } else if (v.length === 9) {
+      // Celular sem DDD: xxxxx-xxxx
+      return `${v.slice(0, 5)}-${v.slice(5)}`;
+    }
+    return phone;
+  },
+
   maskPhone(input) {
+    if (!input) return;
     let v = input.value.replace(/\D/g, '');
     if (v.length > 11) v = v.substring(0, 11);
-    if (v.length > 6) {
+
+    if (v.length > 10) {
+      // Celular móvel: (xx) xxxxx-xxxx
       input.value = `(${v.substring(0, 2)}) ${v.substring(2, 7)}-${v.substring(7)}`;
+    } else if (v.length > 6) {
+      // Telefone fixo: (xx) xxxx-xxxx
+      input.value = `(${v.substring(0, 2)}) ${v.substring(2, 6)}-${v.substring(6)}`;
     } else if (v.length > 2) {
       input.value = `(${v.substring(0, 2)}) ${v.substring(2)}`;
     } else if (v.length > 0) {
       input.value = `(${v}`;
+    } else {
+      input.value = '';
+    }
+  },
+
+  sanitizeSchoolPhones() {
+    try {
+      const schools = store.getSchools();
+      let changed = false;
+      schools.forEach(s => {
+        if (s.phone) {
+          const formatted = this.formatPhone(s.phone);
+          if (formatted !== '-' && formatted !== s.phone) {
+            s.phone = formatted;
+            changed = true;
+            if (typeof FirestoreSync !== 'undefined' && FirestoreSync.saveSchool) {
+              FirestoreSync.saveSchool(s);
+            }
+          }
+        }
+      });
+      if (changed) {
+        store.setSchools(schools);
+      }
+    } catch(e) {
+      console.warn("Erro ao higienizar telefones das escolas:", e);
     }
   },
 
