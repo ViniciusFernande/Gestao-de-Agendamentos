@@ -61,13 +61,13 @@
           <i class="fa-solid fa-list-check"></i>
           <span class="nav-text">Histórico de Agendamentos</span>
         </a>
-        <a href="#" class="nav-item" data-view="atendimento-ure">
-          <i class="fa-solid fa-laptop"></i>
-          <span class="nav-text">Atendimento URE</span>
-        </a>
         <a href="#" class="nav-item" data-view="ranking-escolas">
           <i class="fa-solid fa-trophy"></i>
           <span class="nav-text">Ranking Escolas</span>
+        </a>
+        <a href="#" class="nav-item" data-view="atendimento-ure">
+          <i class="fa-solid fa-laptop"></i>
+          <span class="nav-text">Atendimento URE</span>
         </a>
         <a href="#" class="nav-item" data-view="analistas">
           <i class="fa-solid fa-user-group"></i>
@@ -838,8 +838,7 @@
                       <option value="all">Todos Tipos</option>
                       <option value="manutencao">Manutenção</option>
                       <option value="inventario">Inventário</option>
-                      <option value="chamado_interno">Chamado Interno</option>
-                    </select>
+                          </select>
                   </div>
 
                   <button class="btn-primary" id="btn-export-pdf" onclick="App.exportReportPDF()" style="background:#2563eb; padding:6px 12px; font-size:0.8rem; height:34px; display:inline-flex; align-items:center; gap:5px;" title="Exportar Relatório em PDF">
@@ -1061,13 +1060,13 @@
               <label class="form-label">Assunto <span class="required">*</span></label>
               <select id="sched-subject-select" class="form-select" onchange="App.handleSubjectSelectChange(this.value)" required>
                 <option value="">Selecione uma opção...</option>
-                <option value="Chamado Interno">Chamado Interno</option>
-                <option value="Manutenção de Maquinas">Manutenção de Maquinas</option>
-                <option value="Formatar Maquinas">Formatar Maquinas</option>
+                <option value="Manutenção de Máquinas">Manutenção de Máquinas</option>
                 <option value="Conectividade">Conectividade</option>
                 <option value="Espelhamento DVR">Espelhamento DVR</option>
+                <option value="Formatar Maquinas">Formatar Maquinas</option>
                 <option value="Verificar AP">Verificar AP</option>
                 <option value="Inventário Escolar">Inventário Escolar</option>
+                <option value="Chamado Interno">Chamado Interno</option>
                 <option value="custom">Outro</option>
               </select>
               <input type="text" id="sched-subject-custom" class="form-input" placeholder="Digite o assunto desejado..." style="display:none; margin-top:8px;">
@@ -1078,7 +1077,6 @@
                 <option value="">Selecione uma opção...</option>
                 <option value="manutencao">Manutenção / Conectividade</option>
                 <option value="inventario">Inventário de Equipamentos</option>
-                <option value="chamado_interno">Chamado Interno</option>
               </select>
             </div>
             <div class="col-span-2" id="group-schedule-status-flags" style="display:none; flex-direction: row; align-items: center; gap: 32px; background: var(--bg-item); padding: 12px 18px; border-radius: 8px; border: 1px solid var(--border-color);">
@@ -1417,13 +1415,13 @@
               <label class="form-label">Assunto / Motivo <span class="required">*</span></label>
               <select id="queue-subject-select" class="form-select" onchange="App.handleQueueSubjectSelectChange(this.value)" required>
                 <option value="">Selecione uma opção...</option>
-                <option value="Chamado Interno">Chamado Interno</option>
-                <option value="Manutenção de Maquinas">Manutenção de Maquinas</option>
-                <option value="Formatar Maquinas">Formatar Maquinas</option>
+                <option value="Manutenção de Máquinas">Manutenção de Máquinas</option>
                 <option value="Conectividade">Conectividade</option>
                 <option value="Espelhamento DVR">Espelhamento DVR</option>
+                <option value="Formatar Maquinas">Formatar Maquinas</option>
                 <option value="Verificar AP">Verificar AP</option>
                 <option value="Inventário Escolar">Inventário Escolar</option>
+                <option value="Chamado Interno">Chamado Interno</option>
                 <option value="custom">Outro</option>
               </select>
               <input type="text" id="queue-subject-custom" class="form-input" placeholder="Digite o assunto desejado..." style="display:none; margin-top:8px;">

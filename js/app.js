@@ -1022,12 +1022,12 @@ const App = {
     this.toggleReturnDateInput(!!sched.needsReturn);
 
     // Trata se o assunto é pré-definido ou personalizado
-    const isPredefined = PREDEFINED_SUBJECTS.some(sub => sub.name === sched.subject);
+    const isPredefined = PREDEFINED_SUBJECTS.some(sub => sub.name === sched.subject || (sched.subject === 'Manutenção de Maquinas' && sub.name === 'Manutenção de Máquinas'));
     const selectSub = document.getElementById('sched-subject-select');
     const inputCustom = document.getElementById('sched-subject-custom');
 
     if (isPredefined) {
-      selectSub.value = sched.subject;
+      selectSub.value = (sched.subject === 'Manutenção de Maquinas') ? 'Manutenção de Máquinas' : sched.subject;
       inputCustom.style.display = 'none';
     } else {
       selectSub.value = 'custom';
@@ -1124,7 +1124,11 @@ const App = {
       inputCustom.required = false;
       inputCustom.value = '';
       // Auto ajusta tipo de serviço se for pré-definido
-      const found = PREDEFINED_SUBJECTS.find(s => s.name === val);
+      const found = PREDEFINED_SUBJECTS.find(s => s.name === val || s.id === val);
+      if (val === 'Chamado Interno' || val === 'chamado_interno') {
+        const selectType = document.getElementById('sched-service-type');
+        if (selectType) selectType.value = 'manutencao';
+      }
       if (found) {
         document.getElementById('sched-service-type').value = found.type;
       }
@@ -1573,7 +1577,8 @@ const App = {
              <span>Enviar Agenda</span>
            </button>`;
 
-      const absenceActionBtn = `<button type="button" class="btn-icon-action" onclick="App.openAnalystAbsenceModal('${analyst.id}', '${currentDate}')" style="width: 32px; height: 32px; border-radius: 8px; ${absenceBtnStyle}" title="${absenceBtnTitle}">
+      // Ícone ao lado do nome só aparece quando presente (trabalhando normalmente)
+      const absenceActionBtn = isAbsent ? '' : `<button type="button" class="btn-icon-action" onclick="App.openAnalystAbsenceModal('${analyst.id}', '${currentDate}')" style="width: 32px; height: 32px; border-radius: 8px; ${absenceBtnStyle}" title="${absenceBtnTitle}">
         ${absenceBtnText}
       </button>`;
 
@@ -1586,7 +1591,6 @@ const App = {
               ${avatarHtml}
               <div style="min-width: 0; flex: 1;">
                 <div class="analyst-daily-name" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${analyst.name}</div>
-                ${absenceBadgeHtml}
               </div>
             </div>
             <div style="display: flex; align-items: center; gap: 8px; flex-shrink: 0;">
@@ -1654,12 +1658,6 @@ const App = {
                   </div>
                   <div class="card-school-cie">CIE: ${order.schoolCie} | Diretor(a): ${order.directorName || 'Coordenação'}</div>
                 </div>
-                <div style="display:flex; align-items:center; gap:8px;">
-                  ${isLocked 
-                    ? '<span class="drag-grip-indicator" style="opacity:0.3; cursor:not-allowed;" title="Bloqueado para transferências"><i class="fa-solid fa-lock" style="font-size:0.75rem;"></i></span>' 
-                    : '<span class="drag-grip-indicator" title="Arraste para outro analista"><i class="fa-solid fa-grip-vertical"></i></span>'
-                  }
-                </div>
               </div>
 
               <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px;">
@@ -1702,6 +1700,15 @@ const App = {
 
 
 
+                ${isDone
+                  ? `<button type="button" class="btn-icon-action btn-survey active" onclick="App.openSatisfactionSurvey('${order.id}')" title="Enviar Pesquisa de Satisfação para a Escola">
+                      <i class="fa-solid fa-star"></i>
+                    </button>`
+                  : `<button type="button" class="btn-icon-action btn-survey is-disabled" disabled title="Pesquisa de satisfação liberada apenas após a ordem ser concluída" style="cursor:not-allowed; opacity:0.35; filter:grayscale(0.85);">
+                      <i class="fa-solid fa-star"></i>
+                    </button>`
+                }
+
                 <button class="btn-icon-action btn-edit" title="Editar atendimento" onclick="App.openEditScheduleModal('${order.id}')">
                   <i class="fa-solid fa-pen"></i>
                 </button>
@@ -1729,11 +1736,16 @@ const App = {
         // Estado vazio ou ausente
         if (isAbsent) {
           cardsHtml += `
-            <div class="card-empty-state" style="padding: 32px 16px; opacity: 0.9;">
-              <i class="fa-solid fa-ban" style="font-size:2.2rem; color:#ef4444; margin-bottom: 8px; opacity: 0.8;"></i>
-              <div style="color: #fca5a5; font-weight: 700; font-size: 0.9rem;">Analista Indisponível</div>
-              <div style="color: #94a3b8; font-size: 0.78rem; max-width: 220px; margin: 4px auto 14px auto;">Card bloqueado para agendamentos devido à ausência informada.</div>
-              <button class="btn-secondary" style="font-size:0.75rem; padding:6px 12px;" onclick="App.openAnalystAbsenceModal('${analyst.id}', '${currentDate}')">
+            <div class="card-empty-state" style="padding: 12px 14px; gap: 6px; opacity: 0.95;">
+              <div style="display: flex; align-items: center; justify-content: center; gap: 8px;">
+                <i class="fa-solid fa-ban" style="font-size:1.15rem; color:#ef4444; opacity: 0.9;"></i>
+                <span style="color: #fca5a5; font-weight: 700; font-size: 0.88rem;">Analista Indisponível</span>
+              </div>
+              <div style="margin: 2px 0;">
+                ${absenceBadgeHtml}
+              </div>
+              <div style="color: #94a3b8; font-size: 0.74rem; line-height: 1.35; max-width: 260px; margin: 0 auto 4px auto;">Card bloqueado para agendamentos devido à ausência informada.</div>
+              <button class="btn-secondary" style="font-size:0.74rem; padding:4px 12px; display:inline-flex; align-items:center; gap:5px; margin:2px auto 0 auto;" onclick="App.openAnalystAbsenceModal('${analyst.id}', '${currentDate}')">
                 <i class="fa-solid fa-pen"></i> Alterar Disponibilidade
               </button>
             </div>
@@ -1789,6 +1801,12 @@ const App = {
     }
   },
 
+
+  openSatisfactionSurvey(scheduleId) {
+    const sched = store.getSchedules().find(s => String(s.id).trim() === String(scheduleId).trim());
+    const schoolName = sched ? sched.schoolName : 'a escola';
+    this.showToast(`Pesquisa de satisfação para ${schoolName}: o link do formulário será inserido em breve!`);
+  },
 
   markCardAsCompleted(scheduleId) {
     const list = store.getSchedules();
@@ -1898,8 +1916,6 @@ const App = {
     this.renderAllSchedulesTable();
     this.updateDashboard();
 
-    const formattedReturnDate = returnDate.split('-').reverse().join('/');
-    alert(`Retorno registrado com sucesso! Uma nova O.S. já foi agendada para o analista no dia ${formattedReturnDate}.`);
   },
 
 
@@ -3676,7 +3692,7 @@ const App = {
       } else if (defaultCategory === 'inventario') {
         subjSelect.value = 'Inventário Escolar';
       } else {
-        subjSelect.value = 'Manutenção de Maquinas';
+        subjSelect.value = 'Manutenção de Máquinas';
       }
     }
 
@@ -3761,7 +3777,7 @@ const App = {
     }
     if (subjSelect) {
       if (category === 'manutencao') {
-        subjSelect.value = 'Manutenção de Maquinas';
+        subjSelect.value = 'Manutenção de Máquinas';
       } else if (category === 'conectividade') {
         subjSelect.value = 'Conectividade';
       } else if (category === 'inventario') {
@@ -3836,13 +3852,14 @@ const App = {
     const subjSelect = document.getElementById('queue-subject-select');
     const inputCustom = document.getElementById('queue-subject-custom');
     const predefinedList = [
-      'Chamado Interno',
+      'Manutenção de Máquinas',
       'Manutenção de Maquinas',
-      'Formatar Maquinas',
       'Conectividade',
       'Espelhamento DVR',
+      'Formatar Maquinas',
       'Verificar AP',
-      'Inventário Escolar'
+      'Inventário Escolar',
+      'Chamado Interno'
     ];
 
     if (predefinedList.includes(item.subject)) {

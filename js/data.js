@@ -15,13 +15,13 @@ const STORAGE_KEYS = {
 
 // Categorias padrão de assuntos
 const PREDEFINED_SUBJECTS = [
-  { id: 'chamado_interno', name: 'Chamado Interno', type: 'chamado_interno' },
-  { id: 'manutencao_maquinas', name: 'Manutenção de Maquinas', type: 'manutencao' },
-  { id: 'formatar_maquinas', name: 'Formatar Maquinas', type: 'manutencao' },
+  { id: 'manutencao_maquinas', name: 'Manutenção de Máquinas', type: 'manutencao' },
   { id: 'conectividade', name: 'Conectividade', type: 'manutencao' },
   { id: 'espelhamento_dvr', name: 'Espelhamento DVR', type: 'manutencao' },
+  { id: 'formatar_maquinas', name: 'Formatar Maquinas', type: 'manutencao' },
   { id: 'verificar_ap', name: 'Verificar AP', type: 'manutencao' },
-  { id: 'inventario_escolar', name: 'Inventário Escolar', type: 'inventario' }
+  { id: 'inventario_escolar', name: 'Inventário Escolar', type: 'inventario' },
+  { id: 'chamado_interno', name: 'Chamado Interno', type: 'manutencao' }
 ];
 
 // Dados iniciais padrão (8 Analistas)
