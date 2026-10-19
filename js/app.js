@@ -455,6 +455,7 @@ const App = {
         document.getElementById('results-cie')?.classList.remove('active');
         document.getElementById('results-school-name')?.classList.remove('active');
         document.getElementById('queue-results-cie')?.classList.remove('active');
+        document.getElementById('queue-results-school-name')?.classList.remove('active');
       }
     });
   },
@@ -3639,25 +3640,18 @@ const App = {
     document.getElementById('queue-item-id').value = '';
     const resCie = document.getElementById('queue-results-cie');
     if (resCie) resCie.classList.remove('active');
+    const resName = document.getElementById('queue-results-school-name');
+    if (resName) resName.classList.remove('active');
     const cieIn = document.getElementById('queue-school-cie');
     if (cieIn) cieIn.value = '';
+    const nameIn = document.getElementById('queue-school-name');
+    if (nameIn) nameIn.value = '';
     const dirIn = document.getElementById('queue-director');
     if (dirIn) dirIn.value = '';
     
     const titleEl = document.getElementById('modal-queue-title');
     if (titleEl) {
       titleEl.innerHTML = '<i class="fa-solid fa-layer-group" style="color:var(--primary);"></i> Nova Solicitação na Fila';
-    }
-
-    // Popula select de escolas
-    const schoolSelect = document.getElementById('queue-school-select');
-    if (schoolSelect) {
-      const schools = store.getSchools().slice().sort((a, b) => (a.name || '').localeCompare(b.name || ''));
-      let optHtml = '<option value="">Selecione uma escola...</option>';
-      schools.forEach(s => {
-        optHtml += `<option value="${s.cie}">${s.name} (CIE: ${s.cie})</option>`;
-      });
-      schoolSelect.innerHTML = optHtml;
     }
 
     // Define categoria
@@ -3716,55 +3710,72 @@ const App = {
     }
 
     resultsContainer.innerHTML = matches.map(s => `
-      <div class="autocomplete-item" onclick="App.selectQueueSchoolByCie('${s.cie}')">
+      <div class="autocomplete-item" onclick="App.selectQueueSchoolAutocomplete('${s.cie}')">
         <div class="autocomplete-item-name">${s.name}</div>
-        <div class="autocomplete-item-cie">CIE: ${s.cie} | Diretor(a): ${s.director || 'Coordenação'}</div>
+        <div class="autocomplete-item-cie">CIE: ${s.cie} | Dir: ${s.director || 'Não informado'}</div>
       </div>
     `).join('');
     resultsContainer.classList.add('active');
 
-    // Auto-seleciona se o CIE for exato
+    // Auto-preenche se o CIE for exato
     const exact = schools.find(s => String(s.cie).trim() === trimmed);
     if (exact) {
-      const selectSchool = document.getElementById('queue-school-select');
+      const nameInput = document.getElementById('queue-school-name');
       const dirInput = document.getElementById('queue-director');
-      if (selectSchool) selectSchool.value = exact.cie;
+      if (nameInput) nameInput.value = exact.name;
       if (dirInput) dirInput.value = exact.director || '';
     }
   },
 
-  selectQueueSchoolByCie(cie) {
+  handleQueueSchoolNameInput(query) {
+    const resultsContainer = document.getElementById('queue-results-school-name');
+    const trimmed = (query || '').trim();
+    if (!trimmed || trimmed.length < 2) {
+      if (resultsContainer) resultsContainer.classList.remove('active');
+      return;
+    }
+
+    const schools = store.getSchools();
+    const matches = schools.filter(s => (s.name || '').toLowerCase().includes(trimmed.toLowerCase()));
+
+    if (!resultsContainer || matches.length === 0) {
+      if (resultsContainer) resultsContainer.classList.remove('active');
+      return;
+    }
+
+    resultsContainer.innerHTML = matches.map(s => `
+      <div class="autocomplete-item" onclick="App.selectQueueSchoolAutocomplete('${s.cie}')">
+        <div class="autocomplete-item-name">${s.name}</div>
+        <div class="autocomplete-item-cie">CIE: ${s.cie} | Dir: ${s.director || 'Não informado'}</div>
+      </div>
+    `).join('');
+    resultsContainer.classList.add('active');
+  },
+
+  selectQueueSchoolAutocomplete(cie) {
     const school = store.getSchoolByCie(cie);
     if (!school) return;
 
     const cieInput = document.getElementById('queue-school-cie');
-    const selectSchool = document.getElementById('queue-school-select');
+    const nameInput = document.getElementById('queue-school-name');
     const dirInput = document.getElementById('queue-director');
 
     if (cieInput) cieInput.value = school.cie;
-    if (selectSchool) selectSchool.value = school.cie;
+    if (nameInput) nameInput.value = school.name;
     if (dirInput) dirInput.value = school.director || '';
 
-    const resultsContainer = document.getElementById('queue-results-cie');
-    if (resultsContainer) resultsContainer.classList.remove('active');
+    const resultsCie = document.getElementById('queue-results-cie');
+    const resultsName = document.getElementById('queue-results-school-name');
+    if (resultsCie) resultsCie.classList.remove('active');
+    if (resultsName) resultsName.classList.remove('active');
+  },
+
+  selectQueueSchoolByCie(cie) {
+    this.selectQueueSchoolAutocomplete(cie);
   },
 
   onQueueSchoolSelect(cie) {
-    const cieInput = document.getElementById('queue-school-cie');
-    const dirInput = document.getElementById('queue-director');
-    const resultsContainer = document.getElementById('queue-results-cie');
-    if (resultsContainer) resultsContainer.classList.remove('active');
-
-    if (!cie) {
-      if (cieInput) cieInput.value = '';
-      if (dirInput) dirInput.value = '';
-      return;
-    }
-    const school = store.getSchoolByCie(cie);
-    if (school) {
-      if (cieInput) cieInput.value = school.cie || '';
-      if (dirInput) dirInput.value = school.director || '';
-    }
+    this.selectQueueSchoolAutocomplete(cie);
   },
 
   onQueueCategoryChange(category) {
@@ -3828,17 +3839,12 @@ const App = {
       titleEl.innerHTML = '<i class="fa-solid fa-pen" style="color:var(--primary);"></i> Editar Solicitação na Fila';
     }
 
-    // Popula select de escolas
-    const schoolSelect = document.getElementById('queue-school-select');
-    if (schoolSelect) {
-      const schools = store.getSchools().slice().sort((a, b) => (a.name || '').localeCompare(b.name || ''));
-      let optHtml = '<option value="">Selecione uma escola...</option>';
-      schools.forEach(s => {
-        const isSel = String(s.cie).trim() === String(item.schoolCie).trim() ? 'selected' : '';
-        optHtml += `<option value="${s.cie}" ${isSel}>${s.name} (CIE: ${s.cie})</option>`;
-      });
-      schoolSelect.innerHTML = optHtml;
-    }
+    const cieIn = document.getElementById('queue-school-cie');
+    if (cieIn) cieIn.value = item.schoolCie || '';
+    const nameIn = document.getElementById('queue-school-name');
+    if (nameIn) nameIn.value = item.schoolName || '';
+    const dirIn = document.getElementById('queue-director');
+    if (dirIn) dirIn.value = item.directorName || '';
 
     document.getElementById('queue-school-cie').value = item.schoolCie || '';
     document.getElementById('queue-director').value = item.directorName || '';
@@ -3884,15 +3890,21 @@ const App = {
   saveQueueItemForm(e) {
     if (e && e.preventDefault) e.preventDefault();
 
-    const schoolSelect = document.getElementById('queue-school-select');
-    const schoolCie = schoolSelect.value;
-    if (!schoolCie) {
-      alert('Por favor, selecione uma escola.');
+    const cieInput = document.getElementById('queue-school-cie');
+    const nameInput = document.getElementById('queue-school-name');
+    const schoolCie = cieInput ? cieInput.value.trim() : '';
+    let schoolName = nameInput ? nameInput.value.trim() : '';
+
+    if (!schoolCie && !schoolName) {
+      alert('Por favor, selecione ou digite a escola solicitante.');
       return;
     }
 
     const school = store.getSchoolByCie(schoolCie);
-    const schoolName = school ? school.name : (schoolSelect.options[schoolSelect.selectedIndex]?.text || '');
+    if (!schoolName && school) {
+      schoolName = school.name;
+    }
+    const finalSchoolCie = schoolCie || (school ? school.cie : '');
     const directorName = document.getElementById('queue-director').value.trim() || (school ? school.director : '');
     const category = document.getElementById('queue-category').value;
     const osNumber = '';

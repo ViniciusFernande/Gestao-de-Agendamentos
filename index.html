@@ -1384,14 +1384,13 @@
           <input type="hidden" id="queue-item-id">
           
           <div class="form-grid">
-            <div class="form-group col-span-2">
+            <div class="form-group col-span-2 autocomplete-container">
               <label class="form-label">Escola Solicitante <span class="required">*</span></label>
-              <select id="queue-school-select" class="form-select" required onchange="App.onQueueSchoolSelect(this.value)">
-                <option value="">Selecione uma escola...</option>
-              </select>
+              <input type="text" id="queue-school-name" class="form-input" placeholder="Digite o nome da escola..." required autocomplete="off" oninput="App.handleQueueSchoolNameInput(this.value)">
+              <div id="queue-results-school-name" class="autocomplete-results"></div>
             </div>
 
-                        <div class="form-group autocomplete-container">
+            <div class="form-group autocomplete-container">
               <label class="form-label">CIE da Escola <span style="font-size:0.75rem; color:var(--text-muted); font-weight:normal;">(Digite para buscar)</span></label>
               <input type="text" id="queue-school-cie" class="form-input" placeholder="Digite o CIE (ex: 012345)..." autocomplete="off" oninput="App.handleQueueCieInput(this.value)">
               <div id="queue-results-cie" class="autocomplete-results"></div>
@@ -1405,9 +1404,9 @@
             <div class="form-group">
               <label class="form-label">Fila / Categoria <span class="required">*</span></label>
               <select id="queue-category" class="form-select" required onchange="App.onQueueCategoryChange(this.value)">
-                <option value="manutencao">🛠️ Manutenção</option>
+                <option value="manutencao">🔧 Manutenção</option>
                 <option value="conectividade">🌐 Conectividade</option>
-                <option value="inventario">📦 Inventário</option>
+                <option value="inventario">📋 Inventário</option>
               </select>
             </div>
 
