@@ -964,7 +964,23 @@ class DataStore {
 
   getAbsence(analystId, dateStr) {
     const list = this.getAbsences();
-    return list.find(a => String(a.analystId).trim() === String(analystId).trim() && a.date === dateStr);
+    const existing = list.find(a => String(a.analystId).trim() === String(analystId).trim() && a.date === dateStr);
+    if (existing) {
+      return existing;
+    }
+    // Se o analista for Pleno, o status padrão diário é automaticamente 'fixo_ure'
+    const analyst = this.getAnalystById(analystId);
+    if (analyst && (analyst.role || '').toLowerCase().includes('pleno')) {
+      return {
+        id: `${analystId}_${dateStr}`,
+        analystId,
+        date: dateStr,
+        reason: 'fixo_ure',
+        note: '',
+        isDefaultPleno: true
+      };
+    }
+    return null;
   }
 
   setAbsence(analystId, dateStr, reason, note = '') {

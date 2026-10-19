@@ -1051,7 +1051,7 @@ const App = {
       if (absence && absence.reason && absence.reason !== 'presente') {
         const analystObj = store.getAnalystById(analystId);
         const name = analystObj ? analystObj.name : 'Este analista';
-        const labels = { day_off: 'Day Off (Folga)', atestado: 'Atestado Médico', ausente: 'Ausente' };
+        const labels = { day_off: 'Day Off (Folga)', atestado: 'Atestado Médico', ausente: 'Ausente', fixo_ure: 'Fixo na URE' };
         alert(`Não é possível agendar: ${name} está marcado(a) como "${labels[absence.reason] || 'Ausente'}" na data ${date.split('-').reverse().join('/')}.`);
         return;
       }
@@ -1505,18 +1505,27 @@ const App = {
     const allSchedules = store.getSchedules();
     const todaySchedules = allSchedules.filter(s => s.date === currentDate);
 
+    // Contagem de analistas ativos que constam como Presente (Trabalhando Normalmente) hoje
+    const presentAnalystsCount = analysts.filter(a => {
+      const absence = store.getAbsence(a.id, currentDate);
+      return !absence || !absence.reason || absence.reason === 'presente';
+    }).length;
+
     // Atualiza chips de resumo no topo
     const statAnalysts = document.getElementById('stat-card-analysts');
     const statTotal = document.getElementById('stat-card-total');
     const statCompleted = document.getElementById('stat-card-completed');
+    const statReturns = document.getElementById('stat-card-returns');
     const statPending = document.getElementById('stat-card-pending');
 
     const completedCount = todaySchedules.filter(s => s.completed).length;
-    const pendingCount = todaySchedules.filter(s => !s.completed).length;
+    const returnsCount = todaySchedules.filter(s => !s.completed && s.needsReturn).length;
+    const pendingCount = todaySchedules.filter(s => !s.completed && !s.needsReturn).length;
 
-    if (statAnalysts) statAnalysts.textContent = analysts.length;
+    if (statAnalysts) statAnalysts.textContent = presentAnalystsCount;
     if (statTotal) statTotal.textContent = todaySchedules.length;
     if (statCompleted) statCompleted.textContent = completedCount;
+    if (statReturns) statReturns.textContent = returnsCount;
     if (statPending) statPending.textContent = pendingCount;
 
     if (analysts.length === 0) {
@@ -1559,6 +1568,9 @@ const App = {
         } else if (r === 'atestado') {
           absenceBadgeHtml = `<div style="background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.3); color: #f87171; border-radius: 6px; padding: 4px 10px; font-size: 0.75rem; font-weight: 700; display: inline-flex; align-items: center; gap: 6px; margin-top: 6px;"><i class="fa-solid fa-notes-medical"></i> ATESTADO MÉDICO</div>`;
           absenceBtnStyle = 'background: rgba(239, 68, 68, 0.2); border: 1px solid #ef4444; color: #f87171;';
+        } else if (r === 'fixo_ure') {
+          absenceBadgeHtml = `<div style="background: rgba(59, 130, 246, 0.15); border: 1px solid rgba(59, 130, 246, 0.3); color: #60a5fa; border-radius: 6px; padding: 4px 10px; font-size: 0.75rem; font-weight: 700; display: inline-flex; align-items: center; gap: 6px; margin-top: 6px;"><i class="fa-solid fa-laptop"></i> FIXO NA URE</div>`;
+          absenceBtnStyle = 'background: rgba(59, 130, 246, 0.2); border: 1px solid #3b82f6; color: #60a5fa;';
         } else {
           absenceBadgeHtml = `<div style="background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.3); color: #f87171; border-radius: 6px; padding: 4px 10px; font-size: 0.75rem; font-weight: 700; display: inline-flex; align-items: center; gap: 6px; margin-top: 6px;"><i class="fa-solid fa-user-xmark"></i> AUSENTE</div>`;
           absenceBtnStyle = 'background: rgba(239, 68, 68, 0.2); border: 1px solid #ef4444; color: #f87171;';
@@ -1584,7 +1596,7 @@ const App = {
       </button>`;
 
       cardsHtml += `
-        <div class="analyst-daily-card ${isAbsent ? 'is-analyst-absent' : ''}" id="analyst-card-${analyst.id}" style="${isAbsent ? 'border: 1px solid rgba(239,68,68,0.35); background: linear-gradient(180deg, rgba(30,41,59,0.85) 0%, rgba(15,23,42,0.95) 100%); opacity: 0.88;' : ''}">
+        <div class="analyst-daily-card ${isAbsent ? 'is-analyst-absent' : ''}" id="analyst-card-${analyst.id}" style="${isAbsent ? (absence && absence.reason === 'fixo_ure' ? 'border: 1px solid rgba(59,130,246,0.35); background: linear-gradient(180deg, rgba(30,41,59,0.85) 0%, rgba(15,23,42,0.95) 100%); opacity: 0.92;' : 'border: 1px solid rgba(239,68,68,0.35); background: linear-gradient(180deg, rgba(30,41,59,0.85) 0%, rgba(15,23,42,0.95) 100%); opacity: 0.88;') : ''}">
           
           <!-- Topo do Card: Nome, Botão Ausência e Botão Enviar Agenda -->
           <div class="analyst-daily-header">
@@ -1736,16 +1748,28 @@ const App = {
       } else {
         // Estado vazio ou ausente
         if (isAbsent) {
+          const isFixoUre = absence && absence.reason === 'fixo_ure';
+          const absentMsg = isFixoUre
+            ? 'Analista em atendimento interno na URE. Para agendar visita em escola, altere para Presente.'
+            : 'Card bloqueado para agendamentos devido à ausência informada.';
+          const absentTitle = isFixoUre
+            ? 'Analista Fixo na URE'
+            : 'Analista Indisponível';
+          const absentIcon = isFixoUre
+            ? '<i class="fa-solid fa-laptop" style="font-size:1.15rem; color:#60a5fa; opacity: 0.95;"></i>'
+            : '<i class="fa-solid fa-ban" style="font-size:1.15rem; color:#ef4444; opacity: 0.9;"></i>';
+          const titleColor = isFixoUre ? '#93c5fd' : '#fca5a5';
+
           cardsHtml += `
             <div class="card-empty-state" style="padding: 12px 14px; gap: 6px; opacity: 0.95;">
               <div style="display: flex; align-items: center; justify-content: center; gap: 8px;">
-                <i class="fa-solid fa-ban" style="font-size:1.15rem; color:#ef4444; opacity: 0.9;"></i>
-                <span style="color: #fca5a5; font-weight: 700; font-size: 0.88rem;">Analista Indisponível</span>
+                ${absentIcon}
+                <span style="color: ${titleColor}; font-weight: 700; font-size: 0.88rem;">${absentTitle}</span>
               </div>
               <div style="margin: 2px 0;">
                 ${absenceBadgeHtml}
               </div>
-              <div style="color: #94a3b8; font-size: 0.74rem; line-height: 1.35; max-width: 260px; margin: 0 auto 4px auto;">Card bloqueado para agendamentos devido à ausência informada.</div>
+              <div style="color: #94a3b8; font-size: 0.74rem; line-height: 1.35; max-width: 260px; margin: 0 auto 4px auto;">${absentMsg}</div>
               <button class="btn-secondary" style="font-size:0.74rem; padding:4px 12px; display:inline-flex; align-items:center; gap:5px; margin:2px auto 0 auto;" onclick="App.openAnalystAbsenceModal('${analyst.id}', '${currentDate}')">
                 <i class="fa-solid fa-pen"></i> Alterar Disponibilidade
               </button>
@@ -1779,7 +1803,7 @@ const App = {
     if (absence && absence.reason && absence.reason !== 'presente') {
       const analystObj = store.getAnalystById(analystId);
       const name = analystObj ? analystObj.name : 'Este analista';
-      const labels = { day_off: 'Day Off (Folga)', atestado: 'Atestado Médico', ausente: 'Ausente' };
+      const labels = { day_off: 'Day Off (Folga)', atestado: 'Atestado Médico', ausente: 'Ausente', fixo_ure: 'Fixo na URE' };
       alert(`Agendamento bloqueado: ${name} está marcado(a) como "${labels[absence.reason] || 'Ausente'}" nesta data.`);
       return;
     }
@@ -2012,7 +2036,7 @@ const App = {
     if (absence && absence.reason && absence.reason !== 'presente') {
       const analystObj = store.getAnalystById(targetAnalystId);
       const name = analystObj ? analystObj.name : 'Este analista';
-      const labels = { day_off: 'Day Off (Folga)', atestado: 'Atestado Médico', ausente: 'Ausente' };
+      const labels = { day_off: 'Day Off (Folga)', atestado: 'Atestado Médico', ausente: 'Ausente', fixo_ure: 'Fixo na URE' };
       alert(`Transferência bloqueada: ${name} está marcado(a) como "${labels[absence.reason] || 'Ausente'}" nesta data.`);
       return;
     }
@@ -4031,7 +4055,7 @@ const App = {
       if (absence && absence.reason && absence.reason !== 'presente') {
         const analystObj = store.getAnalystById(analystId);
         const name = analystObj ? analystObj.name : 'Este analista';
-        const labels = { day_off: 'Day Off (Folga)', atestado: 'Atestado Médico', ausente: 'Ausente' };
+        const labels = { day_off: 'Day Off (Folga)', atestado: 'Atestado Médico', ausente: 'Ausente', fixo_ure: 'Fixo na URE' };
         alert(`Não é possível alocar: ${name} está marcado(a) como "${labels[absence.reason] || 'Ausente'}" na data ${schedDate.split('-').reverse().join('/')}.`);
         return;
       }
@@ -4220,12 +4244,20 @@ const App = {
 
     if (!analystId || !dateStr) return false;
 
+    const targetAnalystObj = store.getAnalystById(analystId);
+    const isPlenoAnalyst = targetAnalystObj && (targetAnalystObj.role || '').toLowerCase().includes('pleno');
+
     if (reason === 'presente') {
-      store.removeAbsence(analystId, dateStr);
+      if (isPlenoAnalyst) {
+        // Para analista Pleno, gravamos explicitamente 'presente' para liberar agendamentos no dia
+        store.setAbsence(analystId, dateStr, 'presente', note);
+      } else {
+        store.removeAbsence(analystId, dateStr);
+      }
       this.showToast('Analista marcado como Presente no dia!');
     } else {
       store.setAbsence(analystId, dateStr, reason, note);
-      const labels = { day_off: 'Day Off (Folga)', atestado: 'Atestado Médico', ausente: 'Ausente' };
+      const labels = { day_off: 'Day Off (Folga)', atestado: 'Atestado Médico', ausente: 'Ausente', fixo_ure: 'Fixo na URE' };
       this.showToast(`Marcado como "${labels[reason] || 'Ausente'}"! Card bloqueado.`);
     }
 
