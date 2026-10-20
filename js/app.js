@@ -226,10 +226,10 @@ const App = {
     const selAnalystMonth = document.getElementById('filter-analyst-month');
     if (selAnalystMonth) selAnalystMonth.value = currentMonth;
 
-    // Inicialização dos filtros do Atendimento URE com a data/mês/ano atual
+    // Inicialização dos filtros do Atendimento URE (data específica livre para seleção manual)
     const inputUreDate = document.getElementById('filter-ure-date');
-    if (inputUreDate && !inputUreDate.value) {
-      inputUreDate.value = todayStr;
+    if (inputUreDate) {
+      inputUreDate.value = '';
     }
     const selectUreMonth = document.getElementById('filter-ure-month');
     if (selectUreMonth && (!selectUreMonth.value || selectUreMonth.value === 'all')) {
@@ -1697,7 +1697,7 @@ const App = {
                 }
 
                 ${order.needsReturn 
-                  ? `<button type="button" class="card-btn-action card-btn-return is-returned" disabled title="Retorno já agendado para ${order.returnDate ? order.returnDate.split('-').reverse().join('/') : 'outra data'}. Para alterar ou cancelar o retorno caso precise de último caso, use o botão do lápis (editar)." style="cursor:not-allowed; opacity:0.92; background:rgba(245, 158, 11, 0.25); border-color:#f59e0b; color:#fbbf24; flex-direction:column; justify-content:center; gap:1px; padding:5px 8px; line-height:1.15;">
+                  ? `<button type="button" class="card-btn-action card-btn-return is-returned" disabled title="Retorno já agendado para ${order.returnDate ? order.returnDate.split('-').reverse().join('/') : 'outra data'}. Para alterar ou cancelar o retorno caso precise de último caso, use o botão do lápis (editar)." style="cursor:not-allowed; opacity:0.92; background:rgba(245, 158, 11, 0.25); border-color:#f59e0b; color:#fbbf24; flex-direction:column; justify-content:center; gap:1px; padding:4px 3px; line-height:1.15;">
                       <span style="display:inline-flex; align-items:center; gap:5px; font-weight:700; font-size:0.78rem;"><i class="fa-solid fa-arrows-rotate"></i> Retorno</span>
                       ${order.returnDate ? `<span style="font-size:0.72rem; color:#fde047; font-weight:600; letter-spacing:0.2px;">${order.returnDate.split('-').reverse().join('/')}</span>` : ''}
                     </button>`
@@ -4325,14 +4325,11 @@ renderUreView() {
     const elYear = document.getElementById('filter-ure-year');
     const elSearch = document.getElementById('filter-ure-search');
 
-    // Se estiver vazio ao carregar, atribui a data e mês atuais
-    if (elDate && !elDate.value) {
-      elDate.value = todayStr;
-    }
-    if (elMonth && (!elMonth.value || elMonth.value === 'all')) {
+    // Permite selecionar 'all' (Todos os Meses / Todos os Anos) sem forçar o mês/ano atual
+    if (elMonth && !elMonth.value) {
       elMonth.value = String(currentMonth);
     }
-    if (elYear && (!elYear.value || elYear.value === 'all')) {
+    if (elYear && !elYear.value) {
       elYear.value = String(currentYear);
     }
 

@@ -2020,12 +2020,14 @@ html, body {
   background: var(--bg-item);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-md);
-  padding: 14px;
+  padding: 12px;
   display: flex;
   flex-direction: column;
   gap: 10px;
   position: relative;
   transition: var(--transition);
+  box-sizing: border-box;
+  overflow: hidden;
 }
 
 .card-order-box.completed {
@@ -2124,14 +2126,17 @@ html, body {
 .card-actions-row {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 5px;
   margin-top: 4px;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .card-btn-action {
-  flex: 1;
-  padding: 8px 12px;
-  font-size: 0.8rem;
+  flex: 1 1 0;
+  min-width: 0;
+  padding: 6px 6px;
+  font-size: 0.74rem;
   font-weight: 600;
   border-radius: 6px;
   border: none;
@@ -2139,8 +2144,22 @@ html, body {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
+  gap: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
   transition: var(--transition);
+  box-sizing: border-box;
+}
+
+.card-actions-row .btn-icon-action {
+  width: 30px;
+  height: 30px;
+  min-width: 30px;
+  font-size: 0.8rem;
+  flex-shrink: 0;
+  padding: 0;
+  box-sizing: border-box;
 }
 
 .card-btn-complete {
@@ -3594,7 +3613,7 @@ html, body {
   gap: 6px;
   padding: 6px 0 2px 0;
   flex: 1;
-  justify-content: space-around;
+  justify-content: flex-start;
 }
 
 .dash-rank-item {
@@ -3737,10 +3756,10 @@ html, body {
 .dash-queue-list-container {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
   padding: 6px 0 2px 0;
   flex: 1;
-  justify-content: space-around;
+  justify-content: flex-start;
 }
 
 .dash-queue-item {
@@ -4349,4 +4368,11 @@ html, body {
 
 body.role-analista .admin-only {
   display: none !important;
+}
+
+
+@media (max-width: 576px) {
+  .analyst-cards-grid {
+    grid-template-columns: 1fr;
+  }
 }
