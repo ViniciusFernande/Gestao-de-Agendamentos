@@ -1658,10 +1658,11 @@ const App = {
               </div>
             </div>`;
 
-          const isLocked = isDone || !!order.needsReturn;
+          const hasReturn = !!order.needsReturn;
+          const isLocked = isDone || hasReturn;
 
           cardsHtml += `
-            <div class="card-order-box ${isDone ? 'completed' : ''} ${isLocked ? 'is-locked' : ''}" 
+            <div class="card-order-box ${isDone ? 'completed' : ''} ${hasReturn ? 'has-return' : ''} ${isLocked ? 'is-locked' : ''}" 
                  ${isLocked ? 'draggable="false"' : `draggable="true" ondragstart="App.handleOrderDragStart(event, '${order.id}')" ondragend="App.handleOrderDragEnd(event)"`} 
                  id="order-box-${order.id}" 
                  title="${isLocked ? (isDone ? 'Atendimento concluído (bloqueado para transferências)' : 'Atendimento com retorno agendado (bloqueado para transferências)') : 'Arraste este card para mudar de analista'}">

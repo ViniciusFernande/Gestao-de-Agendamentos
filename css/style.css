@@ -2031,8 +2031,21 @@ html, body {
 }
 
 .card-order-box.completed {
-  border-color: rgba(34, 197, 94, 0.35);
+  border-color: rgba(34, 197, 94, 0.45);
   background: rgba(34, 197, 94, 0.04);
+}
+
+.card-order-box.has-return {
+  border-color: rgba(245, 158, 11, 0.5);
+  background: rgba(245, 158, 11, 0.04);
+}
+
+.card-order-box.completed:hover {
+  border-color: rgba(34, 197, 94, 0.65);
+}
+
+.card-order-box.has-return:hover {
+  border-color: rgba(245, 158, 11, 0.7);
 }
 
 .card-order-header {
