@@ -2582,6 +2582,7 @@ const App = {
     const schedules = store.getSchedules();
     const schools = store.getSchools();
     const schoolStats = {};
+    const schoolOrders = {}; // Armazena as ordens únicas de cada escola
 
     const isUre = (name, cie) => {
       const n = (name || '').toLowerCase().trim();
@@ -2592,7 +2593,8 @@ const App = {
     // 1. Inicializa com escolas cadastradas (exceto URE)
     schools.forEach(sc => {
       if (isUre(sc.name, sc.cie)) return;
-      schoolStats[sc.cie] = {
+      const cieKey = String(sc.cie || '').trim();
+      schoolStats[cieKey] = {
         cie: sc.cie,
         name: sc.name,
         director: sc.director || 'Não informado',
@@ -2600,16 +2602,16 @@ const App = {
         total: 0,
         completed: 0
       };
+      schoolOrders[cieKey] = new Map();
     });
 
-    // 2. Contabiliza apenas agendamentos reais (ignora retornos/isReturnVisit e ignora URE)
+    // 2. Contabiliza apenas ordens únicas por escola (mesmo Nº de O.S. conta apenas 1 vez, mesmo com múltiplos retornos)
     schedules.forEach(s => {
-      if (s.isReturnVisit) return; // Retornos não contam como novo agendamento da escola
       if (isUre(s.schoolName, s.schoolCie)) return; // Ignora atendimentos da URE no Ranking
 
-      const cie = s.schoolCie || 'SEM_CIE';
-      if (!schoolStats[cie]) {
-        schoolStats[cie] = {
+      const cieKey = String(s.schoolCie || 'SEM_CIE').trim();
+      if (!schoolStats[cieKey]) {
+        schoolStats[cieKey] = {
           cie: s.schoolCie || '-',
           name: s.schoolName || 'Escola não cadastrada',
           director: s.directorName || 'Não informado',
@@ -2617,14 +2619,41 @@ const App = {
           total: 0,
           completed: 0
         };
+        schoolOrders[cieKey] = new Map();
       }
-      schoolStats[cie].total += 1;
-      if (s.completed) {
-        schoolStats[cie].completed += 1;
+
+      // Normaliza o número da O.S. (remove sufixos -RET, espaços extras e coloca em maiúsculas)
+      const rawOs = (s.osNumber || '').replace(/(-RET)+$/gi, '').trim();
+      const cleanOs = rawOs ? rawOs.toUpperCase() : null;
+
+      // Define a chave única da ordem:
+      // Se houver número de O.S., agrupa pelo número da O.S. (garante que retornos da mesma O.S. contem como 1 só)
+      // Se não houver O.S., agrupa pelo parentScheduleId ou pelo id do agendamento
+      const orderKey = cleanOs ? `OS:${cleanOs}` : `ID:${s.parentScheduleId || s.id}`;
+
+      if (!schoolOrders[cieKey].has(orderKey)) {
+        schoolOrders[cieKey].set(orderKey, { completed: !!s.completed });
+      } else {
+        // Se qualquer visita ou retorno desta mesma ordem estiver concluído, a ordem conta como concluída
+        const existing = schoolOrders[cieKey].get(orderKey);
+        if (s.completed) {
+          existing.completed = true;
+        }
       }
     });
 
-    // 3. Ordena decrescente pelo total de agendamentos
+    // Atualiza os totais e concluídos por ordens únicas
+    Object.keys(schoolStats).forEach(cieKey => {
+      const ordersMap = schoolOrders[cieKey] || new Map();
+      schoolStats[cieKey].total = ordersMap.size;
+      let completedCount = 0;
+      ordersMap.forEach(ord => {
+        if (ord.completed) completedCount++;
+      });
+      schoolStats[cieKey].completed = completedCount;
+    });
+
+    // 3. Ordena decrescente pelo total de ordens distintas
     return Object.values(schoolStats).sort((a, b) => {
       if (b.total !== a.total) return b.total - a.total;
       return b.completed - a.completed;
