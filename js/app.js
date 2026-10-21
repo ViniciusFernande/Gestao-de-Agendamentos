@@ -1638,29 +1638,25 @@ const App = {
             ? `<span class="badge-card-os-ok" title="Atendimento Concluído"><i class="fa-solid fa-check"></i> OK</span>`
             : '';
 
-          const seqBarHtml = analystOrders.length > 1
-            ? `<div class="card-seq-bar">
-                 <div class="card-seq-left">
-                   <span class="seq-pill"><i class="fa-solid fa-route"></i> ${index + 1}º Atendimento</span>
-                   ${osInputHtml}
-                   ${okBadgeHtml}
-                 </div>
-                 <div class="seq-btns">
-                   <button type="button" class="btn-seq-move" title="Subir na sequência" ${index === 0 ? 'disabled' : ''} onclick="event.stopPropagation(); App.moveScheduleSequence('${order.id}', -1)">
-                     <i class="fa-solid fa-arrow-up"></i>
-                   </button>
-                   <button type="button" class="btn-seq-move" title="Descer na sequência" ${index === analystOrders.length - 1 ? 'disabled' : ''} onclick="event.stopPropagation(); App.moveScheduleSequence('${order.id}', 1)">
-                     <i class="fa-solid fa-arrow-down"></i>
-                   </button>
-                 </div>
+          const seqBtnsHtml = analystOrders.length > 1
+            ? `<div class="seq-btns" draggable="false" onmouseenter="App.disableCardDrag(this)" onmouseleave="App.enableCardDrag(this)" ondragstart="event.stopPropagation(); event.preventDefault(); return false;" style="align-self: flex-end; margin-bottom: 1px;">
+                 <button type="button" class="btn-seq-move" title="Subir na sequência" ${index === 0 ? 'disabled' : ''} onclick="event.stopPropagation(); App.moveScheduleSequence('${order.id}', -1)">
+                   <i class="fa-solid fa-arrow-up"></i>
+                 </button>
+                 <button type="button" class="btn-seq-move" title="Descer na sequência" ${index === analystOrders.length - 1 ? 'disabled' : ''} onclick="event.stopPropagation(); App.moveScheduleSequence('${order.id}', 1)">
+                   <i class="fa-solid fa-arrow-down"></i>
+                 </button>
                </div>`
-            : `<div class="card-seq-bar">
-                 <div class="card-seq-left">
-                   <span class="seq-pill" style="opacity:0.85; font-size:0.72rem;"><i class="fa-solid fa-route"></i> 1º Atendimento</span>
-                   ${osInputHtml}
-                   ${okBadgeHtml}
-                 </div>
-               </div>`;
+            : '';
+
+          const seqBarHtml = `
+            <div class="card-seq-bar">
+              <div class="card-seq-left">
+                <span class="seq-pill"><i class="fa-solid fa-route"></i> ${index + 1}º Atendimento</span>
+                ${osInputHtml}
+                ${okBadgeHtml}
+              </div>
+            </div>`;
 
           const isLocked = isDone || !!order.needsReturn;
 
@@ -1671,11 +1667,12 @@ const App = {
                  title="${isLocked ? (isDone ? 'Atendimento concluído (bloqueado para transferências)' : 'Atendimento com retorno agendado (bloqueado para transferências)') : 'Arraste este card para mudar de analista'}">
               ${seqBarHtml}
               <div class="card-order-header">
-                <div>
-                  <div class="card-school-name">
-                    <span>${order.schoolName}</span>
-                  </div>
-                  <div class="card-school-cie">CIE: ${order.schoolCie} | Diretor(a): ${order.directorName || 'Coordenação'}</div>
+                <div class="card-school-name" title="${order.schoolName}">
+                  <span>${order.schoolName}</span>
+                </div>
+                <div class="card-cie-row">
+                  <div class="card-school-cie" title="CIE: ${order.schoolCie} | Diretor(a): ${order.directorName || 'Coordenação'}">CIE: ${order.schoolCie} | Diretor(a): ${order.directorName || 'Coordenação'}</div>
+                  ${seqBtnsHtml}
                 </div>
               </div>
 
