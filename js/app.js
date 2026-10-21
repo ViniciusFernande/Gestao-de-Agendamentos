@@ -869,7 +869,7 @@ const App = {
     filtered.forEach(item => {
       const analyst = analysts.find(a => a.id === item.analystId) || (item.analystName ? { name: item.analystName } : { name: 'Analista' });
       const statusBadge = item.completed 
-        ? '<span class="table-status-badge status-completed"><i class="fa-solid fa-check"></i> Concluída</span>'
+        ? '<span class="table-status-badge status-completed"><i class="fa-solid fa-check"></i> Concluído</span>'
         : '<span class="table-status-badge status-pending"><i class="fa-regular fa-clock"></i> Pendente</span>';
       
       const returnBadge = item.needsReturn
@@ -903,7 +903,7 @@ const App = {
                 ? `<button class="btn-icon-action" style="background:#16a34a; color:#ffffff; cursor:not-allowed; opacity:0.9;" disabled title="Atendimento concluído. Para alterar caso tenha marcado errado, use o botão do lápis (editar).">
                     <i class="fa-solid fa-check-double"></i>
                    </button>`
-                : `<button class="btn-icon-action btn-complete" title="Marcar como Concluída" onclick="App.markCardAsCompleted('${item.id}')">
+                : `<button class="btn-icon-action btn-complete" title="Marcar como Concluído" onclick="App.markCardAsCompleted('${item.id}')">
                     <i class="fa-solid fa-check"></i>
                    </button>`
               }
@@ -1371,7 +1371,7 @@ const App = {
     filtered.forEach(item => {
       const analyst = analysts.find(a => a.id === item.analystId) || (item.analystName ? { name: item.analystName } : { name: 'Analista' });
       const statusBadge = item.completed 
-        ? '<span class="table-status-badge status-completed"><i class="fa-solid fa-check"></i> Concluída</span>'
+        ? '<span class="table-status-badge status-completed"><i class="fa-solid fa-check"></i> Concluído</span>'
         : (item.needsReturn
             ? `<div class="badge-return" style="display:inline-flex; align-items:center; gap:5px;"><i class="fa-solid fa-rotate-left"></i> Retornar ${item.returnDate ? '(' + item.returnDate.split('-').reverse().join('/') + ')' : ''}</div>`
             : '<span class="table-status-badge status-pending"><i class="fa-regular fa-clock"></i> Pendente</span>');
@@ -1620,7 +1620,7 @@ const App = {
         analystOrders.forEach((order, index) => {
           const isDone = !!order.completed;
           const doneBadge = isDone
-            ? '<span class="table-status-badge status-completed" style="font-size:0.72rem; padding:3px 8px; border-radius:6px; font-weight:700; display:inline-flex; align-items:center; gap:5px;"><i class="fa-solid fa-check"></i> Concluída</span>'
+            ? '<span class="table-status-badge status-completed" style="font-size:0.72rem; padding:3px 8px; border-radius:6px; font-weight:700; display:inline-flex; align-items:center; gap:5px;"><i class="fa-solid fa-check"></i> Concluído</span>'
             : '';
 
           const returnInfo = order.needsReturn
@@ -1634,11 +1634,16 @@ const App = {
             </div>
           `;
 
+          const okBadgeHtml = isDone
+            ? `<span class="badge-card-os-ok" title="Atendimento Concluído"><i class="fa-solid fa-check"></i> OK</span>`
+            : '';
+
           const seqBarHtml = analystOrders.length > 1
             ? `<div class="card-seq-bar">
                  <div class="card-seq-left">
                    <span class="seq-pill"><i class="fa-solid fa-route"></i> ${index + 1}º Atendimento</span>
                    ${osInputHtml}
+                   ${okBadgeHtml}
                  </div>
                  <div class="seq-btns">
                    <button type="button" class="btn-seq-move" title="Subir na sequência" ${index === 0 ? 'disabled' : ''} onclick="event.stopPropagation(); App.moveScheduleSequence('${order.id}', -1)">
@@ -1653,6 +1658,7 @@ const App = {
                  <div class="card-seq-left">
                    <span class="seq-pill" style="opacity:0.85; font-size:0.72rem;"><i class="fa-solid fa-route"></i> 1º Atendimento</span>
                    ${osInputHtml}
+                   ${okBadgeHtml}
                  </div>
                </div>`;
 
@@ -1684,7 +1690,7 @@ const App = {
               <div class="card-actions-row">
                 ${isDone 
                   ? `<button type="button" class="card-btn-action card-btn-complete is-done" disabled title="Atendimento marcado como concluído. Para reabrir ou alterar caso tenha clicado errado, use o botão do lápis (editar)." style="cursor:not-allowed; opacity:0.92;">
-                      <i class="fa-solid fa-circle-check"></i> Concluída
+                      <i class="fa-solid fa-circle-check"></i> Concluído
                     </button>`
                   : (order.needsReturn
                       ? `<button type="button" class="card-btn-action card-btn-complete" disabled title="Atendimento com retorno já agendado. Botão de conclusão bloqueado." style="cursor:not-allowed; opacity:0.35; filter:grayscale(0.85);">
@@ -2162,7 +2168,7 @@ const App = {
     orders.forEach((ord, i) => {
       const isDone = !!ord.completed;
       const statusBadge = isDone
-        ? '<span style="color:#4ade80; font-size:0.72rem; font-weight:700;"><i class="fa-solid fa-check"></i> Concluída</span>'
+        ? '<span style="color:#4ade80; font-size:0.72rem; font-weight:700;"><i class="fa-solid fa-check"></i> Concluído</span>'
         : (ord.needsReturn
             ? '<span style="color:#fbbf24; font-size:0.72rem; font-weight:700;"><i class="fa-solid fa-arrows-rotate"></i> Retorno</span>'
             : ''
@@ -2297,7 +2303,7 @@ const App = {
       message += `🔧 *Serviço:* ${(ord.subject || '').replace(/^Retorno:\s*/gi, '').trim()}\n`;
       if (ord.osNumber) message += `📄 *Nº O.S.:* ${ord.osNumber}\n`;
       if (ord.obs) message += `ℹ️ *Obs:* ${ord.obs}\n`;
-      if (ord.completed) message += `✅ *Status:* Concluída\n`;
+      if (ord.completed) message += `✅ *Status:* Concluído\n`;
       message += `\n`;
     });
 
