@@ -1733,5 +1733,118 @@
     </div>
   </div>
 
+
+  <!-- MODAL: PESQUISA DE SATISFAÇÃO & ENVIO DE E-MAIL -->
+  <div class="modal-overlay" id="modal-satisfaction-survey">
+    <div class="modal-box" style="max-width: 580px;">
+      <div class="modal-header">
+        <div class="modal-title" id="modal-survey-title">
+          <i class="fa-solid fa-envelope-circle-check" style="color:#38bdf8;"></i> Pesquisa de Satisfação & Envio
+        </div>
+        <button class="btn-modal-close" onclick="App.closeModal('modal-satisfaction-survey')">&times;</button>
+      </div>
+
+      <form id="form-satisfaction-survey" onsubmit="event.preventDefault(); App.sendSatisfactionSurvey(event); return false;">
+        <input type="hidden" id="survey-schedule-id">
+
+        <div class="modal-body" style="max-height: calc(85vh - 130px); overflow-y: auto; padding: 18px 22px;">
+          <!-- Card de Dados do Atendimento -->
+          <div class="survey-order-card" style="background: rgba(15, 23, 42, 0.65); border: 1px solid var(--border-color); border-radius: 10px; padding: 14px 16px; margin-bottom: 16px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+              <span style="font-size: 0.72rem; color: #94a3b8; text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px;">Atendimento Concluído</span>
+              <span class="table-status-badge status-completed" style="font-size:0.72rem; padding:2px 8px; border-radius:5px;"><i class="fa-solid fa-check"></i> Concluído</span>
+            </div>
+            <div id="survey-info-school" style="font-weight: 700; color: #ffffff; font-size: 1rem; line-height: 1.3;">-</div>
+            <div id="survey-info-cie" style="font-size: 0.78rem; color: var(--text-dim); margin-top: 2px;">CIE: - | Diretor(a): -</div>
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-top:8px; padding-top:8px; border-top:1px dashed rgba(255,255,255,0.08);">
+              <div id="survey-info-analyst" style="font-size: 0.8rem; color: #60a5fa;"><i class="fa-solid fa-user-gear"></i> Analista: <span>-</span></div>
+              <div id="survey-info-os" style="font-size: 0.8rem; color: #38bdf8; font-weight:700;"><i class="fa-solid fa-file-lines"></i> O.S: <span>-</span></div>
+              <div id="survey-info-date" style="font-size: 0.78rem; color: var(--text-muted);"><i class="fa-regular fa-calendar"></i> <span>-</span></div>
+            </div>
+            <div id="survey-info-subject" style="font-size: 0.78rem; color: #cbd5e1; margin-top: 6px;"><i class="fa-solid fa-screwdriver-wrench"></i> <span>-</span></div>
+          </div>
+
+          <!-- Banner se já enviado anteriormente -->
+          <div id="survey-already-sent-box" style="display:none; background: rgba(34, 197, 94, 0.12); border: 1px solid rgba(34, 197, 94, 0.35); border-radius: 8px; padding: 12px 14px; margin-bottom: 16px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+              <div style="font-size:0.84rem; color:#4ade80; font-weight:700;">
+                <i class="fa-solid fa-circle-check"></i> Pesquisa já enviada em <span id="survey-sent-date">-</span>
+              </div>
+              <button type="button" class="btn-secondary" onclick="App.downloadCurrentSurveyReceipt()" style="font-size:0.75rem; padding:4px 10px; background:rgba(34,197,94,0.2); border-color:#22c55e; color:#ffffff; font-weight:600; cursor:pointer;">
+                <i class="fa-solid fa-file-pdf"></i> Baixar Comprovante (PDF)
+              </button>
+            </div>
+
+          </div>
+
+          <!-- E-mail da Escola (Destinatário) -->
+          <div class="form-group" style="margin-bottom: 14px;">
+            <label class="form-label" for="survey-recipient-email">Destinatário <span class="required">*</span></label>
+            <input type="email" id="survey-recipient-email" class="form-input" placeholder="e000000a@educacao.sp.gov.br" required>
+            <div style="font-size:0.72rem; color:var(--text-dim); margin-top:3px;">
+              E-mail oficial da escola que receberá o link da pesquisa de satisfação.
+            </div>
+          </div>
+
+          <!-- Resumo do Atendimento (Opcional) -->
+          <div class="form-group" style="margin-bottom: 14px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:5px;">
+              <label class="form-label" for="survey-summary-text" style="margin-bottom:0;">Resumo do Atendimento</label>
+              <span style="font-size:0.72rem; color:var(--text-dim); font-weight:500;">(Não obrigatório)</span>
+            </div>
+            <textarea id="survey-summary-text" class="form-textarea" rows="5" placeholder="Equipamentos Verificados:&#10;Equipamentos Arrumados:&#10;Equipamentos para Garantia:&#10;Equipamentos S/ Solução:"></textarea>
+          </div>
+
+          <!-- Anexo de Arquivo / Relatório (Opcional) -->
+          <div class="form-group" style="margin-bottom: 14px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:5px;">
+              <label class="form-label" style="margin-bottom:0;">Anexo / Relatório Complementar</label>
+              <span style="font-size:0.72rem; color:var(--text-dim); font-weight:500;">(Não obrigatório)</span>
+            </div>
+            
+            <div id="survey-file-dropzone" class="survey-file-zone" onclick="document.getElementById('survey-file-input').click()">
+              <input type="file" id="survey-file-input" style="display:none;" onchange="App.handleSurveyFileSelect(event)">
+              <div id="survey-file-empty" style="text-align:center; padding:14px 10px;">
+                <i class="fa-solid fa-cloud-arrow-up" style="font-size:1.5rem; color:#60a5fa; margin-bottom:4px;"></i>
+                <div style="font-size:0.84rem; font-weight:600; color:#e2e8f0;">Clique para selecionar um arquivo anexo</div>
+                <div style="font-size:0.72rem; color:var(--text-dim); margin-top:2px;">PDF, Imagem, Relatório ou Documento (opcional)</div>
+              </div>
+              <div id="survey-file-selected" style="display:none; align-items:center; justify-content:space-between; padding:10px 14px; background:rgba(30,41,59,0.85); border-radius:8px;">
+                <div style="display:flex; align-items:center; gap:10px; min-width:0;">
+                  <i class="fa-solid fa-paperclip" style="color:#38bdf8; font-size:1.1rem; flex-shrink:0;"></i>
+                  <div style="min-width:0;">
+                    <div id="survey-file-name" style="font-size:0.82rem; font-weight:600; color:#ffffff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">arquivo.pdf</div>
+                    <div id="survey-file-size" style="font-size:0.72rem; color:#94a3b8;">120 KB</div>
+                  </div>
+                </div>
+                <button type="button" class="btn-icon-action" onclick="event.stopPropagation(); App.removeSurveyFile();" title="Remover anexo" style="color:#ef4444; border-color:rgba(239,68,68,0.3); width:28px; height:28px; cursor:pointer;">
+                  <i class="fa-solid fa-xmark"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Alerta explicativo -->
+          <div style="background: rgba(56, 189, 248, 0.08); border: 1px solid rgba(56, 189, 248, 0.25); border-radius: 8px; padding: 10px 14px; font-size: 0.78rem; color: #bae6fd; line-height: 1.4;">
+            <i class="fa-solid fa-circle-info" style="color:#38bdf8; margin-right:5px;"></i>
+            Ao confirmar o envio, o sistema registrará a confirmação e gerará automaticamente o <strong>Documento Comprovante em PDF</strong> contendo todos os dados, resumo e anexo para seu arquivamento e prestação de contas.
+          </div>
+        </div>
+
+        <div class="modal-footer" style="display:flex; justify-content:space-between; align-items:center;">
+          <button type="button" class="btn-secondary" onclick="App.closeModal('modal-satisfaction-survey')">Cancelar</button>
+          <button type="submit" id="btn-submit-survey" class="btn-primary" style="background:#2563eb; border-color:#1d4ed8; box-shadow:0 4px 14px rgba(37,99,235,0.35);">
+            <i class="fa-solid fa-paper-plane"></i> <span id="btn-submit-survey-text">Enviar E-mail e Gerar Comprovante (PDF)</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- CONTAINER TEMPLATE OCULTO PARA GERAÇÃO DO COMPROVANTE EM PDF -->
+  <div id="survey-pdf-render-wrapper" style="position:fixed; left:-9999px; top:-9999px; width:210mm; background:#ffffff; color:#0f172a; font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif; z-index:-1; opacity:0; pointer-events:none;">
+    <div id="survey-pdf-content" style="padding:15mm; background:#ffffff; box-sizing:border-box;"></div>
+  </div>
+
 </body>
 </html>

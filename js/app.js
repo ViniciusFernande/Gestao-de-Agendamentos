@@ -1718,9 +1718,14 @@ const App = {
 
 
                 ${isDone
-                  ? `<button type="button" class="btn-icon-action btn-survey active" onclick="App.openSatisfactionSurvey('${order.id}')" title="Enviar Pesquisa de Satisfação para a Escola">
-                      <i class="fa-solid fa-star"></i>
-                    </button>`
+                  ? (order.surveySent
+                      ? `<button type="button" class="btn-icon-action btn-survey sent" onclick="App.openSatisfactionSurvey('${order.id}')" title="Pesquisa de Satisfação já Enviada (Clique para ver comprovante ou reenviar)">
+                          <i class="fa-solid fa-star"></i>
+                        </button>`
+                      : `<button type="button" class="btn-icon-action btn-survey active" onclick="App.openSatisfactionSurvey('${order.id}')" title="Enviar Pesquisa de Satisfação para a Escola">
+                          <i class="fa-solid fa-star"></i>
+                        </button>`
+                    )
                   : `<button type="button" class="btn-icon-action btn-survey is-disabled" disabled title="Pesquisa de satisfação liberada apenas após a ordem ser concluída" style="cursor:not-allowed; opacity:0.35; filter:grayscale(0.85);">
                       <i class="fa-solid fa-star"></i>
                     </button>`
@@ -1831,10 +1836,379 @@ const App = {
   },
 
 
+  // =========================================================================
+  // GESTÃO DA PESQUISA DE SATISFAÇÃO & COMPROVANTE DE ENVIO (PDF)
+  // =========================================================================
+  currentSurveySchedule: null,
+  currentSurveyFile: null,
+
   openSatisfactionSurvey(scheduleId) {
     const sched = store.getSchedules().find(s => String(s.id).trim() === String(scheduleId).trim());
-    const schoolName = sched ? sched.schoolName : 'a escola';
-    this.showToast(`Pesquisa de satisfação para ${schoolName}: o link do formulário será inserido em breve!`);
+    if (!sched) {
+      this.showToast('Atendimento não encontrado.');
+      return;
+    }
+
+    this.currentSurveySchedule = sched;
+    this.currentSurveyFile = null;
+
+    // Reset formulário e campos
+    document.getElementById('survey-schedule-id').value = sched.id;
+    document.getElementById('survey-info-school').textContent = sched.schoolName || 'Escola Solicitante';
+    document.getElementById('survey-info-cie').textContent = `CIE: ${sched.schoolCie || '-'} | Diretor(a): ${sched.directorName || 'Coordenação'}`;
+
+    const analyst = store.getAnalystById(sched.analystId) || { name: sched.analystName || 'Analista' };
+    const elAnalystSpan = document.querySelector('#survey-info-analyst span');
+    if (elAnalystSpan) elAnalystSpan.textContent = analyst.name;
+
+    const elOsSpan = document.querySelector('#survey-info-os span');
+    if (elOsSpan) elOsSpan.textContent = sched.osNumber || '-';
+
+    const elDateSpan = document.querySelector('#survey-info-date span');
+    if (elDateSpan) elDateSpan.textContent = sched.date ? sched.date.split('-').reverse().join('/') : '-';
+
+    const elSubSpan = document.querySelector('#survey-info-subject span');
+    if (elSubSpan) elSubSpan.textContent = (sched.subject || 'Atendimento Geral').replace(/^Retorno:\s*/gi, '').trim();
+
+    // E-mail do destinatário: padrão automático SEDUC (eCIEa@educacao.sp.gov.br) ou histórico anterior
+    const inputEmail = document.getElementById('survey-recipient-email');
+    if (inputEmail) {
+      let defaultEmail = sched.surveyRecipient || '';
+      if (!defaultEmail) {
+        const schools = store.getSchools();
+        const schoolObj = schools.find(sc => String(sc.cie).trim() === String(sched.schoolCie).trim());
+        if (schoolObj && schoolObj.email) {
+          defaultEmail = schoolObj.email;
+        } else if (sched.schoolCie) {
+          const cieDigits = String(sched.schoolCie).replace(/\D/g, '');
+          if (cieDigits) {
+            const formattedCie = cieDigits.length === 5 ? ('0' + cieDigits) : (cieDigits.length < 5 ? cieDigits.padStart(6, '0') : cieDigits);
+            defaultEmail = `e${formattedCie}a@educacao.sp.gov.br`;
+          }
+        }
+      }
+      inputEmail.value = defaultEmail;
+    }
+
+    // Resumo do atendimento (template padrão fixo para todos os cards)
+    const defaultSummaryTemplate = "Equipamentos Verificados:\nEquipamentos Arrumados:\nEquipamentos para Garantia:\nEquipamentos S/ Solução:";
+
+    const txtSummary = document.getElementById('survey-summary-text');
+    if (txtSummary) {
+      txtSummary.value = (sched.surveySummary && sched.surveySummary.trim()) ? sched.surveySummary : defaultSummaryTemplate;
+    }
+
+    // Reset de anexo
+    const fileInput = document.getElementById('survey-file-input');
+    if (fileInput) fileInput.value = '';
+
+    const emptyBox = document.getElementById('survey-file-empty');
+    const selectedBox = document.getElementById('survey-file-selected');
+    const fileNameEl = document.getElementById('survey-file-name');
+    const fileSizeEl = document.getElementById('survey-file-size');
+
+    if (sched.surveyAttachmentName) {
+      if (emptyBox) emptyBox.style.display = 'none';
+      if (selectedBox) selectedBox.style.display = 'flex';
+      if (fileNameEl) fileNameEl.textContent = sched.surveyAttachmentName;
+      if (fileSizeEl) fileSizeEl.textContent = '(Arquivo já anexado anteriormente)';
+    } else {
+      if (emptyBox) emptyBox.style.display = 'block';
+      if (selectedBox) selectedBox.style.display = 'none';
+    }
+
+    // Banner de envio anterior
+    const alreadyBox = document.getElementById('survey-already-sent-box');
+    const btnSubmitText = document.getElementById('btn-submit-survey-text');
+
+    if (sched.surveySent) {
+      if (alreadyBox) {
+        alreadyBox.style.display = 'block';
+        const dateFmt = sched.surveySentAt ? this.formatDateTimePtBr(sched.surveySentAt) : 'Data não registrada';
+        document.getElementById('survey-sent-date').textContent = dateFmt;
+      }
+      if (btnSubmitText) btnSubmitText.textContent = 'Reenviar E-mail e Gerar Novo Comprovante (PDF)';
+    } else {
+      if (alreadyBox) alreadyBox.style.display = 'none';
+      if (btnSubmitText) btnSubmitText.textContent = 'Enviar E-mail e Gerar Comprovante (PDF)';
+    }
+
+    this.openModal('modal-satisfaction-survey');
+  },
+
+  handleSurveyFileSelect(event) {
+    const file = event.target.files ? event.target.files[0] : null;
+    const emptyBox = document.getElementById('survey-file-empty');
+    const selectedBox = document.getElementById('survey-file-selected');
+    const fileNameEl = document.getElementById('survey-file-name');
+    const fileSizeEl = document.getElementById('survey-file-size');
+
+    if (file) {
+      this.currentSurveyFile = file;
+      if (emptyBox) emptyBox.style.display = 'none';
+      if (selectedBox) selectedBox.style.display = 'flex';
+      if (fileNameEl) fileNameEl.textContent = file.name;
+      if (fileSizeEl) fileSizeEl.textContent = this.formatFileSize(file.size);
+    } else {
+      this.removeSurveyFile();
+    }
+  },
+
+  removeSurveyFile() {
+    this.currentSurveyFile = null;
+    const fileInput = document.getElementById('survey-file-input');
+    if (fileInput) fileInput.value = '';
+
+    const emptyBox = document.getElementById('survey-file-empty');
+    const selectedBox = document.getElementById('survey-file-selected');
+    if (emptyBox) emptyBox.style.display = 'block';
+    if (selectedBox) selectedBox.style.display = 'none';
+
+    if (this.currentSurveySchedule) {
+      this.currentSurveySchedule.surveyAttachmentName = '';
+    }
+  },
+
+  formatFileSize(bytes) {
+    if (!bytes || bytes === 0) return '0 KB';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+  },
+
+  formatDateTimePtBr(isoString) {
+    if (!isoString) return '-';
+    try {
+      const d = new Date(isoString);
+      if (isNaN(d.getTime())) return isoString;
+      const day = String(d.getDate()).padStart(2, '0');
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const year = d.getFullYear();
+      const hours = String(d.getHours()).padStart(2, '0');
+      const minutes = String(d.getMinutes()).padStart(2, '0');
+      const seconds = String(d.getSeconds()).padStart(2, '0');
+      return `${day}/${month}/${year} às ${hours}:${minutes}:${seconds}`;
+    } catch {
+      return isoString;
+    }
+  },
+
+  async sendSatisfactionSurvey(event) {
+    if (event) event.preventDefault();
+
+    const scheduleId = document.getElementById('survey-schedule-id')?.value;
+    const recipientEmail = document.getElementById('survey-recipient-email')?.value?.trim();
+    const summaryText = document.getElementById('survey-summary-text')?.value?.trim() || '';
+
+    if (!scheduleId) return;
+
+    if (!recipientEmail) {
+      alert('Por favor, informe o e-mail do destinatário da escola.');
+      return;
+    }
+
+    const sched = store.getSchedules().find(s => String(s.id).trim() === String(scheduleId).trim());
+    if (!sched) return;
+
+    const btnSubmit = document.getElementById('btn-submit-survey');
+    const originalBtnHtml = btnSubmit ? btnSubmit.innerHTML : '';
+    if (btnSubmit) {
+      btnSubmit.disabled = true;
+      btnSubmit.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Enviando e Gerando PDF...';
+    }
+
+    try {
+      // Gera protocolo oficial único
+      const now = new Date();
+      const nowIso = now.toISOString();
+      const ymd = now.toISOString().slice(0, 10).replace(/-/g, '');
+      const osClean = (sched.osNumber || 'OS').replace(/[^a-zA-Z0-9]/g, '').slice(-6);
+      const randomSuffix = Math.floor(1000 + Math.random() * 9000);
+      const protocol = `SAT-${ymd}-${osClean}-${randomSuffix}`;
+
+      // Salva dados no agendamento
+      sched.surveySent = true;
+      sched.surveySentAt = nowIso;
+      sched.surveyRecipient = recipientEmail;
+      sched.surveySummary = summaryText;
+      sched.surveyAttachmentName = this.currentSurveyFile ? this.currentSurveyFile.name : (sched.surveyAttachmentName || '');
+      sched.surveyProtocol = protocol;
+
+      store.saveSchedule(sched);
+      if (typeof FirestoreSync !== 'undefined') {
+        FirestoreSync.saveSchedule(sched);
+      }
+
+      // Atualiza interface do sistema
+      this.renderAnalystDailyCards();
+      this.renderAllSchedulesTable();
+
+      // Gera e baixa automaticamente o comprovante em PDF
+      await this.generateSurveyReceiptPDF(sched);
+
+      this.closeModal('modal-satisfaction-survey');
+      this.showToast('✅ Pesquisa de satisfação enviada com sucesso! Comprovante em PDF gerado.');
+
+    } catch (err) {
+      console.error('Erro ao enviar pesquisa ou gerar PDF:', err);
+      alert('Erro ao processar o envio ou gerar comprovante: ' + (err.message || err));
+    } finally {
+      if (btnSubmit) {
+        btnSubmit.disabled = false;
+        btnSubmit.innerHTML = originalBtnHtml;
+      }
+    }
+  },
+
+  async downloadCurrentSurveyReceipt() {
+    if (!this.currentSurveySchedule) return;
+    await this.generateSurveyReceiptPDF(this.currentSurveySchedule);
+  },
+
+  async generateSurveyReceiptPDF(sched) {
+    if (!sched) return;
+
+    const pdfContainer = document.getElementById('survey-pdf-content');
+    if (!pdfContainer) return;
+
+    const analyst = store.getAnalystById(sched.analystId) || { name: sched.analystName || 'Analista Responsável' };
+    const dateFormatted = sched.date ? sched.date.split('-').reverse().join('/') : '-';
+    const sentAtFormatted = sched.surveySentAt ? this.formatDateTimePtBr(sched.surveySentAt) : this.formatDateTimePtBr(new Date().toISOString());
+    const osNumberDisplay = sched.osNumber || 'Não informado';
+    const cleanOsFileName = (sched.osNumber || 'Atendimento').replace(/[^a-zA-Z0-9]/g, '_');
+
+    // Monta o HTML formal do comprovante em padrão A4 (fundo branco, tipografia institucional)
+    pdfContainer.innerHTML = `
+      <div style="font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif; color:#0f172a; line-height:1.45; font-size:12px;">
+        <!-- CABEÇALHO OFICIAL -->
+        <div style="border-bottom: 2px solid #1e3a8a; padding-bottom: 12px; margin-bottom: 16px; text-align: center;">
+          <div style="font-size: 19px; font-weight: 800; color: #1e3a8a; line-height: 1.25; letter-spacing: -0.2px;">Unidade Regional de Ensino Sorocaba</div>
+          <div style="font-size: 13px; font-weight: 600; color: #475569; margin-top: 4px;">Setor de Tecnologia - Seintec e Setec</div>
+        </div>
+
+        <!-- TÍTULO DO DOCUMENTO -->
+        <div style="text-align:center; background:#f1f5f9; border:1px solid #cbd5e1; border-radius:6px; padding:10px 14px; margin-bottom:18px;">
+          <div style="font-size:15px; font-weight:800; color:#0f172a; text-transform:uppercase; letter-spacing:0.5px;">Comprovante de Envio &mdash; Pesquisa de Satisfação</div>
+          <div style="font-size:11px; color:#475569; margin-top:2px;">Notificação eletrônica de avaliação de atendimento escolar</div>
+        </div>
+
+        <!-- QUADRO DE STATUS E ENVIO -->
+        <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px; padding:12px 14px; margin-bottom:18px;">
+          <table style="width:100%; border-collapse:collapse; font-size:11.5px;">
+            <tr>
+              <td style="width:45%; padding:4px 0;"><strong>Data e Hora do Envio:</strong> <span>${sentAtFormatted}</span></td>
+              <td style="width:55%; padding:4px 0;"><strong>Destinatário:</strong> <span style="color:#0f172a; font-weight:600;">${sched.surveyRecipient || 'E-mail oficial da unidade'}</span></td>
+            </tr>
+          </table>
+        </div>
+
+        <!-- DETALHES DA ORDEM DE SERVIÇO -->
+        <div style="margin-bottom:18px;">
+          <div style="font-size:12px; font-weight:800; color:#1e3a8a; text-transform:uppercase; border-bottom:1px solid #e2e8f0; padding-bottom:4px; margin-bottom:10px; letter-spacing:0.5px;">
+            1. Dados da Ordem de Serviço & Atendimento
+          </div>
+          <table style="width:100%; border-collapse:collapse; font-size:11.5px;">
+            <tbody>
+              <tr style="border-bottom:1px solid #f1f5f9;">
+                <td style="padding:6px 8px; width:25%; background:#f8fafc; font-weight:600; color:#475569;">Escola Solicitante:</td>
+                <td style="padding:6px 8px; width:75%; font-weight:700; color:#0f172a;">${sched.schoolName || '-'}</td>
+              </tr>
+              <tr style="border-bottom:1px solid #f1f5f9;">
+                <td style="padding:6px 8px; background:#f8fafc; font-weight:600; color:#475569;">Código CIE:</td>
+                <td style="padding:6px 8px; color:#0f172a;">${sched.schoolCie || '-'}</td>
+              </tr>
+              <tr style="border-bottom:1px solid #f1f5f9;">
+                <td style="padding:6px 8px; background:#f8fafc; font-weight:600; color:#475569;">Diretor(a) Responsável:</td>
+                <td style="padding:6px 8px; color:#0f172a;">${sched.directorName || 'Coordenação da Unidade'}</td>
+              </tr>
+              <tr style="border-bottom:1px solid #f1f5f9;">
+                <td style="padding:6px 8px; background:#f8fafc; font-weight:600; color:#475569;">Analista Técnico:</td>
+                <td style="padding:6px 8px; font-weight:600; color:#1e3a8a;">${analyst.name || '-'}</td>
+              </tr>
+              <tr style="border-bottom:1px solid #f1f5f9;">
+                <td style="padding:6px 8px; background:#f8fafc; font-weight:600; color:#475569;">Número da O.S.:</td>
+                <td style="padding:6px 8px; font-weight:700; color:#2563eb;">${osNumberDisplay}</td>
+              </tr>
+              <tr style="border-bottom:1px solid #f1f5f9;">
+                <td style="padding:6px 8px; background:#f8fafc; font-weight:600; color:#475569;">Data de Realização:</td>
+                <td style="padding:6px 8px; color:#0f172a;">${dateFormatted}</td>
+              </tr>
+              <tr style="border-bottom:1px solid #f1f5f9;">
+                <td style="padding:6px 8px; background:#f8fafc; font-weight:600; color:#475569;">Assunto / Serviço:</td>
+                <td style="padding:6px 8px; color:#0f172a;">${sched.subject || 'Atendimento Geral'}</td>
+              </tr>
+
+            </tbody>
+          </table>
+        </div>
+
+        <!-- RESUMO DO ATENDIMENTO -->
+        <div style="margin-bottom:18px;">
+          <div style="font-size:12px; font-weight:800; color:#1e3a8a; text-transform:uppercase; border-bottom:1px solid #e2e8f0; padding-bottom:4px; margin-bottom:8px; letter-spacing:0.5px;">
+            2. Resumo da Visita Técnica Realizada
+          </div>
+          <div style="background:${sched.surveySummary ? '#f8fafc' : '#ffffff'}; border:1px solid ${sched.surveySummary ? '#cbd5e1' : '#e2e8f0'}; border-radius:6px; padding:10px 12px; min-height:45px;">
+            ${sched.surveySummary ? `
+              <div style="color:#0f172a; white-space:pre-wrap; font-size:11.5px;">${sched.surveySummary}</div>
+            ` : `
+              <div style="color:#94a3b8; font-style:italic; font-size:11px;">Nenhum resumo complementar informado (item não obrigatório).</div>
+            `}
+          </div>
+        </div>
+
+        <!-- ANEXO VINCULADO -->
+        <div style="margin-bottom:24px;">
+          <div style="font-size:12px; font-weight:800; color:#1e3a8a; text-transform:uppercase; border-bottom:1px solid #e2e8f0; padding-bottom:4px; margin-bottom:8px; letter-spacing:0.5px;">
+            3. Registro de Documento / Relatório Anexo
+          </div>
+          <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px; padding:10px 12px; display:flex; align-items:center; justify-content:space-between;">
+            ${sched.surveyAttachmentName ? `
+              <div style="display:flex; align-items:center; gap:8px;">
+                <span style="font-size:16px;">&#128206;</span>
+                <div>
+                  <div style="font-weight:700; color:#0f172a; font-size:11.5px;">${sched.surveyAttachmentName}</div>
+                  <div style="font-size:10px; color:#15803d; font-weight:600;">&#10004; Arquivo anexo vinculado e transmitido no envio eletrônico.</div>
+                </div>
+              </div>
+            ` : `
+              <div style="color:#94a3b8; font-style:italic; font-size:11px;">Nenhum arquivo externo anexado (item não obrigatório).</div>
+            `}
+          </div>
+        </div>
+
+        <!-- DECLARAÇÃO INSTITUCIONAL & AUTENTICAÇÃO -->
+        <div style="border-top:1px solid #cbd5e1; padding-top:14px; margin-top:20px;">
+          <div style="background:#f1f5f9; border-radius:6px; padding:10px 12px; font-size:10.5px; color:#475569; line-height:1.45;">
+            <strong>DECLARAÇÃO DE CONFORMIDADE:</strong> Certificamos para os devidos fins de documentação, fiscalização e acompanhamento técnico que a pesquisa de satisfação referente à Ordem de Serviço supracitada foi devidamente gerada e despachada via sistema à equipe gestora da unidade escolar solicitante. Este comprovante é emitido eletronicamente e possui validade para registro histórico e prestação de contas.
+          </div>
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-top:12px; font-size:10px; color:#64748b;">
+            <div>Emissão: ${this.formatDateTimePtBr(new Date().toISOString())}</div>
+            <div>Sistema de Agendamento URE Sorocaba &bull; Controle de Qualidade</div>
+          </div>
+        </div>
+      </div>
+    `;
+
+    // Configuração do html2pdf em A4 Retrato
+    const opt = {
+      margin: [10, 10, 10, 10],
+      filename: `Comprovante_Pesquisa_OS_${cleanOsFileName}.pdf`,
+      image: { type: 'jpeg', quality: 0.98 },
+      html2canvas: {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: '#ffffff'
+      },
+      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+    };
+
+    if (typeof html2pdf !== 'undefined') {
+      await html2pdf().set(opt).from(pdfContainer).save();
+    } else {
+      console.warn('html2pdf não encontrado. Abrindo janela de impressão...');
+      window.print();
+    }
   },
 
   markCardAsCompleted(scheduleId) {
