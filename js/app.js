@@ -2000,7 +2000,7 @@ const App = {
     try {
       if (!sched.completed) throw new Error('Conclua o atendimento antes de enviar a pesquisa.');
       if (!sched.schoolCie || !sched.osNumber) throw new Error('Informe o CIE e o número da O.S. no atendimento.');
-      const configuredUrl = 'https://sor-seintec.github.io/pesquisa-qualidade/index.html';
+      const configuredUrl = 'https://sor-seintec.github.io/pesquisa-qualidade/index.html?v=20261028-auto-cie';
       if (!configuredUrl) throw new Error('URL da integração não informada.');
       const url = new URL(configuredUrl);
       if (!['https:', 'http:'].includes(url.protocol)) throw new Error('Use uma URL HTTP ou HTTPS para a integração.');
