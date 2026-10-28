@@ -1994,13 +1994,13 @@ const App = {
     const originalBtnHtml = btnSubmit ? btnSubmit.innerHTML : '';
     if (btnSubmit) {
       btnSubmit.disabled = true;
-      btnSubmit.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Enviando e Gerando PDF...';
+      btnSubmit.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Conectando à pesquisa...';
     }
 
     try {
       if (!sched.completed) throw new Error('Conclua o atendimento antes de enviar a pesquisa.');
       if (!sched.schoolCie || !sched.osNumber) throw new Error('Informe o CIE e o número da O.S. no atendimento.');
-      const configuredUrl = 'https://sor-seintec.github.io/pesquisa-qualidade/index.html?v=20261028-hidden';
+      const configuredUrl = 'https://sor-seintec.github.io/pesquisa-qualidade/index.html?v=20261028-hidden-fix';
       if (!configuredUrl) throw new Error('URL da integração não informada.');
       const url = new URL(configuredUrl);
       if (!['https:', 'http:'].includes(url.protocol)) throw new Error('Use uma URL HTTP ou HTTPS para a integração.');
@@ -2012,34 +2012,44 @@ const App = {
       const result = await new Promise((resolve, reject) => {
         const frame = document.createElement('iframe');
         frame.title = 'Autenticação da Pesquisa de Qualidade';
-        frame.hidden = true;
+        frame.style.cssText = 'width:100%;height:calc(100% - 40px);border:0;';
         const loginPanel = document.createElement('div');
-        loginPanel.hidden = true;
+        loginPanel.hidden = false;
         loginPanel.style.cssText = 'position:fixed;inset:5%;z-index:99999;background:white;padding:12px;border:2px solid #2563eb;border-radius:10px;';
+        const visiblePanelStyle = loginPanel.style.cssText;
+        const hidePanel = () => { loginPanel.style.cssText = 'position:fixed;left:-10000px;top:0;width:650px;height:700px;opacity:0;pointer-events:none;'; };
+        hidePanel();
         const close = document.createElement('button');
         close.type = 'button';
         close.textContent = 'Cancelar acesso à pesquisa';
         close.onclick = () => finish(new Error('Acesso à pesquisa cancelado.'));
         loginPanel.append(close, frame);
         document.body.append(loginPanel);
-        frame.src = url.href;
         const popup = frame.contentWindow;
         let settled = false;
 
+        const connectionTimer = setTimeout(() => finish(new Error('A pesquisa não confirmou a conexão em 30 segundos. Confira a publicação dos dois sistemas e o histórico de envios antes de tentar novamente.')), 30000);
+        const sendRequest = () => popup.postMessage({type:'quality-request',payload},url.origin);
+        const retry = setInterval(sendRequest, 1000);
+        frame.onload = sendRequest;
+        frame.onerror = () => finish(new Error('Não foi possível carregar a pesquisa.'));
         const timer = setTimeout(() => finish(new Error('Tempo esgotado. Verifique o sistema de pesquisa antes de tentar novamente.')), 300000);
-        function finish(error, value) { if (settled) return; settled = true; clearTimeout(timer); window.removeEventListener('message', receive); loginPanel.remove(); error ? reject(error) : resolve(value); }
+        function finish(error, value) { if (settled) return; settled = true; clearTimeout(timer); clearTimeout(connectionTimer); clearInterval(retry); window.removeEventListener('message', receive); loginPanel.remove(); error ? reject(error) : resolve(value); }
         function receive(e) {
           if (e.source !== popup || e.origin !== url.origin || !e.data) return;
+          if (['quality-received','quality-auth-required','quality-auth-ready','quality-result'].includes(e.data.type)) { clearTimeout(connectionTimer); clearInterval(retry); }
+          if (e.data.type === 'quality-received' && btnSubmit) btnSubmit.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Aguardando envio da pesquisa...';
           if (e.data.type === 'quality-auth-required') {
-            loginPanel.hidden = false;
+            loginPanel.style.cssText = visiblePanelStyle;
             frame.hidden = false;
             frame.style.cssText = 'width:100%;height:calc(100% - 40px);border:0;';
           }
-          if (e.data.type === 'quality-auth-ready') { loginPanel.hidden = true; frame.hidden = true; }
+          if (e.data.type === 'quality-auth-ready') { hidePanel(); }
           if (e.data.type === 'quality-ready') popup.postMessage({ type: 'quality-request', payload }, url.origin);
           if (e.data.type === 'quality-result') e.data.error ? finish(new Error(e.data.error)) : finish(null, e.data);
         }
         window.addEventListener('message', receive);
+        frame.src = url.href;
       });
       const nowIso = new Date().toISOString();
       const protocol = result.token;
@@ -2061,6 +2071,7 @@ const App = {
       this.renderAnalystDailyCards();
       this.renderAllSchedulesTable();
 
+      if (btnSubmit) btnSubmit.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Gerando comprovante PDF...';
       // Gera e baixa automaticamente o comprovante em PDF
       try { await this.generateSurveyReceiptPDF(sched); } catch (pdfError) { console.error(pdfError); alert('A solicitação de envio foi aceita, mas não foi possível gerar o PDF. Não reenvie apenas por esse motivo.'); }
 
