@@ -2019,20 +2019,39 @@ const App = {
     }
 
     try {
-      // Gera protocolo oficial único
-      const now = new Date();
-      const nowIso = now.toISOString();
-      const ymd = now.toISOString().slice(0, 10).replace(/-/g, '');
-      const osClean = (sched.osNumber || 'OS').replace(/[^a-zA-Z0-9]/g, '').slice(-6);
-      const randomSuffix = Math.floor(1000 + Math.random() * 9000);
-      const protocol = `SAT-${ymd}-${osClean}-${randomSuffix}`;
+      if (!sched.completed) throw new Error('Conclua o atendimento antes de enviar a pesquisa.');
+      if (!sched.schoolCie || !sched.osNumber) throw new Error('Informe o CIE e o número da O.S. no atendimento.');
+      const configuredUrl = localStorage.getItem('qualityIntegrationUrl') || prompt('Informe a URL da página integracao.html do sistema Pesquisa de Qualidade:');
+      if (!configuredUrl) throw new Error('URL da integração não informada.');
+      const url = new URL(configuredUrl);
+      if (!['https:', 'http:'].includes(url.protocol)) throw new Error('Use uma URL HTTP ou HTTPS para a integração.');
+      localStorage.setItem('qualityIntegrationUrl', url.href);
+      const popup = window.open(url.href, 'pesquisaQualidadeIntegracao', 'width=650,height=700');
+      if (!popup) throw new Error('Permita pop-ups para abrir o sistema de pesquisa.');
+      const file = this.currentSurveyFile;
+      if (file && file.size > 5 * 1024 * 1024) { popup.close(); throw new Error('O anexo deve ter no máximo 5 MB.'); }
+      const attachment = file ? { name: file.name, contentType: file.type || 'application/octet-stream', contentBase64: btoa(Array.from(new Uint8Array(await file.arrayBuffer()), b => String.fromCharCode(b)).join('')) } : null;
+      const payload = { cie: String(sched.schoolCie), osNumber: String(sched.osNumber), schoolName: sched.schoolName || '', serviceDate: sched.date || '', customEmail: recipientEmail, customMessage: summaryText, attachment };
+      const result = await new Promise((resolve, reject) => {
+        const timer = setTimeout(() => finish(new Error('Tempo esgotado. Verifique o sistema de pesquisa antes de tentar novamente.')), 300000);
+        const poll = setInterval(() => { if (popup.closed) finish(new Error('Janela da pesquisa fechada. Verifique o resultado antes de tentar novamente.')); }, 1000);
+        function finish(error, value) { clearTimeout(timer); clearInterval(poll); window.removeEventListener('message', receive); error ? reject(error) : resolve(value); }
+        function receive(e) {
+          if (e.source !== popup || e.origin !== url.origin || !e.data) return;
+          if (e.data.type === 'quality-ready') popup.postMessage({ type: 'quality-request', payload }, url.origin);
+          if (e.data.type === 'quality-result') e.data.error ? finish(new Error(e.data.error)) : finish(null, e.data);
+        }
+        window.addEventListener('message', receive);
+      });
+      const nowIso = new Date().toISOString();
+      const protocol = result.token;
 
       // Salva dados no agendamento
       sched.surveySent = true;
       sched.surveySentAt = nowIso;
       sched.surveyRecipient = recipientEmail;
       sched.surveySummary = summaryText;
-      sched.surveyAttachmentName = this.currentSurveyFile ? this.currentSurveyFile.name : (sched.surveyAttachmentName || '');
+      sched.surveyAttachmentName = this.currentSurveyFile ? this.currentSurveyFile.name : '';
       sched.surveyProtocol = protocol;
 
       store.saveSchedule(sched);
@@ -2045,10 +2064,10 @@ const App = {
       this.renderAllSchedulesTable();
 
       // Gera e baixa automaticamente o comprovante em PDF
-      await this.generateSurveyReceiptPDF(sched);
+      try { await this.generateSurveyReceiptPDF(sched); } catch (pdfError) { console.error(pdfError); alert('A solicitação de envio foi aceita, mas não foi possível gerar o PDF. Não reenvie apenas por esse motivo.'); }
 
       this.closeModal('modal-satisfaction-survey');
-      this.showToast('✅ Pesquisa de satisfação enviada com sucesso! Comprovante em PDF gerado.');
+      this.showToast('✅ Solicitação aceita pelo Power Automate. Comprovante gerado.');
 
     } catch (err) {
       console.error('Erro ao enviar pesquisa ou gerar PDF:', err);
@@ -2168,7 +2187,7 @@ const App = {
                 <span style="font-size:16px;">&#128206;</span>
                 <div>
                   <div style="font-weight:700; color:#0f172a; font-size:11.5px;">${sched.surveyAttachmentName}</div>
-                  <div style="font-size:10px; color:#15803d; font-weight:600;">&#10004; Arquivo anexo vinculado e transmitido no envio eletrônico.</div>
+                  <div style="font-size:10px; color:#15803d; font-weight:600;">&#10004; Arquivo informado na solicitação de envio.</div>
                 </div>
               </div>
             ` : `
@@ -2180,7 +2199,7 @@ const App = {
         <!-- DECLARAÇÃO INSTITUCIONAL & AUTENTICAÇÃO -->
         <div style="border-top:1px solid #cbd5e1; padding-top:14px; margin-top:20px;">
           <div style="background:#f1f5f9; border-radius:6px; padding:10px 12px; font-size:10.5px; color:#475569; line-height:1.45;">
-            <strong>DECLARAÇÃO DE CONFORMIDADE:</strong> Certificamos para os devidos fins de documentação, fiscalização e acompanhamento técnico que a pesquisa de satisfação referente à Ordem de Serviço supracitada foi devidamente gerada e despachada via sistema à equipe gestora da unidade escolar solicitante. Este comprovante é emitido eletronicamente e possui validade para registro histórico e prestação de contas.
+            <strong>DECLARAÇÃO DE CONFORMIDADE:</strong> Certificamos para os devidos fins de documentação, fiscalização e acompanhamento técnico que a pesquisa de satisfação referente à Ordem de Serviço supracitada teve sua solicitação de envio aceita pelo fluxo à equipe gestora da unidade escolar solicitante. Este comprovante é emitido eletronicamente e possui validade para registro histórico e prestação de contas.
           </div>
           <div style="display:flex; justify-content:space-between; align-items:center; margin-top:12px; font-size:10px; color:#64748b;">
             <div>Emissão: ${this.formatDateTimePtBr(new Date().toISOString())}</div>
