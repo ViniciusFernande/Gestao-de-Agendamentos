@@ -1870,25 +1870,9 @@ const App = {
     const elSubSpan = document.querySelector('#survey-info-subject span');
     if (elSubSpan) elSubSpan.textContent = (sched.subject || 'Atendimento Geral').replace(/^Retorno:\s*/gi, '').trim();
 
-    // E-mail do destinatário: padrão automático SEDUC (eCIEa@educacao.sp.gov.br) ou histórico anterior
+    // Vazio: a pesquisa resolve o destinatário pelo cadastro do CIE.
     const inputEmail = document.getElementById('survey-recipient-email');
-    if (inputEmail) {
-      let defaultEmail = sched.surveyRecipient || '';
-      if (!defaultEmail) {
-        const schools = store.getSchools();
-        const schoolObj = schools.find(sc => String(sc.cie).trim() === String(sched.schoolCie).trim());
-        if (schoolObj && schoolObj.email) {
-          defaultEmail = schoolObj.email;
-        } else if (sched.schoolCie) {
-          const cieDigits = String(sched.schoolCie).replace(/\D/g, '');
-          if (cieDigits) {
-            const formattedCie = cieDigits.length === 5 ? ('0' + cieDigits) : (cieDigits.length < 5 ? cieDigits.padStart(6, '0') : cieDigits);
-            defaultEmail = `e${formattedCie}a@educacao.sp.gov.br`;
-          }
-        }
-      }
-      inputEmail.value = defaultEmail;
-    }
+    if (inputEmail) inputEmail.value = '';
 
     // Resumo do atendimento (template padrão fixo para todos os cards)
     const defaultSummaryTemplate = "Equipamentos Verificados:\nEquipamentos Arrumados:\nEquipamentos para Garantia:\nEquipamentos S/ Solução:";
@@ -1998,15 +1982,10 @@ const App = {
     if (event) event.preventDefault();
 
     const scheduleId = document.getElementById('survey-schedule-id')?.value;
-    const recipientEmail = document.getElementById('survey-recipient-email')?.value?.trim();
     const summaryText = document.getElementById('survey-summary-text')?.value?.trim() || '';
 
     if (!scheduleId) return;
 
-    if (!recipientEmail) {
-      alert('Por favor, informe o e-mail do destinatário da escola.');
-      return;
-    }
 
     const sched = store.getSchedules().find(s => String(s.id).trim() === String(scheduleId).trim());
     if (!sched) return;
@@ -2021,7 +2000,7 @@ const App = {
     try {
       if (!sched.completed) throw new Error('Conclua o atendimento antes de enviar a pesquisa.');
       if (!sched.schoolCie || !sched.osNumber) throw new Error('Informe o CIE e o número da O.S. no atendimento.');
-      const configuredUrl = localStorage.getItem('qualityIntegrationUrl') || prompt('Informe a URL da página integracao.html do sistema Pesquisa de Qualidade:');
+      const configuredUrl = 'https://sor-seintec.github.io/pesquisa-qualidade/index.html';
       if (!configuredUrl) throw new Error('URL da integração não informada.');
       const url = new URL(configuredUrl);
       if (!['https:', 'http:'].includes(url.protocol)) throw new Error('Use uma URL HTTP ou HTTPS para a integração.');
@@ -2031,7 +2010,7 @@ const App = {
       const file = this.currentSurveyFile;
       if (file && file.size > 5 * 1024 * 1024) { popup.close(); throw new Error('O anexo deve ter no máximo 5 MB.'); }
       const attachment = file ? { name: file.name, contentType: file.type || 'application/octet-stream', contentBase64: btoa(Array.from(new Uint8Array(await file.arrayBuffer()), b => String.fromCharCode(b)).join('')) } : null;
-      const payload = { cie: String(sched.schoolCie), osNumber: String(sched.osNumber), schoolName: sched.schoolName || '', serviceDate: sched.date || '', customEmail: recipientEmail, customMessage: summaryText, attachment };
+      const payload = { cie: String(sched.schoolCie), osNumber: String(sched.osNumber), schoolName: sched.schoolName || '', serviceDate: sched.date || '',  customMessage: summaryText, attachment };
       const result = await new Promise((resolve, reject) => {
         const timer = setTimeout(() => finish(new Error('Tempo esgotado. Verifique o sistema de pesquisa antes de tentar novamente.')), 300000);
         const poll = setInterval(() => { if (popup.closed) finish(new Error('Janela da pesquisa fechada. Verifique o resultado antes de tentar novamente.')); }, 1000);
@@ -2049,7 +2028,7 @@ const App = {
       // Salva dados no agendamento
       sched.surveySent = true;
       sched.surveySentAt = nowIso;
-      sched.surveyRecipient = recipientEmail;
+      sched.surveyRecipient = result.recipientEmail || '';
       sched.surveySummary = summaryText;
       sched.surveyAttachmentName = this.currentSurveyFile ? this.currentSurveyFile.name : '';
       sched.surveyProtocol = protocol;
