@@ -2005,7 +2005,7 @@ const App = {
     try {
       if (!sched.completed) throw new Error('Conclua o atendimento antes de enviar a pesquisa.');
       if (!sched.schoolCie || !sched.osNumber) throw new Error('Informe o CIE e o número da O.S. no atendimento.');
-      const configuredUrl = localStorage.getItem('qualityIntegrationUrl') || prompt('Informe a URL da página integracao.html do sistema Pesquisa de Qualidade:');
+      const configuredUrl = 'https://sor-seintec.github.io/pesquisa-qualidade/index.html';
       if (!configuredUrl) throw new Error('URL da integração não informada.');
       const url = new URL(configuredUrl);
       if (!['https:', 'http:'].includes(url.protocol)) throw new Error('Use uma URL HTTP ou HTTPS para a integração.');
@@ -2015,7 +2015,7 @@ const App = {
       const file = this.currentSurveyFile;
       if (file && file.size > 5 * 1024 * 1024) { popup.close(); throw new Error('O anexo deve ter no máximo 5 MB.'); }
       const attachment = file ? { name: file.name, contentType: file.type || 'application/octet-stream', contentBase64: btoa(Array.from(new Uint8Array(await file.arrayBuffer()), b => String.fromCharCode(b)).join('')) } : null;
-      const payload = { cie: String(sched.schoolCie), osNumber: String(sched.osNumber), schoolName: sched.schoolName || '', serviceDate: sched.date || '', customEmail: recipientEmail || null, customMessage: summaryText, attachment };
+      const payload = { cie: String(sched.schoolCie), osNumber: String(sched.osNumber), schoolName: sched.schoolName || '', serviceDate: sched.date || '',  customMessage: summaryText, attachment };
       const result = await new Promise((resolve, reject) => {
         const timer = setTimeout(() => finish(new Error('Tempo esgotado. Verifique o sistema de pesquisa antes de tentar novamente.')), 300000);
         const poll = setInterval(() => { if (popup.closed) finish(new Error('Janela da pesquisa fechada. Verifique o resultado antes de tentar novamente.')); }, 1000);
