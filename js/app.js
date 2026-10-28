@@ -2000,23 +2000,42 @@ const App = {
     try {
       if (!sched.completed) throw new Error('Conclua o atendimento antes de enviar a pesquisa.');
       if (!sched.schoolCie || !sched.osNumber) throw new Error('Informe o CIE e o número da O.S. no atendimento.');
-      const configuredUrl = 'https://sor-seintec.github.io/pesquisa-qualidade/index.html?v=20261028-auto-cie';
+      const configuredUrl = 'https://sor-seintec.github.io/pesquisa-qualidade/index.html?v=20261028-hidden';
       if (!configuredUrl) throw new Error('URL da integração não informada.');
       const url = new URL(configuredUrl);
       if (!['https:', 'http:'].includes(url.protocol)) throw new Error('Use uma URL HTTP ou HTTPS para a integração.');
       localStorage.setItem('qualityIntegrationUrl', url.href);
-      const popup = window.open(url.href, 'pesquisaQualidadeIntegracao', 'width=650,height=700');
-      if (!popup) throw new Error('Permita pop-ups para abrir o sistema de pesquisa.');
       const file = this.currentSurveyFile;
-      if (file && file.size > 5 * 1024 * 1024) { popup.close(); throw new Error('O anexo deve ter no máximo 5 MB.'); }
+      if (file && file.size > 5 * 1024 * 1024) throw new Error('O anexo deve ter no máximo 5 MB.');
       const attachment = file ? { name: file.name, contentType: file.type || 'application/octet-stream', contentBase64: btoa(Array.from(new Uint8Array(await file.arrayBuffer()), b => String.fromCharCode(b)).join('')) } : null;
       const payload = { cie: String(sched.schoolCie), osNumber: String(sched.osNumber), schoolName: sched.schoolName || '', serviceDate: sched.date || '',  customMessage: summaryText, attachment };
       const result = await new Promise((resolve, reject) => {
+        const frame = document.createElement('iframe');
+        frame.title = 'Autenticação da Pesquisa de Qualidade';
+        frame.hidden = true;
+        const loginPanel = document.createElement('div');
+        loginPanel.hidden = true;
+        loginPanel.style.cssText = 'position:fixed;inset:5%;z-index:99999;background:white;padding:12px;border:2px solid #2563eb;border-radius:10px;';
+        const close = document.createElement('button');
+        close.type = 'button';
+        close.textContent = 'Cancelar acesso à pesquisa';
+        close.onclick = () => finish(new Error('Acesso à pesquisa cancelado.'));
+        loginPanel.append(close, frame);
+        document.body.append(loginPanel);
+        frame.src = url.href;
+        const popup = frame.contentWindow;
+        let settled = false;
+
         const timer = setTimeout(() => finish(new Error('Tempo esgotado. Verifique o sistema de pesquisa antes de tentar novamente.')), 300000);
-        const poll = setInterval(() => { if (popup.closed) finish(new Error('Janela da pesquisa fechada. Verifique o resultado antes de tentar novamente.')); }, 1000);
-        function finish(error, value) { clearTimeout(timer); clearInterval(poll); window.removeEventListener('message', receive); error ? reject(error) : resolve(value); }
+        function finish(error, value) { if (settled) return; settled = true; clearTimeout(timer); window.removeEventListener('message', receive); loginPanel.remove(); error ? reject(error) : resolve(value); }
         function receive(e) {
           if (e.source !== popup || e.origin !== url.origin || !e.data) return;
+          if (e.data.type === 'quality-auth-required') {
+            loginPanel.hidden = false;
+            frame.hidden = false;
+            frame.style.cssText = 'width:100%;height:calc(100% - 40px);border:0;';
+          }
+          if (e.data.type === 'quality-auth-ready') { loginPanel.hidden = true; frame.hidden = true; }
           if (e.data.type === 'quality-ready') popup.postMessage({ type: 'quality-request', payload }, url.origin);
           if (e.data.type === 'quality-result') e.data.error ? finish(new Error(e.data.error)) : finish(null, e.data);
         }
