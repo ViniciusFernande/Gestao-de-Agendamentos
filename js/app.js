@@ -2091,14 +2091,21 @@ const App = {
 
   async downloadCurrentSurveyReceipt() {
     if (!this.currentSurveySchedule) return;
+    this.showToast('Gerando comprovante em PDF...');
     await this.generateSurveyReceiptPDF(this.currentSurveySchedule);
   },
 
-  async generateSurveyReceiptPDF(sched) {
-    if (!sched) return;
-
-    const pdfContainer = document.getElementById('survey-pdf-content');
-    if (!pdfContainer) return;
+  /**
+   * Gerador Oficial e Definitivo do Comprovante de Envio em PDF
+   * Motor Vetorial 100% Nativo jsPDF: inicia exatamente no topo da folha (15mm)
+   * e garante que todas as informações fiquem perfeitamente visíveis em uma única página A4.
+   */
+  generateSurveyReceiptNativePDF(sched) {
+    const JsPdfClass = (window.jspdf && window.jspdf.jsPDF) || window.jsPDF;
+    if (!JsPdfClass) {
+      alert('Biblioteca de PDF não carregada. Por favor, recarregue a página.');
+      return false;
+    }
 
     const analyst = store.getAnalystById(sched.analystId) || { name: sched.analystName || 'Analista Responsável' };
     const dateFormatted = sched.date ? sched.date.split('-').reverse().join('/') : '-';
@@ -2106,136 +2113,220 @@ const App = {
     const osNumberDisplay = sched.osNumber || 'Não informado';
     const cleanOsFileName = (sched.osNumber || 'Atendimento').replace(/[^a-zA-Z0-9]/g, '_');
 
-    // Monta o HTML formal do comprovante em padrão A4 (fundo branco, tipografia institucional)
-    pdfContainer.innerHTML = `
-      <div style="font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif; color:#0f172a; line-height:1.45; font-size:12px;">
-        <!-- CABEÇALHO OFICIAL -->
-        <div style="border-bottom: 2px solid #1e3a8a; padding-bottom: 12px; margin-bottom: 16px; text-align: center;">
-          <div style="font-size: 19px; font-weight: 800; color: #1e3a8a; line-height: 1.25; letter-spacing: -0.2px;">Unidade Regional de Ensino Sorocaba</div>
-          <div style="font-size: 13px; font-weight: 600; color: #475569; margin-top: 4px;">Setor de Tecnologia - Seintec e Setec</div>
-        </div>
+    let pdf;
+    try {
+      pdf = new JsPdfClass({ orientation: 'p', unit: 'mm', format: 'a4' });
+    } catch (_) {
+      pdf = new JsPdfClass('p', 'mm', 'a4');
+    }
 
-        <!-- TÍTULO DO DOCUMENTO -->
-        <div style="text-align:center; background:#f1f5f9; border:1px solid #cbd5e1; border-radius:6px; padding:10px 14px; margin-bottom:18px;">
-          <div style="font-size:15px; font-weight:800; color:#0f172a; text-transform:uppercase; letter-spacing:0.5px;">Comprovante de Envio &mdash; Pesquisa de Satisfação</div>
-          <div style="font-size:11px; color:#475569; margin-top:2px;">Notificação eletrônica de avaliação de atendimento escolar</div>
-        </div>
+    const marginL = 14;
+    const marginR = 196;
+    const contentW = 182;
+    const center = 105;
 
-        <!-- QUADRO DE STATUS E ENVIO -->
-        <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px; padding:12px 14px; margin-bottom:18px;">
-          <table style="width:100%; border-collapse:collapse; font-size:11.5px;">
-            <tr>
-              <td style="width:45%; padding:4px 0;"><strong>Data e Hora do Envio:</strong> <span>${sentAtFormatted}</span></td>
-              <td style="width:55%; padding:4px 0;"><strong>Destinatário:</strong> <span style="color:#0f172a; font-weight:600;">${sched.surveyRecipient || 'E-mail oficial da unidade'}</span></td>
-            </tr>
-          </table>
-        </div>
-
-        <!-- DETALHES DA ORDEM DE SERVIÇO -->
-        <div style="margin-bottom:18px;">
-          <div style="font-size:12px; font-weight:800; color:#1e3a8a; text-transform:uppercase; border-bottom:1px solid #e2e8f0; padding-bottom:4px; margin-bottom:10px; letter-spacing:0.5px;">
-            1. Dados da Ordem de Serviço & Atendimento
-          </div>
-          <table style="width:100%; border-collapse:collapse; font-size:11.5px;">
-            <tbody>
-              <tr style="border-bottom:1px solid #f1f5f9;">
-                <td style="padding:6px 8px; width:25%; background:#f8fafc; font-weight:600; color:#475569;">Escola Solicitante:</td>
-                <td style="padding:6px 8px; width:75%; font-weight:700; color:#0f172a;">${sched.schoolName || '-'}</td>
-              </tr>
-              <tr style="border-bottom:1px solid #f1f5f9;">
-                <td style="padding:6px 8px; background:#f8fafc; font-weight:600; color:#475569;">Código CIE:</td>
-                <td style="padding:6px 8px; color:#0f172a;">${sched.schoolCie || '-'}</td>
-              </tr>
-              <tr style="border-bottom:1px solid #f1f5f9;">
-                <td style="padding:6px 8px; background:#f8fafc; font-weight:600; color:#475569;">Diretor(a) Responsável:</td>
-                <td style="padding:6px 8px; color:#0f172a;">${sched.directorName || 'Coordenação da Unidade'}</td>
-              </tr>
-              <tr style="border-bottom:1px solid #f1f5f9;">
-                <td style="padding:6px 8px; background:#f8fafc; font-weight:600; color:#475569;">Analista Técnico:</td>
-                <td style="padding:6px 8px; font-weight:600; color:#1e3a8a;">${analyst.name || '-'}</td>
-              </tr>
-              <tr style="border-bottom:1px solid #f1f5f9;">
-                <td style="padding:6px 8px; background:#f8fafc; font-weight:600; color:#475569;">Número da O.S.:</td>
-                <td style="padding:6px 8px; font-weight:700; color:#2563eb;">${osNumberDisplay}</td>
-              </tr>
-              <tr style="border-bottom:1px solid #f1f5f9;">
-                <td style="padding:6px 8px; background:#f8fafc; font-weight:600; color:#475569;">Data de Realização:</td>
-                <td style="padding:6px 8px; color:#0f172a;">${dateFormatted}</td>
-              </tr>
-              <tr style="border-bottom:1px solid #f1f5f9;">
-                <td style="padding:6px 8px; background:#f8fafc; font-weight:600; color:#475569;">Assunto / Serviço:</td>
-                <td style="padding:6px 8px; color:#0f172a;">${sched.subject || 'Atendimento Geral'}</td>
-              </tr>
-
-            </tbody>
-          </table>
-        </div>
-
-        <!-- RESUMO DO ATENDIMENTO -->
-        <div style="margin-bottom:18px;">
-          <div style="font-size:12px; font-weight:800; color:#1e3a8a; text-transform:uppercase; border-bottom:1px solid #e2e8f0; padding-bottom:4px; margin-bottom:8px; letter-spacing:0.5px;">
-            2. Resumo da Visita Técnica Realizada
-          </div>
-          <div style="background:${sched.surveySummary ? '#f8fafc' : '#ffffff'}; border:1px solid ${sched.surveySummary ? '#cbd5e1' : '#e2e8f0'}; border-radius:6px; padding:10px 12px; min-height:45px;">
-            ${sched.surveySummary ? `
-              <div style="color:#0f172a; white-space:pre-wrap; font-size:11.5px;">${sched.surveySummary}</div>
-            ` : `
-              <div style="color:#94a3b8; font-style:italic; font-size:11px;">Nenhum resumo complementar informado (item não obrigatório).</div>
-            `}
-          </div>
-        </div>
-
-        <!-- ANEXO VINCULADO -->
-        <div style="margin-bottom:24px;">
-          <div style="font-size:12px; font-weight:800; color:#1e3a8a; text-transform:uppercase; border-bottom:1px solid #e2e8f0; padding-bottom:4px; margin-bottom:8px; letter-spacing:0.5px;">
-            3. Registro de Documento / Relatório Anexo
-          </div>
-          <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px; padding:10px 12px; display:flex; align-items:center; justify-content:space-between;">
-            ${sched.surveyAttachmentName ? `
-              <div style="display:flex; align-items:center; gap:8px;">
-                <span style="font-size:16px;">&#128206;</span>
-                <div>
-                  <div style="font-weight:700; color:#0f172a; font-size:11.5px;">${sched.surveyAttachmentName}</div>
-                  <div style="font-size:10px; color:#15803d; font-weight:600;">&#10004; Arquivo informado na solicitação de envio.</div>
-                </div>
-              </div>
-            ` : `
-              <div style="color:#94a3b8; font-style:italic; font-size:11px;">Nenhum arquivo externo anexado (item não obrigatório).</div>
-            `}
-          </div>
-        </div>
-
-        <!-- DECLARAÇÃO INSTITUCIONAL & AUTENTICAÇÃO -->
-        <div style="border-top:1px solid #cbd5e1; padding-top:14px; margin-top:20px;">
-          <div style="background:#f1f5f9; border-radius:6px; padding:10px 12px; font-size:10.5px; color:#475569; line-height:1.45;">
-            <strong>DECLARAÇÃO DE CONFORMIDADE:</strong> Certificamos para os devidos fins de documentação, fiscalização e acompanhamento técnico que a pesquisa de satisfação referente à Ordem de Serviço supracitada teve sua solicitação de envio aceita pelo fluxo à equipe gestora da unidade escolar solicitante. Este comprovante é emitido eletronicamente e possui validade para registro histórico e prestação de contas.
-          </div>
-          <div style="display:flex; justify-content:space-between; align-items:center; margin-top:12px; font-size:10px; color:#64748b;">
-            <div>Emissão: ${this.formatDateTimePtBr(new Date().toISOString())}</div>
-            <div>Sistema de Agendamento URE Sorocaba &bull; Controle de Qualidade</div>
-          </div>
-        </div>
-      </div>
-    `;
-
-    // Configuração do html2pdf em A4 Retrato
-    const opt = {
-      margin: [10, 10, 10, 10],
-      filename: `Comprovante_Pesquisa_OS_${cleanOsFileName}.pdf`,
-      image: { type: 'jpeg', quality: 0.98 },
-      html2canvas: {
-        scale: 2,
-        useCORS: true,
-        backgroundColor: '#ffffff'
-      },
-      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+    // Funções auxiliares para alinhamento 100% seguro em qualquer versão do jsPDF
+    const drawCenterText = (txt, y) => {
+      try {
+        pdf.text(txt, center, y, { align: 'center' });
+      } catch (_) {
+        const w = pdf.getTextWidth ? pdf.getTextWidth(txt) : (txt.length * pdf.getFontSize() * 0.35);
+        pdf.text(txt, Math.max(marginL, center - (w / 2)), y);
+      }
     };
 
-    if (typeof html2pdf !== 'undefined') {
-      await html2pdf().set(opt).from(pdfContainer).save();
+    const drawRightText = (txt, y) => {
+      try {
+        pdf.text(txt, marginR, y, { align: 'right' });
+      } catch (_) {
+        const w = pdf.getTextWidth ? pdf.getTextWidth(txt) : (txt.length * pdf.getFontSize() * 0.35);
+        pdf.text(txt, marginR - w, y);
+      }
+    };
+
+    // 1. CABEÇALHO OFICIAL (Inicia no topo a 15mm da borda)
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(14);
+    pdf.setTextColor(30, 58, 138); // #1e3a8a
+    drawCenterText('Unidade Regional de Ensino Sorocaba', 15);
+
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(9);
+    pdf.setTextColor(71, 85, 105); // #475569
+    drawCenterText('Setor de Tecnologia - Seintec e Setec', 20.5);
+
+    // Linha azul sob cabeçalho
+    pdf.setDrawColor(30, 58, 138);
+    pdf.setLineWidth(0.5);
+    pdf.line(marginL, 23.5, marginR, 23.5);
+
+    // 2. QUADRO TÍTULO: COMPROVANTE DE ENVIO
+    pdf.setFillColor(241, 245, 249);
+    pdf.setDrawColor(203, 213, 225);
+    pdf.setLineWidth(0.25);
+    pdf.rect(marginL, 26.5, contentW, 11.5, 'FD');
+
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(10.5);
+    pdf.setTextColor(15, 23, 42);
+    drawCenterText('COMPROVANTE DE ENVIO - PESQUISA DE SATISFAÇÃO', 31.5);
+
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(7.5);
+    pdf.setTextColor(71, 85, 105);
+    drawCenterText('Notificação eletrônica de avaliação de atendimento escolar', 35.5);
+
+    // 3. QUADRO STATUS E DESTINATÁRIO
+    pdf.setFillColor(248, 250, 252);
+    pdf.setDrawColor(226, 232, 240);
+    pdf.rect(marginL, 41, contentW, 8.5, 'FD');
+
+    pdf.setFontSize(8);
+    pdf.setFont('helvetica', 'bold');
+    pdf.setTextColor(15, 23, 42);
+    pdf.text('Data e Hora do Envio:', marginL + 3, 46.5);
+    pdf.setFont('helvetica', 'normal');
+    pdf.text(sentAtFormatted, marginL + 36, 46.5);
+
+    pdf.setFont('helvetica', 'bold');
+    pdf.text('Destinatário:', center - 5, 46.5);
+    pdf.setFont('helvetica', 'normal');
+    pdf.text(sched.surveyRecipient || 'E-mail oficial da unidade', center + 14, 46.5);
+
+    // 4. SEÇÃO 1: DADOS DA ORDEM DE SERVIÇO & ATENDIMENTO
+    let curY = 53.5;
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(9);
+    pdf.setTextColor(30, 58, 138);
+    pdf.text('1. DADOS DA ORDEM DE SERVIÇO & ATENDIMENTO', marginL, curY);
+
+    curY += 1.5;
+    pdf.setDrawColor(226, 232, 240);
+    pdf.setLineWidth(0.3);
+    pdf.line(marginL, curY, marginR, curY);
+
+    const rows = [
+      { label: 'Escola Solicitante:', val: sched.schoolName || '-', bold: true },
+      { label: 'Código CIE:', val: sched.schoolCie || '-', bold: false },
+      { label: 'Diretor(a) Responsável:', val: sched.directorName || 'Coordenação da Unidade', bold: false },
+      { label: 'Analista Técnico:', val: analyst.name || '-', bold: true, color: [30, 58, 138] },
+      { label: 'Número da O.S.:', val: osNumberDisplay, bold: true, color: [37, 99, 235] },
+      { label: 'Data de Realização:', val: dateFormatted, bold: false },
+      { label: 'Assunto / Serviço:', val: sched.subject || 'Atendimento Geral', bold: false }
+    ];
+
+    curY += 1.5;
+    const colW = 48;
+    const rH = 5.2;
+    rows.forEach((r, idx) => {
+      const y = curY + (idx * rH);
+      pdf.setFillColor(248, 250, 252);
+      pdf.rect(marginL, y, colW, rH, 'F');
+      pdf.setDrawColor(241, 245, 249);
+      pdf.line(marginL, y + rH, marginR, y + rH);
+
+      pdf.setFont('helvetica', 'bold');
+      pdf.setFontSize(7.5);
+      pdf.setTextColor(71, 85, 105);
+      pdf.text(r.label, marginL + 2, y + 3.6);
+
+      pdf.setFont('helvetica', r.bold ? 'bold' : 'normal');
+      if (r.color) {
+        pdf.setTextColor(r.color[0], r.color[1], r.color[2]);
+      } else {
+        pdf.setTextColor(15, 23, 42);
+      }
+      pdf.text(String(r.val), marginL + colW + 2, y + 3.6);
+    });
+
+    curY += (rows.length * rH) + 5;
+
+    // 5. SEÇÃO 2: RESUMO DA VISITA TÉCNICA REALIZADA
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(9);
+    pdf.setTextColor(30, 58, 138);
+    pdf.text('2. RESUMO DA VISITA TÉCNICA REALIZADA', marginL, curY);
+
+    curY += 1.5;
+    pdf.setDrawColor(226, 232, 240);
+    pdf.line(marginL, curY, marginR, curY);
+
+    curY += 2.5;
+    const sumText = (sched.surveySummary && sched.surveySummary.trim()) ? sched.surveySummary.trim() : 'Nenhum resumo complementar informado (item não obrigatório).';
+    const splitSum = pdf.splitTextToSize(sumText, contentW - 6);
+    const boxH = Math.max(10, (splitSum.length * 4) + 4);
+
+    pdf.setFillColor(248, 250, 252);
+    pdf.setDrawColor(203, 213, 225);
+    pdf.rect(marginL, curY, contentW, boxH, 'FD');
+
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(7.5);
+    pdf.setTextColor(15, 23, 42);
+    pdf.text(splitSum, marginL + 3, curY + 4.2);
+    curY += boxH + 5;
+
+    // 6. SEÇÃO 3: REGISTRO DE DOCUMENTO / RELATÓRIO ANEXO
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(9);
+    pdf.setTextColor(30, 58, 138);
+    pdf.text('3. REGISTRO DE DOCUMENTO / RELATÓRIO ANEXO', marginL, curY);
+
+    curY += 1.5;
+    pdf.setDrawColor(226, 232, 240);
+    pdf.line(marginL, curY, marginR, curY);
+
+    curY += 2.5;
+    pdf.setFillColor(248, 250, 252);
+    pdf.setDrawColor(226, 232, 240);
+    pdf.rect(marginL, curY, contentW, 8.5, 'FD');
+
+    pdf.setFont('helvetica', sched.surveyAttachmentName ? 'bold' : 'italic');
+    pdf.setFontSize(7.5);
+    if (sched.surveyAttachmentName) {
+      pdf.setTextColor(15, 23, 42);
+      pdf.text('[Anexo] ' + sched.surveyAttachmentName, marginL + 3, curY + 5.2);
     } else {
-      console.warn('html2pdf não encontrado. Abrindo janela de impressão...');
-      window.print();
+      pdf.setTextColor(148, 163, 184);
+      pdf.text('Nenhum arquivo externo anexado (item não obrigatório).', marginL + 3, curY + 5.2);
+    }
+    curY += 8.5 + 5;
+
+    // 7. DECLARAÇÃO INSTITUCIONAL & AUTENTICAÇÃO
+    pdf.setDrawColor(203, 213, 225);
+    pdf.line(marginL, curY, marginR, curY);
+
+    curY += 2.5;
+    pdf.setFillColor(241, 245, 249);
+    pdf.rect(marginL, curY, contentW, 13, 'FD');
+
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(6.8);
+    pdf.setTextColor(71, 85, 105);
+    const decl = 'DECLARAÇÃO DE CONFORMIDADE: Certificamos para os devidos fins de documentação, fiscalização e acompanhamento técnico que a pesquisa de satisfação referente à Ordem de Serviço supracitada teve sua solicitação de envio aceita pelo fluxo à equipe gestora da unidade escolar solicitante. Este comprovante é emitido eletronicamente e possui validade para registro histórico e prestação de contas.';
+    const splitDecl = pdf.splitTextToSize(decl, contentW - 6);
+    pdf.text(splitDecl, marginL + 3, curY + 3.8);
+
+    curY += 13 + 4.5;
+
+    // 8. RODAPÉ FINAL
+    pdf.setFontSize(7);
+    pdf.setTextColor(100, 116, 139);
+    pdf.text('Emissão: ' + sentAtFormatted, marginL, curY);
+    drawRightText('Sistema de Agendamento URE Sorocaba | Controle de Qualidade', curY);
+
+    // Salva o PDF diretamente com nome limpo
+    pdf.save(`Comprovante_Pesquisa_OS_${cleanOsFileName}.pdf`);
+    return true;
+  },
+
+  async generateSurveyReceiptPDF(sched) {
+    if (!sched) return;
+    try {
+      return this.generateSurveyReceiptNativePDF(sched);
+    } catch (err) {
+      console.error('Erro na geracao nativa do PDF:', err);
+      alert('Erro ao gerar comprovante em PDF: ' + (err.message || err));
     }
   },
 
