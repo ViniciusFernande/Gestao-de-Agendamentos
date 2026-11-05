@@ -1459,17 +1459,6 @@ const App = {
   // =========================================================================
   // AGENDA ANALISTAS - CARDS EXCLUSIVOS DO DIA ATUAL
   // =========================================================================
-  expandedAgendaCards: new Set(),
-
-  toggleAgendaCard(analystId) {
-    const key = this.selectedAgendaDate + ':' + analystId;
-    if (this.expandedAgendaCards.has(key)) this.expandedAgendaCards.delete(key);
-    else this.expandedAgendaCards.add(key);
-    this.renderAnalystDailyCards();
-    const card = document.getElementById('analyst-card-' + analystId);
-    if (card) card.querySelector('.agenda-expand-toggle')?.focus({ preventScroll: true });
-  },
-
   renderAnalystDailyCards() {
     const container = document.getElementById('analyst-cards-container');
     if (!container) return;
@@ -1591,19 +1580,6 @@ const App = {
         }
       }
 
-      const expanded = this.expandedAgendaCards.has(currentDate + ':' + analyst.id);
-      const firstOrder = analystOrders.find(o => !o.completed && !o.needsReturn) || analystOrders[0];
-      const completedTotal = analystOrders.filter(o => o.completed).length;
-      const returnTotal = analystOrders.filter(o => o.needsReturn).length;
-      const stateLabel = isAbsent ? 'Indisponível' : !analystOrders.length ? 'Sem agendamentos' : completedTotal === analystOrders.length ? 'Concluído' : returnTotal === analystOrders.length ? 'Retorno agendado' : 'Pendente';
-      const summaryHtml = firstOrder ? `
-        <div class="agenda-compact-summary" ${isAbsent ? '' : `ondragover="App.handleAnalystDragOver(event)" ondrop="App.handleAnalystDrop(event, '${analyst.id}')"`}>
-          <div class="agenda-summary-meta"><span class="agenda-state ${completedTotal === analystOrders.length ? 'done' : ''}"><i class="fa-solid fa-circle"></i> ${stateLabel}</span><span class="agenda-summary-os">Nº O.S.: ${this.escapeHtml(firstOrder.osNumber || 'Não informada')}</span></div>
-          <div class="agenda-school-preview"><i class="fa-solid fa-school"></i><div><span>Escola</span><strong>${this.escapeHtml(firstOrder.schoolName || 'Não informada')}</strong>${analystOrders.length > 1 ? '<small>+ ' + (analystOrders.length - 1) + ' atendimento(s) nesta agenda</small>' : ''}</div></div>
-          <div class="agenda-summary-counts"><span title="Atendimentos concluídos"><i class="fa-solid fa-circle-check"></i> ${completedTotal} concluído(s)</span><span title="Retornos agendados"><i class="fa-solid fa-arrows-rotate"></i> ${returnTotal} retorno(s)</span></div>
-          <div class="agenda-summary-footer">${!firstOrder.completed && !firstOrder.needsReturn ? '<button type="button" class="agenda-quick-complete" onclick="App.markCardAsCompleted(&quot;' + firstOrder.id + '&quot;)"><i class="fa-regular fa-circle-check"></i> Concluir' + (analystOrders.length > 1 ? ' próxima O.S.' : '') + '</button>' : '<span class="agenda-summary-status">' + stateLabel + '</span>'}<button type="button" class="agenda-expand-toggle" aria-expanded="${expanded}" aria-controls="agenda-details-${analyst.id}" onclick="App.toggleAgendaCard('${analyst.id}')" title="${expanded ? 'Recolher' : 'Expandir'} atendimento"><i class="fa-solid fa-${expanded ? 'compress' : 'expand'}"></i><span>${expanded ? 'Recolher' : 'Detalhes'}</span></button></div>
-        </div>` : '';
-
       const sendAgendaBtn = (!isAbsent && analystOrders.length > 0)
         ? `<button type="button" class="btn-header-send-agenda" onclick="App.openDailyAgendaModal('${analyst.id}', '${currentDate}')" title="Enviar agenda para o WhatsApp de ${analyst.name}">
              <i class="fa-brands fa-whatsapp"></i>
@@ -1620,7 +1596,7 @@ const App = {
       </button>`;
 
       cardsHtml += `
-        <div class="analyst-daily-card agenda-premium ${expanded ? 'is-expanded' : 'is-collapsed'} ${isAbsent ? 'is-analyst-absent' : ''}" id="analyst-card-${analyst.id}" style="${isAbsent ? (absence && absence.reason === 'fixo_ure' ? 'border: 1px solid rgba(59,130,246,0.35); background: linear-gradient(180deg, rgba(30,41,59,0.85) 0%, rgba(15,23,42,0.95) 100%); opacity: 0.92;' : 'border: 1px solid rgba(239,68,68,0.35); background: linear-gradient(180deg, rgba(30,41,59,0.85) 0%, rgba(15,23,42,0.95) 100%); opacity: 0.88;') : ''}">
+        <div class="analyst-daily-card ${isAbsent ? 'is-analyst-absent' : ''}" id="analyst-card-${analyst.id}" style="${isAbsent ? (absence && absence.reason === 'fixo_ure' ? 'border: 1px solid rgba(59,130,246,0.35); background: linear-gradient(180deg, rgba(30,41,59,0.85) 0%, rgba(15,23,42,0.95) 100%); opacity: 0.92;' : 'border: 1px solid rgba(239,68,68,0.35); background: linear-gradient(180deg, rgba(30,41,59,0.85) 0%, rgba(15,23,42,0.95) 100%); opacity: 0.88;') : ''}">
           
           <!-- Topo do Card: Nome, Botão Ausência e Botão Enviar Agenda -->
           <div class="analyst-daily-header">
@@ -1636,9 +1612,8 @@ const App = {
             </div>
           </div>
 
-          ${summaryHtml}
           <!-- Corpo do Card: Ordens do Dia Atual -->
-          <div class="analyst-daily-body" id="agenda-details-${analyst.id}" ${analystOrders.length && !expanded ? 'hidden' : ''} data-analyst-id="${analyst.id}" ${isAbsent ? '' : `ondragover="App.handleAnalystDragOver(event)" ondragenter="App.handleAnalystDragEnter(event)" ondragleave="App.handleAnalystDragLeave(event)" ondrop="App.handleAnalystDrop(event, '${analyst.id}')"`}>
+          <div class="analyst-daily-body" data-analyst-id="${analyst.id}" ${isAbsent ? '' : `ondragover="App.handleAnalystDragOver(event)" ondragenter="App.handleAnalystDragEnter(event)" ondragleave="App.handleAnalystDragLeave(event)" ondrop="App.handleAnalystDrop(event, '${analyst.id}')"`}>
       `;
 
       if (analystOrders.length > 0) {
@@ -1710,7 +1685,7 @@ const App = {
               ${order.obs ? `<div class="card-obs-text"><i class="fa-solid fa-circle-info" style="color:#60a5fa;"></i> ${order.obs}</div>` : ''}
 
               <!-- Linha de Ações: Concluído / Precisa Retornar / WhatsApp / Editar / Excluir -->
-              <div class="agenda-actions-title"><i class="fa-solid fa-bolt"></i> Ações</div><div class="card-actions-row">
+              <div class="card-actions-row">
                 ${isDone 
                   ? `<button type="button" class="card-btn-action card-btn-complete is-done" disabled title="Atendimento marcado como concluído. Para reabrir ou alterar caso tenha clicado errado, use o botão do lápis (editar)." style="cursor:not-allowed; opacity:0.92;">
                       <i class="fa-solid fa-circle-check"></i> Concluído
@@ -1745,14 +1720,14 @@ const App = {
                 ${isDone
                   ? (order.surveySent
                       ? `<button type="button" class="btn-icon-action btn-survey sent" onclick="App.openSatisfactionSurvey('${order.id}')" title="Pesquisa de Satisfação já Enviada (Clique para ver comprovante ou reenviar)">
-                          <i class="fa-regular fa-star"></i><span>Avaliar</span>
+                          <i class="fa-solid fa-star"></i>
                         </button>`
                       : `<button type="button" class="btn-icon-action btn-survey active" onclick="App.openSatisfactionSurvey('${order.id}')" title="Enviar Pesquisa de Satisfação para a Escola">
-                          <i class="fa-regular fa-star"></i><span>Avaliar</span>
+                          <i class="fa-solid fa-star"></i>
                         </button>`
                     )
                   : `<button type="button" class="btn-icon-action btn-survey is-disabled" disabled title="Pesquisa de satisfação liberada apenas após a ordem ser concluída" style="cursor:not-allowed; opacity:0.35; filter:grayscale(0.85);">
-                      <i class="fa-regular fa-star"></i><span>Avaliar</span>
+                      <i class="fa-solid fa-star"></i>
                     </button>`
                 }
 
