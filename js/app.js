@@ -1804,6 +1804,7 @@ const App = {
     });
 
     container.innerHTML = cardsHtml;
+    if (window.AgendaRadar) window.AgendaRadar.refresh();
   },
 
   openNewScheduleForAnalyst(analystId, customDate) {

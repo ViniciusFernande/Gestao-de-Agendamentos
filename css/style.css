@@ -4474,3 +4474,32 @@ body.role-analista .admin-only {
   border-color: #86efac !important;
   background: #dcfce7 !important;
 }
+
+/* Painel de proximidade exclusivo da Agenda Analistas */
+#view-agendamentos .agenda-radar-layout { display:grid; grid-template-columns:minmax(0,1fr) 330px; gap:18px; align-items:start; }
+#view-agendamentos .agenda-radar-layout .analyst-cards-grid { min-width:0; grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr)); }
+#view-agendamentos .agenda-radar-panel { position:sticky; top:18px; min-width:0; padding:16px; border:1px solid var(--border-color); border-radius:16px; background:var(--bg-card); color:var(--text-primary); box-shadow:0 8px 24px #0002; }
+#view-agendamentos .agenda-radar-heading { display:flex; align-items:center; justify-content:space-between; gap:8px; border-bottom:1px solid var(--border-color); padding-bottom:12px; margin-bottom:14px; }
+#view-agendamentos .agenda-radar-heading h3 { margin:0; font-size:1rem; }
+#view-agendamentos .agenda-radar-heading i { color:#60a5fa; margin-right:6px; }
+#view-agendamentos #agenda-radar-clear { border:1px solid var(--border-color); background:transparent; color:inherit; border-radius:8px; width:30px; height:30px; font-size:1.4rem; cursor:pointer; }
+#view-agendamentos #agenda-radar-selection { font-size:.85rem; line-height:1.5; margin-bottom:12px; }
+#view-agendamentos #agenda-radar-selection strong, #view-agendamentos #agenda-radar-selection small { display:block; }
+#view-agendamentos #agenda-radar-selection strong { margin:5px 0; }
+#view-agendamentos .agenda-radar-analyst { color:var(--text-muted); font-size:.76rem; }
+#view-agendamentos #agenda-radar-map { height:230px; width:100%; border-radius:12px; background:linear-gradient(140deg,#12304c,#0b1b2c); border:1px solid var(--border-color); overflow:hidden; }
+#view-agendamentos #agenda-radar-map-status, #view-agendamentos .agenda-radar-note { color:var(--text-muted); font-size:.72rem; line-height:1.5; margin:9px 0 14px; }
+#view-agendamentos .agenda-radar-panel h4 { margin:18px 0 8px; font-size:.88rem; }
+#view-agendamentos #agenda-radar-list { list-style:none; padding:0; margin:0; }
+#view-agendamentos #agenda-radar-list li { display:flex; align-items:center; gap:9px; border-bottom:1px solid var(--border-color); padding:12px 0; font-size:.76rem; }
+#view-agendamentos #agenda-radar-list li>div { flex:1; min-width:0; }
+#view-agendamentos #agenda-radar-list a { color:inherit; font-weight:600; line-height:1.4; text-decoration:none; }
+#view-agendamentos #agenda-radar-list a:hover { text-decoration:underline; }
+#view-agendamentos #agenda-radar-list small { display:block; color:var(--text-muted); margin-top:4px; font-size:.67rem; }
+#view-agendamentos #agenda-radar-list b { color:#38cfa0; white-space:nowrap; font-size:.78rem; }
+#view-agendamentos .agenda-radar-number { display:grid; place-items:center; width:23px; height:23px; flex-shrink:0; background:#198c6830; color:#36ce9d; border-radius:50%; }
+#view-agendamentos .agenda-radar-open { display:flex; justify-content:center; gap:6px; align-items:center; padding:6px; border:1px solid var(--border-color); color:#60a5fa; background:transparent; border-radius:6px; font-size:.72rem; cursor:pointer; }
+#view-agendamentos .card-order-box.radar-selected { outline:2px solid #60a5fa; outline-offset:2px; }
+#view-agendamentos .agenda-radar-open:focus-visible { outline:2px solid #60a5fa; outline-offset:2px; }
+@media(max-width:1050px) { #view-agendamentos .agenda-radar-layout { grid-template-columns:minmax(0,1fr) 290px; } }
+@media(max-width:760px) { #view-agendamentos .agenda-radar-layout { grid-template-columns:1fr; } #view-agendamentos .agenda-radar-panel { position:static; } }
