@@ -1505,8 +1505,7 @@ const App = {
     const allSchedules = store.getSchedules();
     const todaySchedules = allSchedules.filter(s => s.date === currentDate);
     // Largura de apresentação: reserva espaço para Maps/OK extras sem quebrar a barra.
-    const largestAgenda = Math.max(1, ...analysts.map(a => todaySchedules.filter(s => s.analystId === a.id).length));
-    container.dataset.cardBaseWidth = String(340 + (largestAgenda - 1) * 120);
+    container.dataset.cardBaseWidth = '340';
 
     // Contagem de analistas ativos que constam como Presente (Trabalhando Normalmente) hoje
     const presentAnalystsCount = analysts.filter(a => {
@@ -1804,6 +1803,7 @@ const App = {
     });
 
     container.innerHTML = cardsHtml;
+    if (window.AgendaOrderDeck) window.AgendaOrderDeck.refresh(container);
     if (window.AgendaRadar) window.AgendaRadar.refresh();
     if (window.AgendaCardLayout) window.AgendaCardLayout.refresh(container);
   },

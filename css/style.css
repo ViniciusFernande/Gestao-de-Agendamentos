@@ -4589,3 +4589,29 @@ body.role-analista .admin-only {
 @media(max-width:760px){
  #view-agendamentos .agenda-radar-layout .analyst-cards-grid { grid-template-columns:repeat(5,minmax(220px,1fr)); overflow-x:auto; }
 }
+
+/* Atendimentos empilhados como cartas dentro de cada analista. */
+#view-agendamentos .agenda-header-order-tools[hidden] { display:none!important; }
+#view-agendamentos .agenda-order-deck { min-width:0; padding-bottom:12px; }
+#view-agendamentos .agenda-deck-controls { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:12px; }
+#view-agendamentos .agenda-deck-label { font-size:.76rem; font-weight:600; color:var(--text-muted); }
+#view-agendamentos .agenda-deck-tabs { display:flex; gap:6px; flex-wrap:wrap; justify-content:flex-end; }
+#view-agendamentos .agenda-deck-tab { width:30px; height:30px; padding:0; border:1px solid var(--border-color); background:var(--bg-card); color:var(--text-muted); border-radius:9px; font:inherit; font-size:.8rem; font-weight:700; cursor:pointer; }
+#view-agendamentos .agenda-deck-tab[aria-selected="true"] { background:#2563eb; border-color:#60a5fa; color:white; box-shadow:0 3px 10px #2563eb40; }
+#view-agendamentos .agenda-deck-tab:focus-visible { outline:2px solid #60a5fa; outline-offset:3px; }
+#view-agendamentos .agenda-deck-stage { display:grid; position:relative; isolation:isolate; perspective:900px; margin:0 8px 0 0; }
+#view-agendamentos .agenda-deck-stage::before, #view-agendamentos .agenda-deck-stage::after { content:''; position:absolute; inset:0; border:1px solid var(--border-color); border-radius:10px; background:var(--bg-card); pointer-events:none; }
+#view-agendamentos .agenda-deck-stage::before { transform:translate(8px,10px); opacity:.55; z-index:-2; }
+#view-agendamentos .agenda-deck-stage::after { transform:translate(4px,5px); opacity:.85; z-index:-1; }
+#view-agendamentos .agenda-deck-stage>.card-order-box { grid-area:1/1; margin:0; visibility:hidden; pointer-events:none; align-self:stretch; min-width:0; }
+#view-agendamentos .agenda-deck-stage>.card-order-box.is-deck-active { visibility:visible; pointer-events:auto; background:var(--bg-card); z-index:1; }
+#view-agendamentos .agenda-deck-stage>.card-order-box.is-deck-active.completed { background:var(--bg-card); border-color:#22c55e70; }
+#view-agendamentos .agenda-deck-stage>.card-order-box.is-deck-turning { animation:agenda-card-turn .25s ease-out; transform-origin:left center; }
+@keyframes agenda-card-turn { from { opacity:.3; transform:rotateY(-12deg) translateY(5px); } to { opacity:1; transform:rotateY(0) translateY(0); } }
+@media(prefers-reduced-motion:reduce) { #view-agendamentos .agenda-deck-stage>.card-order-box.is-deck-turning { animation:none; } }
+
+/* Adicionar O.S. e seleção de cartas compartilham o rodapé. */
+#view-agendamentos .analyst-daily-body>.agenda-deck-controls { margin:0; min-width:0; gap:8px; }
+#view-agendamentos .agenda-deck-controls .agenda-deck-add { width:auto!important; flex:1 1 auto; min-width:0; margin:0!important; padding:7px 9px!important; justify-content:center; white-space:nowrap; font-size:.74rem!important; min-height:32px; }
+#view-agendamentos .agenda-deck-controls .agenda-deck-tabs { flex:0 1 auto; max-width:55%; min-width:0; flex-wrap:nowrap; overflow-x:auto; justify-content:flex-start; padding:2px; }
+#view-agendamentos .agenda-deck-controls .agenda-deck-tab { flex:0 0 30px; }
