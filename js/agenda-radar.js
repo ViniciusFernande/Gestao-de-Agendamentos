@@ -1,6 +1,10 @@
 /* Painel da agenda: coordenadas reaproveitadas do Radar; sem escrita no banco. */
 (() => {
   const schools = window.AGENDA_RADAR_SCHOOLS || [];
+  const URE_ADDRESS = 'Rua Manoel Gomes dos Santos Neto, 45 - Jardim Pagliato, Sorocaba - SP, 18046-154';
+  const normalizeLocation = name => String(name || '').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
+  const isUre = order => ['ure sorocaba', 'unidade regional de ensino sorocaba', 'unidade regional de ensino de sorocaba', 'diretoria de ensino sorocaba', 'diretoria de ensino de sorocaba', 'diretoria de ensino regiao de sorocaba'].includes(normalizeLocation(order.schoolName));
+
   const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const located = s => s && Number.isFinite(s.lat) && Number.isFinite(s.lng);
   const km = (a,b) => { const r = Math.PI/180, dlat=(b.lat-a.lat)*r, dlng=(b.lng-a.lng)*r; const h=Math.sin(dlat/2)**2+Math.cos(a.lat*r)*Math.cos(b.lat*r)*Math.sin(dlng/2)**2; return 6371*2*Math.atan2(Math.sqrt(h),Math.sqrt(Math.max(0,1-h))); };
@@ -31,6 +35,29 @@
       const key=JSON.stringify([order.id,order.schoolCie,order.schoolName,order.date,analyst?.name]);if(key===selectionKey)return;selectionKey=key;
       document.getElementById('agenda-radar-selection').innerHTML='<span class="agenda-radar-analyst">'+esc(analyst?.name || 'Analista')+' · '+esc(order.date.split('-').reverse().join('/'))+'</span><strong>'+esc(order.schoolName)+'</strong><small>CIE: '+esc(order.schoolCie)+'</small>';
       pins.forEach(p=>p.setMap(null));pins=[];
+      // Endereço fixo da URE, independente do cadastro geográfico do Radar.
+      let fixedMap = document.getElementById('agenda-radar-fixed-map');
+      if (fixedMap) fixedMap.hidden = true;
+      if (isUre(order) && !located(school)) {
+        currentSchool=null;currentNearby=[];
+        document.getElementById('agenda-radar-map').hidden=true;
+        if(!fixedMap){
+          fixedMap=document.createElement('iframe');
+          fixedMap.id='agenda-radar-fixed-map';
+          fixedMap.title='Localização da URE Sorocaba';
+          fixedMap.loading='lazy';
+          fixedMap.referrerPolicy='no-referrer-when-downgrade';
+          fixedMap.allowFullscreen=true;
+          fixedMap.src='https://www.google.com/maps?q='+encodeURIComponent(URE_ADDRESS)+'&output=embed';
+          document.getElementById('agenda-radar-map').after(fixedMap);
+        }
+        fixedMap.hidden=false;
+        const link='https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(URE_ADDRESS);
+        document.getElementById('agenda-radar-selection').innerHTML += '<div class="agenda-ure-address">'+esc(URE_ADDRESS)+' · <a href="'+link+'" target="_blank" rel="noopener noreferrer">Abrir URE no Google Maps</a></div>';
+        document.getElementById('agenda-radar-list').innerHTML='<li class="agenda-ure-location-note">URE cadastrada como local fixo por endereço. Para calcular as cinco escolas próximas, é necessário confirmar as coordenadas do prédio.</li>';
+        document.getElementById('agenda-radar-map-status').textContent='URE Sorocaba — localização pesquisada pelo endereço informado.';
+        return;
+      }
       if(!located(school)){currentSchool=null;currentNearby=[];document.getElementById('agenda-radar-list').replaceChildren();document.getElementById('agenda-radar-map-status').textContent='Esta unidade não possui coordenadas vinculadas no Radar. Não é possível calcular a proximidade.';document.getElementById('agenda-radar-map').hidden=true;return;}
       document.getElementById('agenda-radar-map').hidden=false;currentSchool=school;currentNearby=nearest(school);
       document.getElementById('agenda-radar-list').innerHTML=currentNearby.map((s,i)=>'<li><span class="agenda-radar-number">'+(i+1)+'</span><div><a href="'+mapLink(s)+'" target="_blank" rel="noopener noreferrer">'+esc(s.name)+' <i class="fa-solid fa-arrow-up-right-from-square"></i></a><small>'+esc(s.area)+' · CIE '+esc(s.cie)+'</small></div><b>'+s.km.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})+' km</b></li>').join('');

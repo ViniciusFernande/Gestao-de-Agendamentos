@@ -4573,3 +4573,11 @@ body.role-analista .admin-only {
 #view-agendamentos .card-seq-left .card-os-inline-group { min-width:0; flex:1 1 auto; }
 #view-agendamentos .card-seq-left .seq-pill { flex:0 0 auto; }
 #view-agendamentos .analyst-daily-name { min-width:0; }
+
+/* Local fixo URE: consulta por endereço, sem alterar o mapa existente. */
+#view-agendamentos #agenda-radar-fixed-map { grid-column:1; grid-row:3/6; width:100%; height:230px; border:1px solid var(--border-color); border-radius:12px; }
+#view-agendamentos #agenda-radar-fixed-map[hidden] { display:none!important; }
+#view-agendamentos .agenda-ure-address { margin-top:8px; font-size:.76rem; line-height:1.5; color:var(--text-muted); }
+#view-agendamentos .agenda-ure-address a { color:#60a5fa; }
+#view-agendamentos .agenda-ure-location-note { line-height:1.5; }
+@media(max-width:760px){#view-agendamentos #agenda-radar-fixed-map{grid-column:1;grid-row:auto;}}
