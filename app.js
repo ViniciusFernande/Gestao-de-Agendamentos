@@ -1504,6 +1504,8 @@ const App = {
     const analysts = store.getAnalysts().filter(a => a.status === 'ativo');
     const allSchedules = store.getSchedules();
     const todaySchedules = allSchedules.filter(s => s.date === currentDate);
+    // Largura de apresentação: reserva espaço para Maps/OK extras sem quebrar a barra.
+    container.dataset.cardBaseWidth = '340';
 
     // Contagem de analistas ativos que constam como Presente (Trabalhando Normalmente) hoje
     const presentAnalystsCount = analysts.filter(a => {
@@ -1544,9 +1546,10 @@ const App = {
         return 0;
       });
       
+      const avatarSource = analyst.avatar || window.AgendaAnalystPhotos?.find(analyst) || '';
       let avatarHtml = '';
-      if (analyst.avatar) {
-        avatarHtml = `<img src="${analyst.avatar}" class="analyst-avatar-img" alt="${analyst.name}" onerror="this.outerHTML='<div class=\'analyst-avatar-fallback\' style=\'background:${analyst.color}\'>${analyst.name.charAt(0)}</div>'">`;
+      if (avatarSource) {
+        avatarHtml = `<img src="${avatarSource}" class="analyst-avatar-img" alt="${analyst.name}" onerror="this.outerHTML='<div class=\'analyst-avatar-fallback\' style=\'background:${analyst.color}\'>${analyst.name.charAt(0)}</div>'">`;
       } else {
         avatarHtml = `<div class="analyst-avatar-fallback" style="background:${analyst.color || '#3b82f6'};">${analyst.name.charAt(0)}</div>`;
       }
@@ -1607,6 +1610,7 @@ const App = {
               </div>
             </div>
             <div style="display: flex; align-items: center; gap: 8px; flex-shrink: 0;">
+              ${analystOrders.map((order, index) => '<span class="agenda-header-order-tools"><button type="button" class="agenda-radar-open" data-schedule-id="' + this.escapeHtml(order.id) + '" aria-pressed="false" aria-controls="agenda-radar-panel" title="' + this.escapeHtml('Ver escola do ' + (index + 1) + 'º atendimento no mapa') + '" onclick="event.stopPropagation(); AgendaRadar.select(this.dataset.scheduleId)"><i class="fa-solid fa-location-dot" aria-hidden="true"></i> Maps' + (analystOrders.length > 1 ? ' ' + (index + 1) : '') + '</button>' + (order.completed ? '<span class="badge-card-os-ok" title="' + this.escapeHtml((index + 1) + 'º atendimento concluído — O.S. ' + (order.osNumber || 'não informada')) + '"><i class="fa-solid fa-check"></i> OK</span>' : '') + '</span>').join('')}
               ${absenceActionBtn}
               ${sendAgendaBtn}
             </div>
@@ -1634,10 +1638,6 @@ const App = {
             </div>
           `;
 
-          const okBadgeHtml = isDone
-            ? `<span class="badge-card-os-ok" title="Atendimento Concluído"><i class="fa-solid fa-check"></i> OK</span>`
-            : '';
-
           const seqBtnsHtml = analystOrders.length > 1
             ? `<div class="seq-btns" draggable="false" onmouseenter="App.disableCardDrag(this)" onmouseleave="App.enableCardDrag(this)" ondragstart="event.stopPropagation(); event.preventDefault(); return false;" style="align-self: flex-end; margin-bottom: 1px;">
                  <button type="button" class="btn-seq-move" title="Subir na sequência" ${index === 0 ? 'disabled' : ''} onclick="event.stopPropagation(); App.moveScheduleSequence('${order.id}', -1)">
@@ -1654,7 +1654,6 @@ const App = {
               <div class="card-seq-left">
                 <span class="seq-pill"><i class="fa-solid fa-route"></i> ${index + 1}º Atendimento</span>
                 ${osInputHtml}
-                ${okBadgeHtml}
               </div>
             </div>`;
 
@@ -1682,7 +1681,7 @@ const App = {
                 <span style="font-size:0.74rem; color:var(--text-dim);"><i class="fa-regular fa-calendar"></i> ${(order.date ? order.date.split('-').reverse().join('/') : currentFmt)}</span>
               </div>
 
-              ${order.obs ? `<div class="card-obs-text"><i class="fa-solid fa-circle-info" style="color:#60a5fa;"></i> ${order.obs}</div>` : ''}
+
 
               <!-- Linha de Ações: Concluído / Precisa Retornar / WhatsApp / Editar / Excluir -->
               <div class="card-actions-row">
@@ -1804,6 +1803,9 @@ const App = {
     });
 
     container.innerHTML = cardsHtml;
+    if (window.AgendaOrderDeck) window.AgendaOrderDeck.refresh(container);
+    if (window.AgendaRadar) window.AgendaRadar.refresh();
+    if (window.AgendaCardLayout) window.AgendaCardLayout.refresh(container);
   },
 
   openNewScheduleForAnalyst(analystId, customDate) {
@@ -1982,15 +1984,10 @@ const App = {
     if (event) event.preventDefault();
 
     const scheduleId = document.getElementById('survey-schedule-id')?.value;
-    const recipientEmail = document.getElementById('survey-recipient-email')?.value?.trim();
     const summaryText = document.getElementById('survey-summary-text')?.value?.trim() || '';
 
     if (!scheduleId) return;
 
-    if (recipientEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(recipientEmail)) {
-      alert('Informe um e-mail válido ou deixe vazio para usar o cadastro da escola.');
-      return;
-    }
 
     const sched = store.getSchedules().find(s => String(s.id).trim() === String(scheduleId).trim());
     if (!sched) return;
@@ -1999,33 +1996,62 @@ const App = {
     const originalBtnHtml = btnSubmit ? btnSubmit.innerHTML : '';
     if (btnSubmit) {
       btnSubmit.disabled = true;
-      btnSubmit.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Enviando e Gerando PDF...';
+      btnSubmit.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Conectando à pesquisa...';
     }
 
     try {
       if (!sched.completed) throw new Error('Conclua o atendimento antes de enviar a pesquisa.');
       if (!sched.schoolCie || !sched.osNumber) throw new Error('Informe o CIE e o número da O.S. no atendimento.');
-      const configuredUrl = 'https://sor-seintec.github.io/pesquisa-qualidade/index.html';
+      const configuredUrl = 'https://sor-seintec.github.io/pesquisa-qualidade/index.html?v=20261028-hidden-fix';
       if (!configuredUrl) throw new Error('URL da integração não informada.');
       const url = new URL(configuredUrl);
       if (!['https:', 'http:'].includes(url.protocol)) throw new Error('Use uma URL HTTP ou HTTPS para a integração.');
       localStorage.setItem('qualityIntegrationUrl', url.href);
-      const popup = window.open(url.href, 'pesquisaQualidadeIntegracao', 'width=650,height=700');
-      if (!popup) throw new Error('Permita pop-ups para abrir o sistema de pesquisa.');
       const file = this.currentSurveyFile;
-      if (file && file.size > 5 * 1024 * 1024) { popup.close(); throw new Error('O anexo deve ter no máximo 5 MB.'); }
+      if (file && file.size > 5 * 1024 * 1024) throw new Error('O anexo deve ter no máximo 5 MB.');
       const attachment = file ? { name: file.name, contentType: file.type || 'application/octet-stream', contentBase64: btoa(Array.from(new Uint8Array(await file.arrayBuffer()), b => String.fromCharCode(b)).join('')) } : null;
       const payload = { cie: String(sched.schoolCie), osNumber: String(sched.osNumber), schoolName: sched.schoolName || '', serviceDate: sched.date || '',  customMessage: summaryText, attachment };
       const result = await new Promise((resolve, reject) => {
+        const frame = document.createElement('iframe');
+        frame.title = 'Autenticação da Pesquisa de Qualidade';
+        frame.style.cssText = 'width:100%;height:calc(100% - 40px);border:0;';
+        const loginPanel = document.createElement('div');
+        loginPanel.hidden = false;
+        loginPanel.style.cssText = 'position:fixed;inset:5%;z-index:99999;background:white;padding:12px;border:2px solid #2563eb;border-radius:10px;';
+        const visiblePanelStyle = loginPanel.style.cssText;
+        const hidePanel = () => { loginPanel.style.cssText = 'position:fixed;left:-10000px;top:0;width:650px;height:700px;opacity:0;pointer-events:none;'; };
+        hidePanel();
+        const close = document.createElement('button');
+        close.type = 'button';
+        close.textContent = 'Cancelar acesso à pesquisa';
+        close.onclick = () => finish(new Error('Acesso à pesquisa cancelado.'));
+        loginPanel.append(close, frame);
+        document.body.append(loginPanel);
+        const popup = frame.contentWindow;
+        let settled = false;
+
+        const connectionTimer = setTimeout(() => finish(new Error('A pesquisa não confirmou a conexão em 30 segundos. Confira a publicação dos dois sistemas e o histórico de envios antes de tentar novamente.')), 30000);
+        const sendRequest = () => popup.postMessage({type:'quality-request',payload},url.origin);
+        const retry = setInterval(sendRequest, 1000);
+        frame.onload = sendRequest;
+        frame.onerror = () => finish(new Error('Não foi possível carregar a pesquisa.'));
         const timer = setTimeout(() => finish(new Error('Tempo esgotado. Verifique o sistema de pesquisa antes de tentar novamente.')), 300000);
-        const poll = setInterval(() => { if (popup.closed) finish(new Error('Janela da pesquisa fechada. Verifique o resultado antes de tentar novamente.')); }, 1000);
-        function finish(error, value) { clearTimeout(timer); clearInterval(poll); window.removeEventListener('message', receive); error ? reject(error) : resolve(value); }
+        function finish(error, value) { if (settled) return; settled = true; clearTimeout(timer); clearTimeout(connectionTimer); clearInterval(retry); window.removeEventListener('message', receive); loginPanel.remove(); error ? reject(error) : resolve(value); }
         function receive(e) {
           if (e.source !== popup || e.origin !== url.origin || !e.data) return;
+          if (['quality-received','quality-auth-required','quality-auth-ready','quality-result'].includes(e.data.type)) { clearTimeout(connectionTimer); clearInterval(retry); }
+          if (e.data.type === 'quality-received' && btnSubmit) btnSubmit.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Aguardando envio da pesquisa...';
+          if (e.data.type === 'quality-auth-required') {
+            loginPanel.style.cssText = visiblePanelStyle;
+            frame.hidden = false;
+            frame.style.cssText = 'width:100%;height:calc(100% - 40px);border:0;';
+          }
+          if (e.data.type === 'quality-auth-ready') { hidePanel(); }
           if (e.data.type === 'quality-ready') popup.postMessage({ type: 'quality-request', payload }, url.origin);
           if (e.data.type === 'quality-result') e.data.error ? finish(new Error(e.data.error)) : finish(null, e.data);
         }
         window.addEventListener('message', receive);
+        frame.src = url.href;
       });
       const nowIso = new Date().toISOString();
       const protocol = result.token;
@@ -2033,7 +2059,7 @@ const App = {
       // Salva dados no agendamento
       sched.surveySent = true;
       sched.surveySentAt = nowIso;
-      sched.surveyRecipient = result.recipientEmail || recipientEmail;
+      sched.surveyRecipient = result.recipientEmail || '';
       sched.surveySummary = summaryText;
       sched.surveyAttachmentName = this.currentSurveyFile ? this.currentSurveyFile.name : '';
       sched.surveyProtocol = protocol;
@@ -2047,6 +2073,7 @@ const App = {
       this.renderAnalystDailyCards();
       this.renderAllSchedulesTable();
 
+      if (btnSubmit) btnSubmit.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Gerando comprovante PDF...';
       // Gera e baixa automaticamente o comprovante em PDF
       try { await this.generateSurveyReceiptPDF(sched); } catch (pdfError) { console.error(pdfError); alert('A solicitação de envio foi aceita, mas não foi possível gerar o PDF. Não reenvie apenas por esse motivo.'); }
 

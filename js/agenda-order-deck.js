@@ -1,4 +1,4 @@
-/* Apresentação em cartas: os registros, IDs e handlers originais são preservados. */
+﻿/* Apresentação em cartas: os registros, IDs e handlers originais são preservados. */
 (() => {
  const selected = new Map();
  window.AgendaOrderDeck={
@@ -46,6 +46,7 @@
       if(tools[i])tools[i].hidden=!active;
      });
      if(animate){void orders[index].offsetWidth;orders[index].classList.add('is-deck-turning');}
+     if(window.AgendaCardLayout)window.AgendaCardLayout.fit();
     }
     const remembered=orders.findIndex(order=>order.id===selected.get(key));activate(remembered>=0?remembered:0,false);
    });

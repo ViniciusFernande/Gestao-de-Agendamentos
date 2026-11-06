@@ -4520,7 +4520,7 @@ body.role-analista .admin-only {
 #view-agendamentos .card-seq-bar, #view-agendamentos .card-seq-left { flex-wrap:wrap; overflow:visible; gap:6px; min-width:0; }
 #view-agendamentos .card-os-inline-group { height:auto; min-height:28px; max-width:100%; flex:1 1 160px; }
 #view-agendamentos .card-os-inline-input { width:100%; min-width:0; flex:1 1 115px; font-size:.74rem; }
-#view-agendamentos .card-school-name, #view-agendamentos .card-school-cie, #view-agendamentos .card-obs-text { white-space:normal; overflow:visible; text-overflow:clip; overflow-wrap:anywhere; line-height:1.45; }
+#view-agendamentos .card-school-cie, #view-agendamentos .card-obs-text { white-space:normal; overflow:visible; text-overflow:clip; overflow-wrap:anywhere; line-height:1.45; }
 #view-agendamentos .card-school-name { font-size:.88rem; }
 #view-agendamentos .card-cie-row { align-items:flex-start; flex-wrap:wrap; }
 #view-agendamentos .card-subject-badge { max-width:100%; white-space:normal; overflow-wrap:anywhere; line-height:1.4; }
@@ -4615,3 +4615,118 @@ body.role-analista .admin-only {
 #view-agendamentos .agenda-deck-controls .agenda-deck-add { width:auto!important; flex:1 1 auto; min-width:0; margin:0!important; padding:7px 9px!important; justify-content:center; white-space:nowrap; font-size:.74rem!important; min-height:32px; }
 #view-agendamentos .agenda-deck-controls .agenda-deck-tabs { flex:0 1 auto; max-width:55%; min-width:0; flex-wrap:nowrap; overflow-x:auto; justify-content:flex-start; padding:2px; }
 #view-agendamentos .agenda-deck-controls .agenda-deck-tab { flex:0 0 30px; }
+
+/* Altura uniforme para todos os cards de analistas da mesma fileira */
+#view-agendamentos .analyst-daily-card {
+  display: flex !important;
+  flex-direction: column !important;
+  box-sizing: border-box;
+}
+
+#view-agendamentos .analyst-daily-body {
+  flex: 1 1 auto !important;
+  display: flex !important;
+  flex-direction: column !important;
+  min-width: 0;
+}
+
+#view-agendamentos .analyst-daily-body > .card-order-box {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+#view-agendamentos .card-order-box {
+  display: flex;
+  flex-direction: column;
+}
+
+#view-agendamentos .card-order-box .card-actions-row {
+  margin-top: auto;
+}
+
+#view-agendamentos .analyst-daily-body > .btn-secondary {
+  margin-top: auto !important;
+  flex-shrink: 0;
+}
+
+#view-agendamentos .agenda-order-deck {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  padding-bottom: 8px;
+}
+
+#view-agendamentos .agenda-deck-stage {
+  flex: 1 1 auto;
+  display: grid;
+  min-height: 0;
+}
+
+#view-agendamentos .agenda-deck-stage > .card-order-box {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+#view-agendamentos .analyst-daily-body > .agenda-deck-controls {
+  margin-top: auto !important;
+  flex-shrink: 0;
+}
+
+#view-agendamentos .card-empty-state {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  margin: auto 0;
+}
+
+#view-agendamentos .analyst-daily-card.is-analyst-absent {
+  align-self: stretch !important;
+}
+
+#view-agendamentos .analyst-daily-card.is-analyst-absent .analyst-daily-body {
+  flex: 1 1 auto !important;
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+#view-agendamentos .analyst-daily-card.is-analyst-absent .card-empty-state {
+  flex: 1 1 auto !important;
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: center !important;
+}
+/* Nome da escola em linha única com reticências quando longo */
+#view-agendamentos .card-order-header {
+  min-width: 0 !important;
+  width: 100% !important;
+  overflow: hidden !important;
+}
+#view-agendamentos .card-school-name {
+  font-size: 0.88rem !important;
+  font-weight: 700 !important;
+  line-height: 1.35 !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+  display: block !important;
+}
+#view-agendamentos .card-school-name span {
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  display: block !important;
+  max-width: 100% !important;
+}
+/* Ocultar campo de observação no card da tela de agendamentos (visível apenas no card enviado ao analista) */
+#view-agendamentos .card-obs-text {
+  display: none !important;
+}

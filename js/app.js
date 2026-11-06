@@ -1681,7 +1681,7 @@ const App = {
                 <span style="font-size:0.74rem; color:var(--text-dim);"><i class="fa-regular fa-calendar"></i> ${(order.date ? order.date.split('-').reverse().join('/') : currentFmt)}</span>
               </div>
 
-              ${order.obs ? `<div class="card-obs-text"><i class="fa-solid fa-circle-info" style="color:#60a5fa;"></i> ${order.obs}</div>` : ''}
+
 
               <!-- Linha de Ações: Concluído / Precisa Retornar / WhatsApp / Editar / Excluir -->
               <div class="card-actions-row">
