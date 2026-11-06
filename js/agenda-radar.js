@@ -13,17 +13,20 @@
       const container=document.getElementById('analyst-cards-container'); if(!container)return;
       if(!document.getElementById('agenda-radar-panel')) {
         const layout=document.createElement('div');layout.className='agenda-radar-layout';container.before(layout);layout.append(container);
-        const panel=document.createElement('aside');panel.id='agenda-radar-panel';panel.className='agenda-radar-panel';panel.setAttribute('aria-label','Mapa de atendimentos');
-        panel.innerHTML='<div class="agenda-radar-heading"><h3><i class="fa-solid fa-map-location-dot"></i> Mapa de atendimentos</h3><button type="button" id="agenda-radar-clear" title="Limpar seleção" aria-label="Limpar seleção">×</button></div><div id="agenda-radar-selection" aria-live="polite">Selecione um atendimento para explorar as escolas próximas.</div><div id="agenda-radar-map" role="region" aria-label="Mini mapa das escolas"></div><p id="agenda-radar-map-status">O mapa será carregado ao selecionar uma escola.</p><h4>5 escolas mais próximas</h4><ol id="agenda-radar-list"></ol><p class="agenda-radar-note">Distâncias aproximadas em linha reta, a partir da escola selecionada. Escola prevista na agenda; sem localização em tempo real.</p>';
-        layout.append(panel); document.getElementById('agenda-radar-clear').onclick=()=>{selectedId=null;selectionKey='';api.refresh();};
-        container.addEventListener('click',event=>{if(event.target.closest('button,input,select,textarea,a,label'))return;const box=event.target.closest('.card-order-box');if(box)api.select(box.id.slice('order-box-'.length));});
+        const panel=document.createElement('aside');panel.id='agenda-radar-panel';panel.className='agenda-radar-panel';panel.hidden=true;panel.setAttribute('aria-label','Mapa de atendimentos');
+        panel.innerHTML='<div class="agenda-radar-heading"><h3><i class="fa-solid fa-map-location-dot"></i> Mapa de atendimentos</h3><button type="button" id="agenda-radar-clear" title="Fechar mapa" aria-label="Fechar mapa">×</button></div><div id="agenda-radar-selection" aria-live="polite">Selecione um atendimento para explorar as escolas próximas.</div><div id="agenda-radar-map" role="region" aria-label="Mini mapa das escolas"></div><p id="agenda-radar-map-status">O mapa será carregado ao selecionar uma escola.</p><h4>5 escolas mais próximas</h4><ol id="agenda-radar-list"></ol><p class="agenda-radar-note">Distâncias aproximadas em linha reta, a partir da escola selecionada. Escola prevista na agenda; sem localização em tempo real.</p>';
+        layout.before(panel); document.getElementById('agenda-radar-clear').onclick=()=>api.close();
+        document.addEventListener('keydown',event=>{if(event.key==='Escape' && !panel.hidden){event.preventDefault();api.close();}});
+        document.addEventListener('click',event=>{if(panel.hidden || panel.contains(event.target) || event.target.closest?.('.agenda-radar-open'))return;api.close(false);},true);
       }
       container.querySelectorAll('.card-order-box').forEach(box=>{
         const id=box.id.slice('order-box-'.length);box.classList.toggle('radar-selected',id===selectedId);
-        let button=box.querySelector('.agenda-radar-open');if(!button){button=document.createElement('button');button.type='button';button.className='agenda-radar-open';button.innerHTML='<i class="fa-solid fa-location-dot"></i> Ver proximidade';button.onclick=()=>api.select(id);box.append(button);}button.setAttribute('aria-pressed',String(id===selectedId));
+
       });
+      container.querySelectorAll('.agenda-radar-open').forEach(button=>button.setAttribute('aria-pressed',String(button.dataset.scheduleId===selectedId)));
       const order=selectedId && store.getSchedules().find(s=>String(s.id)===selectedId && s.date===App.selectedAgendaDate);
-      if(!order){selectedId=null;selectionKey='';currentSchool=null;currentNearby=[];document.getElementById('agenda-radar-selection').textContent='Selecione um atendimento para explorar as escolas próximas.';document.getElementById('agenda-radar-list').replaceChildren();pins.forEach(p=>p.setMap(null));pins=[];if(map){map.setCenter({lat:-23.50,lng:-47.45});map.setZoom(11);}document.getElementById('agenda-radar-map-status').textContent='Selecione um atendimento para visualizar o mapa.';container.querySelectorAll('.radar-selected').forEach(el=>el.classList.remove('radar-selected'));return;}
+      document.getElementById('agenda-radar-panel').hidden=!order;
+      if(!order){container.querySelectorAll('.agenda-radar-open').forEach(button=>button.setAttribute('aria-pressed','false'));selectedId=null;selectionKey='';currentSchool=null;currentNearby=[];document.getElementById('agenda-radar-selection').textContent='Selecione um atendimento para explorar as escolas próximas.';document.getElementById('agenda-radar-list').replaceChildren();pins.forEach(p=>p.setMap(null));pins=[];if(map){map.setCenter({lat:-23.50,lng:-47.45});map.setZoom(11);}document.getElementById('agenda-radar-map-status').textContent='Selecione um atendimento para visualizar o mapa.';container.querySelectorAll('.radar-selected').forEach(el=>el.classList.remove('radar-selected'));return;}
       const school=schools.find(s=>String(s.cie)===String(order.schoolCie));const analyst=store.getAnalystById(order.analystId);
       const key=JSON.stringify([order.id,order.schoolCie,order.schoolName,order.date,analyst?.name]);if(key===selectionKey)return;selectionKey=key;
       document.getElementById('agenda-radar-selection').innerHTML='<span class="agenda-radar-analyst">'+esc(analyst?.name || 'Analista')+' · '+esc(order.date.split('-').reverse().join('/'))+'</span><strong>'+esc(order.schoolName)+'</strong><small>CIE: '+esc(order.schoolCie)+'</small>';
@@ -33,7 +36,8 @@
       document.getElementById('agenda-radar-list').innerHTML=currentNearby.map((s,i)=>'<li><span class="agenda-radar-number">'+(i+1)+'</span><div><a href="'+mapLink(s)+'" target="_blank" rel="noopener noreferrer">'+esc(s.name)+' <i class="fa-solid fa-arrow-up-right-from-square"></i></a><small>'+esc(s.area)+' · CIE '+esc(s.cie)+'</small></div><b>'+s.km.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})+' km</b></li>').join('');
       loadMap().then(drawMap).catch(()=>{document.getElementById('agenda-radar-map-status').textContent='Mapa indisponível. A lista de distâncias continua disponível. Verifique a autorização do endereço da Gestão na chave do Google Maps.';});
     },
-    select(id){selectedId=String(id);selectionKey='';api.refresh();}
+    select(id){selectedId=String(id);selectionKey='';api.refresh();},
+    close(restoreFocus=true){const previous=selectedId;selectedId=null;selectionKey='';api.refresh();if(restoreFocus && previous)Array.from(document.querySelectorAll('#analyst-cards-container .agenda-radar-open')).find(button=>button.dataset.scheduleId===previous)?.focus({preventScroll:true});}
   };
   function loadMap(){
     if(window.google?.maps?.Map)return Promise.resolve();if(loading)return loading;

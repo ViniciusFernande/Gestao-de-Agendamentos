@@ -1544,9 +1544,10 @@ const App = {
         return 0;
       });
       
+      const avatarSource = analyst.avatar || window.AgendaAnalystPhotos?.find(analyst) || '';
       let avatarHtml = '';
-      if (analyst.avatar) {
-        avatarHtml = `<img src="${analyst.avatar}" class="analyst-avatar-img" alt="${analyst.name}" onerror="this.outerHTML='<div class=\'analyst-avatar-fallback\' style=\'background:${analyst.color}\'>${analyst.name.charAt(0)}</div>'">`;
+      if (avatarSource) {
+        avatarHtml = `<img src="${avatarSource}" class="analyst-avatar-img" alt="${analyst.name}" onerror="this.outerHTML='<div class=\'analyst-avatar-fallback\' style=\'background:${analyst.color}\'>${analyst.name.charAt(0)}</div>'">`;
       } else {
         avatarHtml = `<div class="analyst-avatar-fallback" style="background:${analyst.color || '#3b82f6'};">${analyst.name.charAt(0)}</div>`;
       }
@@ -1607,6 +1608,7 @@ const App = {
               </div>
             </div>
             <div style="display: flex; align-items: center; gap: 8px; flex-shrink: 0;">
+              ${analystOrders.map((order, index) => '<span class="agenda-header-order-tools"><button type="button" class="agenda-radar-open" data-schedule-id="' + this.escapeHtml(order.id) + '" aria-pressed="false" aria-controls="agenda-radar-panel" title="' + this.escapeHtml('Ver escola do ' + (index + 1) + 'º atendimento no mapa') + '" onclick="event.stopPropagation(); AgendaRadar.select(this.dataset.scheduleId)"><i class="fa-solid fa-location-dot" aria-hidden="true"></i> Maps' + (analystOrders.length > 1 ? ' ' + (index + 1) : '') + '</button>' + (order.completed ? '<span class="badge-card-os-ok" title="' + this.escapeHtml((index + 1) + 'º atendimento concluído — O.S. ' + (order.osNumber || 'não informada')) + '"><i class="fa-solid fa-check"></i> OK</span>' : '') + '</span>').join('')}
               ${absenceActionBtn}
               ${sendAgendaBtn}
             </div>
@@ -1634,10 +1636,6 @@ const App = {
             </div>
           `;
 
-          const okBadgeHtml = isDone
-            ? `<span class="badge-card-os-ok" title="Atendimento Concluído"><i class="fa-solid fa-check"></i> OK</span>`
-            : '';
-
           const seqBtnsHtml = analystOrders.length > 1
             ? `<div class="seq-btns" draggable="false" onmouseenter="App.disableCardDrag(this)" onmouseleave="App.enableCardDrag(this)" ondragstart="event.stopPropagation(); event.preventDefault(); return false;" style="align-self: flex-end; margin-bottom: 1px;">
                  <button type="button" class="btn-seq-move" title="Subir na sequência" ${index === 0 ? 'disabled' : ''} onclick="event.stopPropagation(); App.moveScheduleSequence('${order.id}', -1)">
@@ -1654,7 +1652,6 @@ const App = {
               <div class="card-seq-left">
                 <span class="seq-pill"><i class="fa-solid fa-route"></i> ${index + 1}º Atendimento</span>
                 ${osInputHtml}
-                ${okBadgeHtml}
               </div>
             </div>`;
 

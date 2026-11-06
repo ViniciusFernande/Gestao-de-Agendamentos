@@ -4503,3 +4503,60 @@ body.role-analista .admin-only {
 #view-agendamentos .agenda-radar-open:focus-visible { outline:2px solid #60a5fa; outline-offset:2px; }
 @media(max-width:1050px) { #view-agendamentos .agenda-radar-layout { grid-template-columns:minmax(0,1fr) 290px; } }
 @media(max-width:760px) { #view-agendamentos .agenda-radar-layout { grid-template-columns:1fr; } #view-agendamentos .agenda-radar-panel { position:static; } }
+
+/* Agenda: cinco analistas por linha, sem truncar os controles. */
+#view-agendamentos .agenda-radar-layout .analyst-cards-grid {
+  grid-template-columns:repeat(5,minmax(250px,1fr));
+  gap:16px; align-items:start; overflow-x:auto; padding:4px 4px 16px; scrollbar-width:thin;
+}
+#view-agendamentos .analyst-daily-card { min-width:0; align-self:start; }
+#view-agendamentos .analyst-daily-header { flex-direction:column; align-items:stretch; gap:12px; padding:16px 12px; }
+#view-agendamentos .analyst-daily-header-left { width:100%; gap:10px; }
+#view-agendamentos .analyst-daily-name { white-space:normal!important; overflow:visible!important; text-overflow:clip!important; overflow-wrap:anywhere; font-size:1rem; font-weight:800; line-height:1.4; color:var(--text-primary,#fff); }
+#view-agendamentos .analyst-daily-header>div:last-child { justify-content:flex-end; flex-wrap:wrap; flex-shrink:1!important; }
+#view-agendamentos .analyst-avatar-img, #view-agendamentos .analyst-avatar-fallback { width:48px; height:48px; min-width:48px; flex:0 0 48px; border:2px solid #69aafa; border-radius:50%; object-fit:cover; box-shadow:0 0 0 3px #60a5fa18; }
+#view-agendamentos .analyst-daily-body { padding:12px; min-width:0; }
+#view-agendamentos .card-order-box { min-width:0; padding:12px; }
+#view-agendamentos .card-seq-bar, #view-agendamentos .card-seq-left { flex-wrap:wrap; overflow:visible; gap:6px; min-width:0; }
+#view-agendamentos .card-os-inline-group { height:auto; min-height:28px; max-width:100%; flex:1 1 160px; }
+#view-agendamentos .card-os-inline-input { width:100%; min-width:0; flex:1 1 115px; font-size:.74rem; }
+#view-agendamentos .card-school-name, #view-agendamentos .card-school-cie, #view-agendamentos .card-obs-text { white-space:normal; overflow:visible; text-overflow:clip; overflow-wrap:anywhere; line-height:1.45; }
+#view-agendamentos .card-school-name { font-size:.88rem; }
+#view-agendamentos .card-cie-row { align-items:flex-start; flex-wrap:wrap; }
+#view-agendamentos .card-subject-badge { max-width:100%; white-space:normal; overflow-wrap:anywhere; line-height:1.4; }
+#view-agendamentos .card-actions-row { flex-wrap:wrap; gap:6px; }
+#view-agendamentos .card-actions-row .card-btn-action { flex:1 1 85px; min-width:85px; min-height:32px; white-space:normal; overflow:visible; text-overflow:clip; padding:7px 8px; }
+#view-agendamentos .card-actions-row .btn-icon-action { flex:0 0 32px; width:32px; height:32px; min-width:32px; }
+#view-agendamentos .btn-header-send-agenda { white-space:normal; min-height:30px; }
+#view-agendamentos .agenda-radar-open { width:100%; min-height:30px; white-space:normal; }
+#view-agendamentos .analyst-daily-body>.btn-secondary { white-space:normal; line-height:1.4; min-height:34px; }
+#view-agendamentos #agenda-radar-selection, #view-agendamentos #agenda-radar-list a { overflow-wrap:anywhere; }
+
+/* Radar contextual horizontal: abaixo do resumo e acima dos analistas. */
+#view-agendamentos .agenda-radar-layout { grid-template-columns:minmax(0,1fr); }
+#view-agendamentos .agenda-radar-panel { position:static; inset:auto; width:100%; max-width:none; max-height:none; overflow:visible; z-index:auto; box-shadow:0 8px 24px #0002; margin:0 0 18px; display:grid; grid-template-columns:320px minmax(0,1fr); gap:10px 20px; }
+#view-agendamentos .agenda-radar-panel[hidden] { display:none!important; }
+#view-agendamentos .agenda-radar-heading { grid-column:1/-1; margin:0; }
+#view-agendamentos #agenda-radar-selection { grid-column:1/-1; margin:0; }
+#view-agendamentos #agenda-radar-selection strong { display:inline; margin:0 12px; }
+#view-agendamentos #agenda-radar-selection small { display:inline; }
+#view-agendamentos #agenda-radar-map { grid-column:1; grid-row:3/6; height:230px; }
+#view-agendamentos #agenda-radar-map-status { grid-column:1; grid-row:6; margin:0; }
+#view-agendamentos .agenda-radar-panel h4 { grid-column:2; grid-row:3; margin:0; align-self:start; }
+#view-agendamentos #agenda-radar-list { grid-column:2; grid-row:4; display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:10px; align-items:start; }
+#view-agendamentos #agenda-radar-list li { height:100%; flex-wrap:wrap; padding:12px; border:1px solid var(--border-color); border-radius:10px; align-content:start; }
+#view-agendamentos #agenda-radar-list li>div { flex:1 1 100px; }
+#view-agendamentos #agenda-radar-list b { margin-left:32px; }
+#view-agendamentos .agenda-radar-note { grid-column:2; grid-row:5; margin:0; align-self:end; }
+@media(max-width:760px) {
+  #view-agendamentos .agenda-radar-panel { grid-template-columns:minmax(0,1fr); }
+  #view-agendamentos .agenda-radar-panel>* { grid-column:1!important; grid-row:auto!important; }
+  #view-agendamentos #agenda-radar-selection strong { display:block; margin:5px 0; }
+  #view-agendamentos #agenda-radar-list { grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); }
+}
+
+/* Maps ao lado esquerdo do OK, no cabeçalho de cada analista. */
+#view-agendamentos .agenda-header-order-tools { display:inline-flex; align-items:center; flex-wrap:wrap; gap:6px; max-width:100%; }
+#view-agendamentos .analyst-daily-header .agenda-radar-open { width:auto; min-height:30px; padding:5px 9px; color:var(--text-primary,#e2e8f0); border-radius:7px; }
+#view-agendamentos .analyst-daily-header .agenda-radar-open i { color:#ef4444; }
+#view-agendamentos .analyst-daily-header .agenda-radar-open[aria-pressed="true"] { border-color:#ef4444; background:#ef444418; }
