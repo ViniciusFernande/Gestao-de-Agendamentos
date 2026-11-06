@@ -4560,3 +4560,16 @@ body.role-analista .admin-only {
 #view-agendamentos .analyst-daily-header .agenda-radar-open { width:auto; min-height:30px; padding:5px 9px; color:var(--text-primary,#e2e8f0); border-radius:7px; }
 #view-agendamentos .analyst-daily-header .agenda-radar-open i { color:#ef4444; }
 #view-agendamentos .analyst-daily-header .agenda-radar-open[aria-pressed="true"] { border-color:#ef4444; background:#ef444418; }
+
+/* Mantém a ordem dos botões em qualquer largura/zoom; a grade rola sem comprimir os cards. */
+#view-agendamentos .agenda-radar-layout .analyst-cards-grid { grid-template-columns:repeat(5,minmax(var(--agenda-card-min,340px),1fr)); overflow-x:auto; overscroll-behavior-x:contain; }
+#view-agendamentos .analyst-daily-header>div:last-child { flex-wrap:nowrap; gap:8px!important; }
+#view-agendamentos .agenda-header-order-tools { flex:0 0 auto; flex-wrap:nowrap; max-width:none; white-space:nowrap; }
+#view-agendamentos .analyst-daily-header .agenda-radar-open, #view-agendamentos .btn-header-send-agenda, #view-agendamentos .badge-card-os-ok { flex-shrink:0; white-space:nowrap; }
+#view-agendamentos .card-actions-row { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr) repeat(3,30px); gap:6px; align-items:stretch; }
+#view-agendamentos .card-actions-row .card-btn-action { min-width:0; white-space:nowrap; padding:6px; min-height:32px; }
+#view-agendamentos .card-actions-row .btn-icon-action { width:30px; min-width:30px; height:32px; }
+#view-agendamentos .card-seq-left { width:100%; flex-wrap:nowrap; }
+#view-agendamentos .card-seq-left .card-os-inline-group { min-width:0; flex:1 1 auto; }
+#view-agendamentos .card-seq-left .seq-pill { flex:0 0 auto; }
+#view-agendamentos .analyst-daily-name { min-width:0; }

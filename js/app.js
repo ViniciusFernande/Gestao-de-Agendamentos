@@ -1504,6 +1504,9 @@ const App = {
     const analysts = store.getAnalysts().filter(a => a.status === 'ativo');
     const allSchedules = store.getSchedules();
     const todaySchedules = allSchedules.filter(s => s.date === currentDate);
+    // Largura de apresentação: reserva espaço para Maps/OK extras sem quebrar a barra.
+    const largestAgenda = Math.max(1, ...analysts.map(a => todaySchedules.filter(s => s.analystId === a.id).length));
+    container.style.setProperty('--agenda-card-min', (340 + (largestAgenda - 1) * 120) + 'px');
 
     // Contagem de analistas ativos que constam como Presente (Trabalhando Normalmente) hoje
     const presentAnalystsCount = analysts.filter(a => {
