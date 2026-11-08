@@ -4504,10 +4504,17 @@ body.role-analista .admin-only {
 @media(max-width:1050px) { #view-agendamentos .agenda-radar-layout { grid-template-columns:minmax(0,1fr) 290px; } }
 @media(max-width:760px) { #view-agendamentos .agenda-radar-layout { grid-template-columns:1fr; } #view-agendamentos .agenda-radar-panel { position:static; } }
 
-/* Agenda: cinco analistas por linha, sem truncar os controles. */
+/* Agenda: Grid 100% responsivo para todos tamanhos de monitor (cards nunca ficam pequenos) */
+#view-agendamentos .analyst-cards-grid,
 #view-agendamentos .agenda-radar-layout .analyst-cards-grid {
-  grid-template-columns:repeat(5,minmax(250px,1fr));
-  gap:16px; align-items:start; overflow-x:auto; padding:4px 4px 16px; scrollbar-width:thin;
+  display: grid !important;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)) !important;
+  gap: 18px !important;
+  align-items: stretch !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+  padding: 6px 2px 24px 2px !important;
+  overflow-x: visible !important;
 }
 #view-agendamentos .analyst-daily-card { min-width:0; align-self:start; }
 #view-agendamentos .analyst-daily-header { flex-direction:column; align-items:stretch; gap:12px; padding:16px 12px; }
@@ -4562,7 +4569,7 @@ body.role-analista .admin-only {
 #view-agendamentos .analyst-daily-header .agenda-radar-open[aria-pressed="true"] { border-color:#ef4444; background:#ef444418; }
 
 /* Mantém a ordem dos botões em qualquer largura/zoom; a grade rola sem comprimir os cards. */
-#view-agendamentos .agenda-radar-layout .analyst-cards-grid { grid-template-columns:repeat(5,minmax(var(--agenda-card-min,340px),1fr)); overflow-x:auto; overscroll-behavior-x:contain; }
+/* Mantem organizacao dos controles sem forcar 5 colunas */
 #view-agendamentos .analyst-daily-header>div:last-child { flex-wrap:nowrap; gap:8px!important; }
 #view-agendamentos .agenda-header-order-tools { flex:0 0 auto; flex-wrap:nowrap; max-width:none; white-space:nowrap; }
 #view-agendamentos .analyst-daily-header .agenda-radar-open, #view-agendamentos .btn-header-send-agenda, #view-agendamentos .badge-card-os-ok { flex-shrink:0; white-space:nowrap; }
@@ -4582,12 +4589,55 @@ body.role-analista .admin-only {
 #view-agendamentos .agenda-ure-location-note { line-height:1.5; }
 @media(max-width:760px){#view-agendamentos #agenda-radar-fixed-map{grid-column:1;grid-row:auto;}}
 
-/* Cinco colunas proporcionais: os cards cabem na área útil em 90% e 100%. */
-#view-agendamentos .agenda-radar-layout .analyst-cards-grid { grid-template-columns:repeat(5,minmax(0,1fr)); gap:14px; overflow-x:clip; padding:4px 4px 16px; }
-#view-agendamentos .agenda-card-cell { position:relative; min-width:0; }
-#view-agendamentos .agenda-card-cell>.analyst-daily-card { position:absolute; top:0; left:0; transform-origin:top left; box-sizing:border-box; transition:none; }
-@media(max-width:760px){
- #view-agendamentos .agenda-radar-layout .analyst-cards-grid { grid-template-columns:repeat(5,minmax(220px,1fr)); overflow-x:auto; }
+/* Responsividade fluida para todos os tamanhos de monitor */
+#view-agendamentos .agenda-card-cell {
+  display: contents !important;
+  position: static !important;
+  min-height: 0 !important;
+}
+
+#view-agendamentos .analyst-daily-card {
+  position: relative !important;
+  top: auto !important;
+  left: auto !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  height: 100% !important;
+  transform: none !important;
+  display: flex !important;
+  flex-direction: column !important;
+  box-sizing: border-box !important;
+  border-radius: 14px;
+}
+
+@media (min-width: 1800px) {
+  #view-agendamentos .analyst-cards-grid,
+  #view-agendamentos .agenda-radar-layout .analyst-cards-grid {
+    grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)) !important;
+    gap: 20px !important;
+  }
+}
+
+@media (max-width: 1366px) {
+  #view-agendamentos .analyst-cards-grid,
+  #view-agendamentos .agenda-radar-layout .analyst-cards-grid {
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)) !important;
+    gap: 14px !important;
+  }
+}
+
+@media (max-width: 900px) {
+  #view-agendamentos .analyst-cards-grid,
+  #view-agendamentos .agenda-radar-layout .analyst-cards-grid {
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)) !important;
+  }
+}
+
+@media (max-width: 640px) {
+  #view-agendamentos .analyst-cards-grid,
+  #view-agendamentos .agenda-radar-layout .analyst-cards-grid {
+    grid-template-columns: 1fr !important;
+  }
 }
 
 /* Atendimentos empilhados como cartas dentro de cada analista. */
@@ -4730,10 +4780,9 @@ body.role-analista .admin-only {
 #view-agendamentos .card-obs-text {
   display: none !important;
 }
-/* Garantir min-height nas células para evitar colapso de grade e sobreposição */
+/* Garantir fluxo natural dos cards sem sobreposicao */
 #view-agendamentos .agenda-card-cell {
-  position: relative !important;
-  min-width: 0 !important;
-  min-height: 200px !important;
-  display: block !important;
+  display: contents !important;
+  position: static !important;
+  min-height: 0 !important;
 }
