@@ -1107,20 +1107,28 @@ const App = {
     this.toggleReturnDateInput(!!sched.needsReturn);
 
     // Trata se o assunto é pré-definido ou personalizado
+    const selectSub = document.getElementById('sched-subject-select');
+    const inputCustom = document.getElementById('sched-subject-custom');
     const activeSubjects = (typeof store !== 'undefined' && store.getScheduleSubjects)
       ? store.getScheduleSubjects()
       : PREDEFINED_SUBJECTS.map(s => s.name);
     const isPredefined = activeSubjects.includes(sched.subject) ||
       (sched.subject === 'Manutenção de Maquinas' && activeSubjects.includes('Manutenção de Máquinas'));
-    const inputCustom = document.getElementById('sched-subject-custom');
 
     if (isPredefined) {
-      selectSub.value = (sched.subject === 'Manutenção de Maquinas') ? 'Manutenção de Máquinas' : sched.subject;
-      inputCustom.style.display = 'none';
+      if (selectSub) selectSub.value = (sched.subject === 'Manutenção de Maquinas') ? 'Manutenção de Máquinas' : sched.subject;
+      if (inputCustom) {
+        inputCustom.style.display = 'none';
+        inputCustom.value = '';
+        inputCustom.required = false;
+      }
     } else {
-      selectSub.value = 'custom';
-      inputCustom.value = sched.subject;
-      inputCustom.style.display = 'block';
+      if (selectSub) selectSub.value = 'custom';
+      if (inputCustom) {
+        inputCustom.value = sched.subject || '';
+        inputCustom.style.display = 'block';
+        inputCustom.required = true;
+      }
     }
 
     this.openModal('modal-schedule');
