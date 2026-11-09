@@ -10,7 +10,10 @@ const STORAGE_KEYS = {
   WHATSAPP_TEMPLATE: 'sg_whatsapp_template',
   THEME: 'sg_selected_theme',
   URE_ATTENDANCES: 'sg_ure_atendimentos',
-  ABSENCES: 'sg_analistas_ausencias'
+  ABSENCES: 'sg_analistas_ausencias',
+  SCHEDULE_SUBJECTS: 'sg_assuntos_agendamento',
+  URE_SECTORS: 'sg_ure_setores',
+  URE_TYPES: 'sg_ure_tipos'
 };
 
 // Categorias padrão de assuntos
@@ -1130,6 +1133,158 @@ _Por favor, confirme o recebimento e anexe a ordem concluída._`;
     }
   }
 
+  // ==========================================
+  // ASSUNTOS DE AGENDAMENTO (O.S.)
+  // ==========================================
+  getScheduleSubjects() {
+    const defaults = [
+      'Manuten\u00e7\u00e3o de M\u00e1quinas',
+      'Conectividade',
+      'Espelhamento DVR',
+      'Formatar Maquinas',
+      'Verificar AP',
+      'Invent\u00e1rio Escolar',
+      'Instala\u00e7\u00e3o de Ponto de Rede',
+      'Configura\u00e7\u00e3o de Roteador',
+      'Chamado Interno'
+    ];
+    try {
+      const saved = JSON.parse(localStorage.getItem(STORAGE_KEYS.SCHEDULE_SUBJECTS));
+      if (Array.isArray(saved) && saved.length > 0) return saved;
+      return defaults;
+    } catch {
+      return defaults;
+    }
+  }
+
+  setScheduleSubjects(list) {
+    try {
+      localStorage.setItem(STORAGE_KEYS.SCHEDULE_SUBJECTS, JSON.stringify(list));
+      if (typeof FirestoreSync !== 'undefined' && FirestoreSync.saveScheduleSubjects) {
+        FirestoreSync.saveScheduleSubjects(list);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
+  addScheduleSubject(name) {
+    const trimmed = (name || '').trim();
+    if (!trimmed) return false;
+    const list = this.getScheduleSubjects();
+    if (list.some(s => s.toLowerCase() === trimmed.toLowerCase())) return false;
+    list.push(trimmed);
+    this.setScheduleSubjects(list);
+    return true;
+  }
+
+  removeScheduleSubject(name) {
+    const list = this.getScheduleSubjects().filter(s => s.toLowerCase() !== (name || '').trim().toLowerCase());
+    this.setScheduleSubjects(list);
+    return true;
+  }
+
+  // ==========================================
+  // SETORES DA URE
+  // ==========================================
+  getUreSectors() {
+    const defaults = [
+      'Protocolo',
+      'CRH',
+      'Supervis\u00e3o',
+      'Segre',
+      'Seom / Sefisc',
+      'Sefin / Seafin',
+      'Pec',
+      'Asure',
+      'Seintec / Setec'
+    ];
+    try {
+      const saved = JSON.parse(localStorage.getItem(STORAGE_KEYS.URE_SECTORS));
+      if (Array.isArray(saved) && saved.length > 0) return saved;
+      return defaults;
+    } catch {
+      return defaults;
+    }
+  }
+
+  setUreSectors(list) {
+    try {
+      localStorage.setItem(STORAGE_KEYS.URE_SECTORS, JSON.stringify(list));
+      if (typeof FirestoreSync !== 'undefined' && FirestoreSync.saveUreSectors) {
+        FirestoreSync.saveUreSectors(list);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
+  addUreSector(name) {
+    const trimmed = (name || '').trim();
+    if (!trimmed) return false;
+    const list = this.getUreSectors();
+    if (list.some(s => s.toLowerCase() === trimmed.toLowerCase())) return false;
+    list.push(trimmed);
+    this.setUreSectors(list);
+    return true;
+  }
+
+  removeUreSector(name) {
+    const list = this.getUreSectors().filter(s => s.toLowerCase() !== (name || '').trim().toLowerCase());
+    this.setUreSectors(list);
+    return true;
+  }
+
+  // ==========================================
+  // TIPOS / ASSUNTOS ATENDIMENTO URE
+  // ==========================================
+  getUreTypes() {
+    const defaults = [
+      'Formata\u00e7\u00e3o de Maquina',
+      'Instalado Impressora',
+      'Verificado Impressora',
+      'Trocado Teclado',
+      'Verificado Monitor',
+      'Trocado Desktop',
+      'Remanejado Desktop de sala',
+      'Configurado Quick',
+      'Auxiliado servidor'
+    ];
+    try {
+      const saved = JSON.parse(localStorage.getItem(STORAGE_KEYS.URE_TYPES));
+      if (Array.isArray(saved) && saved.length > 0) return saved;
+      return defaults;
+    } catch {
+      return defaults;
+    }
+  }
+
+  setUreTypes(list) {
+    try {
+      localStorage.setItem(STORAGE_KEYS.URE_TYPES, JSON.stringify(list));
+      if (typeof FirestoreSync !== 'undefined' && FirestoreSync.saveUreTypes) {
+        FirestoreSync.saveUreTypes(list);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
+  addUreType(name) {
+    const trimmed = (name || '').trim();
+    if (!trimmed) return false;
+    const list = this.getUreTypes();
+    if (list.some(s => s.toLowerCase() === trimmed.toLowerCase())) return false;
+    list.push(trimmed);
+    this.setUreTypes(list);
+    return true;
+  }
+
+  removeUreType(name) {
+    const list = this.getUreTypes().filter(s => s.toLowerCase() !== (name || '').trim().toLowerCase());
+    this.setUreTypes(list);
+    return true;
+  }
 }
 
 const store = new DataStore();

@@ -170,6 +170,9 @@ const App = {
     } else if (this.currentView === 'agendamentos') {
       this.renderAnalystDailyCards();
     }
+    if (this.currentView === 'configuracoes') {
+      this.initSettingsView();
+    }
     this.updateDashboard();
   },
 
@@ -425,15 +428,96 @@ const App = {
         analysts.map(a => `<option value="${a.id}">${a.name}</option>`).join('');
     }
 
-    // Assuntos pré-definidos
+    // Assuntos pré-definidos de agendamento (O.S. e Fila)
+    const scheduleSubjects = (typeof store !== 'undefined' && store.getScheduleSubjects)
+      ? store.getScheduleSubjects()
+      : [
+          'Manutenção de Máquinas',
+          'Conectividade',
+          'Espelhamento DVR',
+          'Formatar Maquinas',
+          'Verificar AP',
+          'Inventário Escolar',
+          'Instalação de Ponto de Rede',
+          'Configuração de Roteador',
+          'Chamado Interno'
+        ];
+
     const schedSubjectSelect = document.getElementById('sched-subject-select');
     if (schedSubjectSelect) {
+      const currentVal = schedSubjectSelect.value;
       let optionsHtml = '<option value="">Selecione uma opção...</option>';
-      PREDEFINED_SUBJECTS.forEach(sub => {
-        optionsHtml += `<option value="${sub.name}" data-type="${sub.type}">${sub.name}</option>`;
+      scheduleSubjects.forEach(sub => {
+        optionsHtml += `<option value="${sub}" data-type="manutencao">${sub}</option>`;
       });
       optionsHtml += '<option value="custom">Outro</option>';
       schedSubjectSelect.innerHTML = optionsHtml;
+      if (currentVal) schedSubjectSelect.value = currentVal;
+    }
+
+    const queueSubjectSelect = document.getElementById('queue-subject-select');
+    if (queueSubjectSelect) {
+      const currentVal = queueSubjectSelect.value;
+      let queueOptsHtml = '<option value="">Selecione uma opção...</option>';
+      scheduleSubjects.forEach(sub => {
+        queueOptsHtml += `<option value="${sub}">${sub}</option>`;
+      });
+      queueOptsHtml += '<option value="custom">Outro</option>';
+      queueSubjectSelect.innerHTML = queueOptsHtml;
+      if (currentVal) queueSubjectSelect.value = currentVal;
+    }
+
+    // Setores URE
+    const ureSectors = (typeof store !== 'undefined' && store.getUreSectors)
+      ? store.getUreSectors()
+      : ['Protocolo', 'CRH', 'Supervisão', 'Segre', 'Seom / Sefisc', 'Sefin / Seafin', 'Pec', 'Asure', 'Seintec / Setec'];
+
+    const quickUreSector = document.getElementById('quick-ure-sector');
+    const editUreSector = document.getElementById('edit-ure-sector');
+    const sectorOpts = '<option value="">Selecione o setor...</option>' +
+      ureSectors.map(s => `<option value="${s}">${s}</option>`).join('');
+
+    if (quickUreSector) {
+      const curr = quickUreSector.value;
+      quickUreSector.innerHTML = sectorOpts;
+      if (curr) quickUreSector.value = curr;
+    }
+    if (editUreSector) {
+      const curr = editUreSector.value;
+      editUreSector.innerHTML = sectorOpts;
+      if (curr) editUreSector.value = curr;
+    }
+
+    // Tipos de Atendimento URE
+    const ureTypes = (typeof store !== 'undefined' && store.getUreTypes)
+      ? store.getUreTypes()
+      : [
+          'Formatação de Maquina',
+          'Instalado Impressora',
+          'Verificado Impressora',
+          'Trocado Teclado',
+          'Verificado Monitor',
+          'Trocado Desktop',
+          'Remanejado Desktop de sala',
+          'Configurado Quick',
+          'Auxiliado servidor'
+        ];
+
+    const quickUreType = document.getElementById('quick-ure-type');
+    const editUreType = document.getElementById('edit-ure-type');
+    const typeOpts = '<option value="">Selecione o tipo de atendimento...</option>' +
+      ureTypes.map(t => `<option value="${t}">${t}</option>`).join('') +
+      '<option value="Outro">Outro</option>';
+
+    if (quickUreType) {
+      const curr = quickUreType.value;
+      quickUreType.innerHTML = typeOpts;
+      if (curr) quickUreType.value = curr;
+    }
+    if (editUreType) {
+      const curr = editUreType.value;
+      editUreType.innerHTML = typeOpts;
+      if (curr) editUreType.value = curr;
     }
   },
 
@@ -1023,8 +1107,11 @@ const App = {
     this.toggleReturnDateInput(!!sched.needsReturn);
 
     // Trata se o assunto é pré-definido ou personalizado
-    const isPredefined = PREDEFINED_SUBJECTS.some(sub => sub.name === sched.subject || (sched.subject === 'Manutenção de Maquinas' && sub.name === 'Manutenção de Máquinas'));
-    const selectSub = document.getElementById('sched-subject-select');
+    const activeSubjects = (typeof store !== 'undefined' && store.getScheduleSubjects)
+      ? store.getScheduleSubjects()
+      : PREDEFINED_SUBJECTS.map(s => s.name);
+    const isPredefined = activeSubjects.includes(sched.subject) ||
+      (sched.subject === 'Manutenção de Maquinas' && activeSubjects.includes('Manutenção de Máquinas'));
     const inputCustom = document.getElementById('sched-subject-custom');
 
     if (isPredefined) {
@@ -1586,15 +1673,15 @@ const App = {
       const sendAgendaBtn = (!isAbsent && analystOrders.length > 0)
         ? `<button type="button" class="btn-header-send-agenda" onclick="App.openDailyAgendaModal('${analyst.id}', '${currentDate}')" title="Enviar agenda para o WhatsApp de ${analyst.name}">
              <i class="fa-brands fa-whatsapp"></i>
-             <span>Enviar Agenda</span>
+             <span>Enviar</span>
            </button>`
         : `<button type="button" class="btn-header-send-agenda is-disabled" disabled title="${isAbsent ? 'Analista ausente na data' : 'Nenhum agendamento para este analista nesta data'}">
              <i class="fa-brands fa-whatsapp"></i>
-             <span>Enviar Agenda</span>
+             <span>Enviar</span>
            </button>`;
 
       // Ícone ao lado do nome só aparece quando presente (trabalhando normalmente)
-      const absenceActionBtn = isAbsent ? '' : `<button type="button" class="btn-icon-action" onclick="App.openAnalystAbsenceModal('${analyst.id}', '${currentDate}')" style="width: 32px; height: 32px; border-radius: 8px; ${absenceBtnStyle}" title="${absenceBtnTitle}">
+      const absenceActionBtn = isAbsent ? '' : `<button type="button" class="btn-icon-action" onclick="App.openAnalystAbsenceModal('${analyst.id}', '${currentDate}')" style="width: 28px; height: 28px; min-width: 28px; border-radius: 6px; ${absenceBtnStyle}" title="${absenceBtnTitle}">
         ${absenceBtnText}
       </button>`;
 
@@ -1608,11 +1695,6 @@ const App = {
               <div style="min-width: 0; flex: 1;">
                 <div class="analyst-daily-name" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${analyst.name}</div>
               </div>
-            </div>
-            <div style="display: flex; align-items: center; gap: 8px; flex-shrink: 0;">
-              ${analystOrders.map((order, index) => '<span class="agenda-header-order-tools"><button type="button" class="agenda-radar-open" data-schedule-id="' + this.escapeHtml(order.id) + '" aria-pressed="false" aria-controls="agenda-radar-panel" title="' + this.escapeHtml('Ver escola do ' + (index + 1) + 'º atendimento no mapa') + '" onclick="event.stopPropagation(); AgendaRadar.select(this.dataset.scheduleId)"><i class="fa-solid fa-location-dot" aria-hidden="true"></i> Maps' + (analystOrders.length > 1 ? ' ' + (index + 1) : '') + '</button></span>').join('')}
-              ${absenceActionBtn}
-              ${sendAgendaBtn}
             </div>
           </div>
 
@@ -1751,9 +1833,16 @@ const App = {
 
         // Botão para adicionar mais uma ordem para este analista hoje se desejar
         cardsHtml += `
-          <button class="btn-secondary" style="width:100%; font-size:0.78rem; padding:8px; justify-content:center; margin-top:2px;" onclick="App.openNewScheduleForAnalyst('${analyst.id}', '${currentDate}')">
-            <i class="fa-solid fa-plus"></i> Adicionar Outra O.S. Hoje
-          </button>
+          <div class="analyst-card-footer">
+            <button class="btn-secondary btn-card-add-os"  onclick="App.openNewScheduleForAnalyst('${analyst.id}', '${currentDate}')">
+              <i class="fa-solid fa-plus"></i> <span>Adicionar O.S.</span>
+            </button>
+            <div class="analyst-footer-actions">
+              ${analystOrders.map((order, index) => '<span class="agenda-header-order-tools"><button type="button" class="agenda-radar-open" data-schedule-id="' + this.escapeHtml(order.id) + '" aria-pressed="false" aria-controls="agenda-radar-panel" title="' + this.escapeHtml('Ver escola do ' + (index + 1) + 'º atendimento no mapa') + '" onclick="event.stopPropagation(); AgendaRadar.select(this.dataset.scheduleId)"><i class="fa-solid fa-location-dot" aria-hidden="true"></i> Maps' + (analystOrders.length > 1 ? ' ' + (index + 1) : '') + '</button></span>').join('')}
+              ${absenceActionBtn}
+              ${sendAgendaBtn}
+            </div>
+          </div>
         `;
       } else {
         // Estado vazio ou ausente
@@ -1790,9 +1879,15 @@ const App = {
             <div class="card-empty-state">
               <i class="fa-regular fa-calendar-xmark" style="font-size:1.8rem; color:#475569;"></i>
               <div>Nenhum agendamento para hoje</div>
-              <button class="btn-secondary" style="font-size:0.8rem; padding:7px 16px;" onclick="App.openNewScheduleForAnalyst('${analyst.id}', '${currentDate}')">
-                <i class="fa-solid fa-plus"></i> Agendar Atendimento Hoje
+            </div>
+            <div class="analyst-card-footer">
+              <button class="btn-secondary btn-card-add-os"  onclick="App.openNewScheduleForAnalyst('${analyst.id}', '${currentDate}')">
+                <i class="fa-solid fa-plus"></i> <span>Adicionar O.S.</span>
               </button>
+              <div class="analyst-footer-actions">
+                ${absenceActionBtn}
+                ${sendAgendaBtn}
+              </div>
             </div>
           `;
         }
@@ -3836,14 +3931,197 @@ const App = {
         }
       });
 
-      // 2. Preenche o modelo de mensagem do WhatsApp
-      const textarea = document.getElementById('textarea-wa-template');
-      if (textarea && typeof store !== 'undefined' && store.getWhatsappTemplate) {
-        textarea.value = store.getWhatsappTemplate();
-        this.updateWhatsappTemplatePreview();
-      }
+      // 2. Renderiza Assuntos de Agendamento O.S.
+      this.renderSettingsSubjects();
+
+      // 3. Renderiza Setores e Tipos URE
+      this.renderSettingsUreSectors();
+      this.renderSettingsUreTypes();
     } catch(e) {
       console.error('Erro em initSettingsView:', e);
+    }
+  },
+
+  // =========================================================================
+  // GERENCIAMENTO DE ASSUNTOS DE O.S. (CONFIGURAÇÕES)
+  // =========================================================================
+  renderSettingsSubjects() {
+    const listEl = document.getElementById('settings-subjects-list');
+    const countEl = document.getElementById('settings-subjects-count');
+    if (!listEl) return;
+
+    const subjects = (typeof store !== 'undefined' && store.getScheduleSubjects) ? store.getScheduleSubjects() : [];
+    if (countEl) countEl.textContent = `${subjects.length} assunto${subjects.length === 1 ? '' : 's'}`;
+
+    if (subjects.length === 0) {
+      listEl.innerHTML = '<span class="settings-items-empty">Nenhum assunto cadastrado. Adicione um assunto acima.</span>';
+      return;
+    }
+
+    listEl.innerHTML = subjects.map(name => `
+      <span class="settings-item-chip">
+        <span>${this.escapeHtml(name)}</span>
+        <button type="button" class="btn-chip-delete" title="Excluir assunto '${this.escapeHtml(name)}'" onclick="App.removeSubjectFromSettings('${this.escapeHtml(name).replace(/'/g, "\\'")}'); event.stopPropagation();">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </span>
+    `).join('');
+  },
+
+  addSubjectFromSettings() {
+    const input = document.getElementById('input-new-subject');
+    if (!input) return;
+    const name = input.value.trim();
+    if (!name) return;
+
+    if (typeof store !== 'undefined' && store.addScheduleSubject) {
+      const added = store.addScheduleSubject(name);
+      if (!added) {
+        alert('Este assunto já está na lista!');
+        return;
+      }
+      input.value = '';
+      this.renderSettingsSubjects();
+      this.populateSelects();
+      if (typeof this.showToast === 'function') {
+        this.showToast('Assunto adicionado com sucesso!');
+      }
+    }
+  },
+
+  removeSubjectFromSettings(name) {
+    if (!name) return;
+    if (confirm(`Deseja remover o assunto "${name}" da lista pré-definida?`)) {
+      if (typeof store !== 'undefined' && store.removeScheduleSubject) {
+        store.removeScheduleSubject(name);
+        this.renderSettingsSubjects();
+        this.populateSelects();
+        if (typeof this.showToast === 'function') {
+          this.showToast('Assunto removido com sucesso!');
+        }
+      }
+    }
+  },
+
+  // =========================================================================
+  // GERENCIAMENTO DE SETORES DA URE (CONFIGURAÇÕES)
+  // =========================================================================
+  renderSettingsUreSectors() {
+    const listEl = document.getElementById('settings-ure-sectors-list');
+    const countEl = document.getElementById('settings-ure-sectors-count');
+    if (!listEl) return;
+
+    const sectors = (typeof store !== 'undefined' && store.getUreSectors) ? store.getUreSectors() : [];
+    if (countEl) countEl.textContent = `${sectors.length} setor${sectors.length === 1 ? 'es' : 'es'}`;
+
+    if (sectors.length === 0) {
+      listEl.innerHTML = '<span class="settings-items-empty">Nenhum setor cadastrado. Adicione um setor acima.</span>';
+      return;
+    }
+
+    listEl.innerHTML = sectors.map(name => `
+      <span class="settings-item-chip">
+        <span>${this.escapeHtml(name)}</span>
+        <button type="button" class="btn-chip-delete" title="Excluir setor '${this.escapeHtml(name)}'" onclick="App.removeUreSectorFromSettings('${this.escapeHtml(name).replace(/'/g, "\\'")}'); event.stopPropagation();">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </span>
+    `).join('');
+  },
+
+  addUreSectorFromSettings() {
+    const input = document.getElementById('input-new-ure-sector');
+    if (!input) return;
+    const name = input.value.trim();
+    if (!name) return;
+
+    if (typeof store !== 'undefined' && store.addUreSector) {
+      const added = store.addUreSector(name);
+      if (!added) {
+        alert('Este setor já está na lista!');
+        return;
+      }
+      input.value = '';
+      this.renderSettingsUreSectors();
+      this.populateSelects();
+      if (typeof this.showToast === 'function') {
+        this.showToast('Setor adicionado com sucesso!');
+      }
+    }
+  },
+
+  removeUreSectorFromSettings(name) {
+    if (!name) return;
+    if (confirm(`Deseja remover o setor "${name}" da lista pré-definida?`)) {
+      if (typeof store !== 'undefined' && store.removeUreSector) {
+        store.removeUreSector(name);
+        this.renderSettingsUreSectors();
+        this.populateSelects();
+        if (typeof this.showToast === 'function') {
+          this.showToast('Setor removido com sucesso!');
+        }
+      }
+    }
+  },
+
+  // =========================================================================
+  // GERENCIAMENTO DE TIPOS DE ATENDIMENTO URE (CONFIGURAÇÕES)
+  // =========================================================================
+  renderSettingsUreTypes() {
+    const listEl = document.getElementById('settings-ure-types-list');
+    const countEl = document.getElementById('settings-ure-types-count');
+    if (!listEl) return;
+
+    const types = (typeof store !== 'undefined' && store.getUreTypes) ? store.getUreTypes() : [];
+    if (countEl) countEl.textContent = `${types.length} tipo${types.length === 1 ? '' : 's'}`;
+
+    if (types.length === 0) {
+      listEl.innerHTML = '<span class="settings-items-empty">Nenhum tipo cadastrado. Adicione um tipo acima.</span>';
+      return;
+    }
+
+    listEl.innerHTML = types.map(name => `
+      <span class="settings-item-chip">
+        <span>${this.escapeHtml(name)}</span>
+        <button type="button" class="btn-chip-delete" title="Excluir tipo '${this.escapeHtml(name)}'" onclick="App.removeUreTypeFromSettings('${this.escapeHtml(name).replace(/'/g, "\\'")}'); event.stopPropagation();">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </span>
+    `).join('');
+  },
+
+  addUreTypeFromSettings() {
+    const input = document.getElementById('input-new-ure-type');
+    if (!input) return;
+    const name = input.value.trim();
+    if (!name) return;
+
+    if (typeof store !== 'undefined' && store.addUreType) {
+      const added = store.addUreType(name);
+      if (!added) {
+        alert('Este tipo de atendimento já está na lista!');
+        return;
+      }
+      input.value = '';
+      this.renderSettingsUreTypes();
+      this.populateSelects();
+      if (typeof this.showToast === 'function') {
+        this.showToast('Tipo de atendimento adicionado com sucesso!');
+      }
+    }
+  },
+
+  removeUreTypeFromSettings(name) {
+    if (!name) return;
+    if (confirm(`Deseja remover o tipo de atendimento "${name}" da lista pré-definida?`)) {
+      if (typeof store !== 'undefined' && store.removeUreType) {
+        store.removeUreType(name);
+        this.renderSettingsUreTypes();
+        this.populateSelects();
+        if (typeof this.showToast === 'function') {
+          this.showToast('Tipo de atendimento removido com sucesso!');
+        }
+      }
     }
   },
 
@@ -4411,16 +4689,19 @@ const App = {
     // Assunto pré-definido ou customizado
     const subjSelect = document.getElementById('queue-subject-select');
     const inputCustom = document.getElementById('queue-subject-custom');
-    const predefinedList = [
-      'Manutenção de Máquinas',
-      'Manutenção de Maquinas',
-      'Conectividade',
-      'Espelhamento DVR',
-      'Formatar Maquinas',
-      'Verificar AP',
-      'Inventário Escolar',
-      'Chamado Interno'
-    ];
+    const predefinedList = (typeof store !== 'undefined' && store.getScheduleSubjects)
+      ? store.getScheduleSubjects()
+      : [
+          'Manutenção de Máquinas',
+          'Conectividade',
+          'Espelhamento DVR',
+          'Formatar Maquinas',
+          'Verificar AP',
+          'Inventário Escolar',
+          'Instalação de Ponto de Rede',
+          'Configuração de Roteador',
+          'Chamado Interno'
+        ];
 
     if (predefinedList.includes(item.subject)) {
       if (subjSelect) subjSelect.value = item.subject;
@@ -4812,7 +5093,7 @@ const App = {
   handleUreTypeChange(val, customInputId) {
     const customInput = document.getElementById(customInputId);
     if (!customInput) return;
-    if (val === 'Outro') {
+    if (val === 'Outro' || val === 'custom') {
       customInput.style.display = 'block';
       customInput.required = true;
       customInput.focus();
@@ -5177,17 +5458,19 @@ renderUreView() {
     // Tipo de Atendimento
     const editTypeSelect = document.getElementById('edit-ure-type');
     const customEditType = document.getElementById('edit-ure-type-custom');
-    const predefinedTypes = [
-      'Formatação de Maquina',
-      'Instalado Impressora',
-      'Verificado Impressora',
-      'Trocado Teclado',
-      'Verificado Monitor',
-      'Trocado Desktop',
-      'Remanejado Desktop de sala',
-      'Configurado Quick',
-      'Auxiliado servidor'
-    ];
+    const predefinedTypes = (typeof store !== 'undefined' && store.getUreTypes)
+      ? store.getUreTypes()
+      : [
+          'Formatação de Maquina',
+          'Instalado Impressora',
+          'Verificado Impressora',
+          'Trocado Teclado',
+          'Verificado Monitor',
+          'Trocado Desktop',
+          'Remanejado Desktop de sala',
+          'Configurado Quick',
+          'Auxiliado servidor'
+        ];
 
     if (predefinedTypes.includes(item.type)) {
       if (editTypeSelect) editTypeSelect.value = item.type;

@@ -11,19 +11,25 @@
     const key=App.selectedAgendaDate+':'+body.dataset.analystId;
     const deck=document.createElement('div');deck.className='agenda-order-deck';
     const nav=document.createElement('div');nav.className='agenda-deck-tabs';nav.setAttribute('role','tablist');nav.setAttribute('aria-label','Atendimentos do analista');
-    const addButton=Array.from(body.children).find(el=>el.tagName==='BUTTON' && el.classList.contains('btn-secondary')); 
-    const controls=document.createElement('div');controls.className='agenda-deck-controls';
+    const footer=body.querySelector('.analyst-card-footer');
+    const addButton=body.querySelector('.btn-card-add-os') || (footer && footer.querySelector('.btn-secondary'));
     const stage=document.createElement('div');stage.className='agenda-deck-stage';
     orders[0].before(deck);deck.append(stage);
-    body.append(controls);
-    if(addButton){
-     addButton.classList.add('agenda-deck-add');
-     addButton.title='Adicionar outra O.S. para este analista na data selecionada';
-     addButton.setAttribute('aria-label',addButton.title);
-     addButton.innerHTML='<i class="fa-solid fa-plus" aria-hidden="true"></i> Adicionar O.S.';
-     controls.append(addButton);
+    const header = analystCard.querySelector('.analyst-daily-header');
+    if(header){
+     const oldNav = header.querySelector('.agenda-deck-tabs');
+     if(oldNav) oldNav.remove();
+     header.append(nav);
     }
-    controls.append(nav);
+    if(footer){
+     body.append(footer);
+     if(addButton){
+      addButton.classList.add('agenda-deck-add');
+      addButton.title='Adicionar outra O.S. para este analista na data selecionada';
+      addButton.setAttribute('aria-label',addButton.title);
+      addButton.innerHTML = '<i class="fa-solid fa-plus"></i> <span>Adicionar O.S.</span>';
+     }
+    }
     const tabs=orders.map((order,index)=>{
      const button=document.createElement('button');button.type='button';button.className='agenda-deck-tab';button.textContent=String(index+1);button.id='agenda-tab-'+order.id;button.setAttribute('role','tab');button.setAttribute('aria-controls',order.id);button.title='Exibir '+(index+1)+'º atendimento';
      order.setAttribute('role','tabpanel');order.setAttribute('aria-labelledby',button.id);

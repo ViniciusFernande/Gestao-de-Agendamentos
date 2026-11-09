@@ -1,4 +1,4 @@
-// ==========================================================================
+﻿// ==========================================================================
 // FIREBASE CONFIG & INTEGRATION (Auth + Cloud Firestore)
 // ==========================================================================
 
@@ -161,8 +161,17 @@ const FirestoreSync = {
         const data = doc.data();
         if (data.whatsappTemplate) {
           localStorage.setItem(STORAGE_KEYS.WHATSAPP_TEMPLATE, data.whatsappTemplate);
-          if (onDataUpdated) onDataUpdated("config");
         }
+        if (Array.isArray(data.scheduleSubjects) && data.scheduleSubjects.length > 0) {
+          localStorage.setItem(STORAGE_KEYS.SCHEDULE_SUBJECTS, JSON.stringify(data.scheduleSubjects));
+        }
+        if (Array.isArray(data.ureSectors) && data.ureSectors.length > 0) {
+          localStorage.setItem(STORAGE_KEYS.URE_SECTORS, JSON.stringify(data.ureSectors));
+        }
+        if (Array.isArray(data.ureTypes) && data.ureTypes.length > 0) {
+          localStorage.setItem(STORAGE_KEYS.URE_TYPES, JSON.stringify(data.ureTypes));
+        }
+        if (onDataUpdated) onDataUpdated("config");
       }
     }, err => console.warn("Erro ao sincronizar configs:", err));
     this.unsubscribers.push(unsubConfig);
@@ -278,7 +287,30 @@ const FirestoreSync = {
     } catch (e) {
       console.warn("Falha ao salvar config no Firestore:", e);
     }
-  },  async clearAllSchedules() {
+  },
+
+  async saveScheduleSubjects(list) {
+    try {
+      await db.collection('config').doc('geral').set({ scheduleSubjects: list }, { merge: true });
+    } catch (e) {
+      console.warn('Falha ao salvar assuntos no Firestore:', e);
+    }
+  },
+  async saveUreSectors(list) {
+    try {
+      await db.collection('config').doc('geral').set({ ureSectors: list }, { merge: true });
+    } catch (e) {
+      console.warn('Falha ao salvar setores URE no Firestore:', e);
+    }
+  },
+  async saveUreTypes(list) {
+    try {
+      await db.collection('config').doc('geral').set({ ureTypes: list }, { merge: true });
+    } catch (e) {
+      console.warn('Falha ao salvar tipos URE no Firestore:', e);
+    }
+  },
+  async clearAllSchedules() {
     try {
       const snap = await db.collection("agendamentos").get();
       const docs = snap.docs;
