@@ -4862,6 +4862,13 @@ body.role-analista .admin-only {
   text-align: left !important;
   background: transparent !important;
 }
+#view-agendamentos .card-os-inline-input:placeholder-shown,
+.card-os-inline-input:placeholder-shown {
+  field-sizing: fixed !important;
+  width: 80px !important;
+  min-width: 80px !important;
+}
+
 
 #view-agendamentos .card-seq-left .badge-card-os-ok,
 .badge-card-os-ok {

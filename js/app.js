@@ -1631,11 +1631,11 @@ const App = {
             ? `<div class="badge-return" style="margin-top:0;" title="${order.returnDate ? `Data do retorno: ${order.returnDate.split('-').reverse().join('/')}` : 'Retorno agendado'}"><i class="fa-solid fa-rotate-left"></i> Retorno Agendado</div>`
             : '';
 
-          const rawOs = (order.osNumber || '').replace(/(-RET)+$/gi, '');
+          const rawOs = (order.osNumber || '').replace(/(-RET)+$/gi, '').trim();
           const osInputHtml = `
             <div class="card-os-inline-group" draggable="false" onmouseenter="App.disableCardDrag(this)" onmouseleave="App.enableCardDrag(this)" ondragstart="event.stopPropagation(); event.preventDefault(); return false;">
               <span class="card-os-label" draggable="false">Nº O.S:</span>
-              <input type="text" class="card-os-inline-input" draggable="false" onfocus="App.disableCardDrag(this)" onblur="App.enableCardDrag(this)" ondragstart="event.stopPropagation(); event.preventDefault(); return false;" placeholder="" value="${rawOs}" style="width: ${rawOs ? rawOs.length + 'ch' : '5ch'};" oninput="this.style.width = (this.value ? this.value.length + 'ch' : '5ch');" onchange="App.updateScheduleOs('${order.id}', this.value)" title="Digite o número da O.S. (Pressione Enter ou clique fora para salvar)">
+              <input type="text" class="card-os-inline-input" draggable="false" onfocus="App.disableCardDrag(this)" onblur="App.enableCardDrag(this)" ondragstart="event.stopPropagation(); event.preventDefault(); return false;" placeholder=" " value="${rawOs}" style="width: ${rawOs ? rawOs.length + 'ch' : '80px'}; min-width: ${rawOs ? '0' : '80px'};" oninput="this.style.width = this.value.trim() ? (this.value.trim().length + 'ch') : '80px'; this.style.minWidth = this.value.trim() ? '0' : '80px';" onchange="App.updateScheduleOs('${order.id}', this.value)" title="Digite o número da O.S. (Pressione Enter ou clique fora para salvar)">
             </div>
           `;
 
