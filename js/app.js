@@ -1610,7 +1610,7 @@ const App = {
               </div>
             </div>
             <div style="display: flex; align-items: center; gap: 8px; flex-shrink: 0;">
-              ${analystOrders.map((order, index) => '<span class="agenda-header-order-tools"><button type="button" class="agenda-radar-open" data-schedule-id="' + this.escapeHtml(order.id) + '" aria-pressed="false" aria-controls="agenda-radar-panel" title="' + this.escapeHtml('Ver escola do ' + (index + 1) + 'º atendimento no mapa') + '" onclick="event.stopPropagation(); AgendaRadar.select(this.dataset.scheduleId)"><i class="fa-solid fa-location-dot" aria-hidden="true"></i> Maps' + (analystOrders.length > 1 ? ' ' + (index + 1) : '') + '</button>' + (order.completed ? '<span class="badge-card-os-ok" title="' + this.escapeHtml((index + 1) + 'º atendimento concluído — O.S. ' + (order.osNumber || 'não informada')) + '"><i class="fa-solid fa-check"></i> OK</span>' : '') + '</span>').join('')}
+              ${analystOrders.map((order, index) => '<span class="agenda-header-order-tools"><button type="button" class="agenda-radar-open" data-schedule-id="' + this.escapeHtml(order.id) + '" aria-pressed="false" aria-controls="agenda-radar-panel" title="' + this.escapeHtml('Ver escola do ' + (index + 1) + 'º atendimento no mapa') + '" onclick="event.stopPropagation(); AgendaRadar.select(this.dataset.scheduleId)"><i class="fa-solid fa-location-dot" aria-hidden="true"></i> Maps' + (analystOrders.length > 1 ? ' ' + (index + 1) : '') + '</button></span>').join('')}
               ${absenceActionBtn}
               ${sendAgendaBtn}
             </div>
@@ -1631,10 +1631,11 @@ const App = {
             ? `<div class="badge-return" style="margin-top:0;" title="${order.returnDate ? `Data do retorno: ${order.returnDate.split('-').reverse().join('/')}` : 'Retorno agendado'}"><i class="fa-solid fa-rotate-left"></i> Retorno Agendado</div>`
             : '';
 
+          const rawOs = (order.osNumber || '').replace(/(-RET)+$/gi, '');
           const osInputHtml = `
             <div class="card-os-inline-group" draggable="false" onmouseenter="App.disableCardDrag(this)" onmouseleave="App.enableCardDrag(this)" ondragstart="event.stopPropagation(); event.preventDefault(); return false;">
               <span class="card-os-label" draggable="false">Nº O.S:</span>
-              <input type="text" class="card-os-inline-input" draggable="false" onfocus="App.disableCardDrag(this)" onblur="App.enableCardDrag(this)" ondragstart="event.stopPropagation(); event.preventDefault(); return false;" placeholder="" value="${(order.osNumber || '').replace(/(-RET)+$/gi, '')}" onchange="App.updateScheduleOs('${order.id}', this.value)" title="Digite o número da O.S. (Pressione Enter ou clique fora para salvar)">
+              <input type="text" class="card-os-inline-input" draggable="false" onfocus="App.disableCardDrag(this)" onblur="App.enableCardDrag(this)" ondragstart="event.stopPropagation(); event.preventDefault(); return false;" placeholder="" value="${rawOs}" style="width: ${rawOs ? rawOs.length + 'ch' : '5ch'};" oninput="this.style.width = (this.value ? this.value.length + 'ch' : '5ch');" onchange="App.updateScheduleOs('${order.id}', this.value)" title="Digite o número da O.S. (Pressione Enter ou clique fora para salvar)">
             </div>
           `;
 
@@ -1654,6 +1655,7 @@ const App = {
               <div class="card-seq-left">
                 <span class="seq-pill"><i class="fa-solid fa-route"></i> ${index + 1}º Atendimento</span>
                 ${osInputHtml}
+                ${isDone ? `<span class="badge-card-os-ok" title="${this.escapeHtml((index + 1) + 'º atendimento concluído - O.S. ' + (order.osNumber || 'não informada'))}"><i class="fa-solid fa-check"></i> OK</span>` : ''}
               </div>
             </div>`;
 

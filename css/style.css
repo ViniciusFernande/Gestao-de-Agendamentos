@@ -4525,8 +4525,8 @@ body.role-analista .admin-only {
 #view-agendamentos .analyst-daily-body { padding:12px; min-width:0; }
 #view-agendamentos .card-order-box { min-width:0; padding:12px; }
 #view-agendamentos .card-seq-bar, #view-agendamentos .card-seq-left { flex-wrap:wrap; overflow:visible; gap:6px; min-width:0; }
-#view-agendamentos .card-os-inline-group { height:auto; min-height:28px; max-width:100%; flex:1 1 160px; }
-#view-agendamentos .card-os-inline-input { width:100%; min-width:0; flex:1 1 115px; font-size:.74rem; }
+#view-agendamentos .card-os-inline-group { height:26px; min-height:26px; width:fit-content; max-width:fit-content; flex:0 0 auto; display:inline-flex; align-items:center; padding:2px 6px; }
+#view-agendamentos .card-os-inline-input { field-sizing:content; width:auto; min-width:0; max-width:fit-content; flex:0 0 auto; font-size:.74rem; padding:0; margin:0; }
 #view-agendamentos .card-school-cie, #view-agendamentos .card-obs-text { white-space:normal; overflow:visible; text-overflow:clip; overflow-wrap:anywhere; line-height:1.45; }
 #view-agendamentos .card-school-name { font-size:.88rem; }
 #view-agendamentos .card-cie-row { align-items:flex-start; flex-wrap:wrap; }
@@ -4577,7 +4577,7 @@ body.role-analista .admin-only {
 #view-agendamentos .card-actions-row .card-btn-action { min-width:0; white-space:nowrap; padding:6px; min-height:32px; }
 #view-agendamentos .card-actions-row .btn-icon-action { width:30px; min-width:30px; height:32px; }
 #view-agendamentos .card-seq-left { width:100%; flex-wrap:nowrap; }
-#view-agendamentos .card-seq-left .card-os-inline-group { min-width:0; flex:1 1 auto; }
+#view-agendamentos .card-seq-left .card-os-inline-group { min-width:0; flex:0 0 auto; width:fit-content; max-width:fit-content; }
 #view-agendamentos .card-seq-left .seq-pill { flex:0 0 auto; }
 #view-agendamentos .analyst-daily-name { min-width:0; }
 
@@ -4785,4 +4785,106 @@ body.role-analista .admin-only {
   display: contents !important;
   position: static !important;
   min-height: 0 !important;
+}
+/* Ajuste preciso para o botão OK e os campos da sequência não cortarem nenhuma parte */
+#view-agendamentos .card-order-box {
+  overflow: visible !important;
+  padding: 10px 10px !important;
+}
+
+#view-agendamentos .card-seq-bar {
+  overflow: visible !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  width: 100% !important;
+  gap: 4px !important;
+}
+
+#view-agendamentos .card-seq-left {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+  flex-wrap: nowrap !important;
+  max-width: 100% !important;
+  overflow: visible !important;
+  width: auto !important;
+}
+
+#view-agendamentos .card-seq-left .seq-pill {
+  flex: 0 0 auto !important;
+  height: 24px !important;
+  min-height: 24px !important;
+  padding: 2px 6px !important;
+  font-size: 0.67rem !important;
+  gap: 3px !important;
+  box-sizing: border-box !important;
+  white-space: nowrap !important;
+}
+
+#view-agendamentos .card-os-inline-group,
+#view-agendamentos .card-seq-left .card-os-inline-group,
+.card-os-inline-group {
+  display: inline-flex !important;
+  align-items: center !important;
+  width: fit-content !important;
+  max-width: fit-content !important;
+  flex: 0 0 auto !important;
+  height: 24px !important;
+  min-height: 24px !important;
+  padding: 2px 5px !important;
+  gap: 2px !important;
+  box-sizing: border-box !important;
+  white-space: nowrap !important;
+}
+
+#view-agendamentos .card-os-label {
+  font-size: 0.65rem !important;
+  letter-spacing: -0.2px !important;
+  white-space: nowrap !important;
+}
+
+#view-agendamentos .card-os-inline-input,
+.card-os-inline-input {
+  field-sizing: content !important;
+  width: auto;
+  min-width: 0 !important;
+  max-width: fit-content !important;
+  flex: 0 0 auto !important;
+  font-size: 0.71rem !important;
+  height: 20px !important;
+  line-height: 20px !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  border: none !important;
+  outline: none !important;
+  box-sizing: content-box !important;
+  text-align: left !important;
+  background: transparent !important;
+}
+
+#view-agendamentos .card-seq-left .badge-card-os-ok,
+.badge-card-os-ok {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 3px !important;
+  font-size: 0.67rem !important;
+  font-weight: 800 !important;
+  color: #22c55e !important;
+  background: rgba(34, 197, 94, 0.15) !important;
+  border: 1px solid rgba(34, 197, 94, 0.5) !important;
+  padding: 2px 6px !important;
+  height: 24px !important;
+  min-height: 24px !important;
+  box-sizing: border-box !important;
+  border-radius: 4px !important;
+  letter-spacing: 0.2px !important;
+  white-space: nowrap !important;
+  flex: 0 0 auto !important;
+  user-select: none !important;
+  vertical-align: middle !important;
+  margin: 0 !important;
+  margin-right: 4px !important;
+  overflow: visible !important;
 }
