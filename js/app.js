@@ -3447,7 +3447,7 @@ const App = {
     });
 
     if (filteredTableList.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:30px; color:var(--text-muted);">Nenhuma escola encontrada no ranking.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:30px; color:var(--text-muted);">Nenhuma escola encontrada no ranking.</td></tr>';
       return;
     }
 
@@ -3460,9 +3460,8 @@ const App = {
       rows += `
         <tr>
           <td style="text-align: center;">${positionHtml}</td>
-          <td><span style="color:#60a5fa; font-weight:700;">${this.escapeHtml(item.cie)}</span></td>
           <td style="width: 1%; white-space: nowrap; padding-right: 14px;">
-            <strong class="school-name-link" style="font-size:0.92rem;" title="Clique para ver o Prontuário Técnico da Escola" data-cie="${this.escapeHtml(item.cie)}" data-name="${this.escapeHtml(item.name)}" onclick="App.openSchoolRecordModal(this.dataset.cie, this.dataset.name)"><i class="fa-solid fa-file-medical" style="color:#38bdf8; font-size:0.8rem;"></i> ${this.escapeHtml(item.name)}</strong>
+            <strong class="school-name-link" style="font-size:0.92rem;" title="Clique para ver o Prontuário Técnico da Escola" data-cie="${this.escapeHtml(item.cie)}" data-name="${this.escapeHtml(item.name)}" onclick="App.openSchoolRecordModal(this.dataset.cie, this.dataset.name)"><i class="fa-solid fa-file-medical" style="color:#38bdf8; font-size:0.8rem;"></i> <span style="color:#60a5fa; font-weight:700;">${this.escapeHtml(item.cie)}</span> - ${this.escapeHtml(item.name)}</strong>
           </td>
           <td style="padding-left: 6px; padding-right: 12px;">
             <div class="ranking-bar-track" title="${item.total} agendamento(s)">
