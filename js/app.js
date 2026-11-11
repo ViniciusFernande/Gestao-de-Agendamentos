@@ -114,38 +114,68 @@ const App = {
     }
   },
 
+  _isReadOnly() {
+    return typeof AuthService !== 'undefined' && AuthService.isViewer && AuthService.isViewer();
+  },
+
+  _blockIfReadOnly() {
+    return this._isReadOnly();
+  },
+
   applyUserRoleUI(userProfile) {
     if (!userProfile) return;
+
+    const isAdmin = userProfile.role === 'admin';
+    const isViewer = userProfile.role === 'viewer';
+
+    document.body.classList.toggle('role-admin', isAdmin);
+    document.body.classList.toggle('role-analista', userProfile.role === 'analista');
+    document.body.classList.toggle('role-viewer', isViewer);
 
     const nameEl = document.getElementById('sidebar-user-name');
     const avatarEl = document.getElementById('sidebar-user-avatar');
 
-    if (nameEl) nameEl.textContent = userProfile.name;
+    if (nameEl) nameEl.textContent = isViewer ? `${userProfile.name} (Leitura)` : userProfile.name;
     if (avatarEl) {
-      avatarEl.innerHTML = userProfile.role === 'admin' 
-        ? '<i class="fa-solid fa-user-shield" style="color:#fbbf24;"></i>' 
-        : '<i class="fa-solid fa-user-tie" style="color:#60a5fa;"></i>';
+      if (isAdmin) {
+        avatarEl.innerHTML = '<i class="fa-solid fa-user-shield" style="color:#fbbf24;"></i>';
+      } else if (isViewer) {
+        avatarEl.innerHTML = '<i class="fa-solid fa-eye" style="color:#38bdf8;"></i>';
+      } else {
+        avatarEl.innerHTML = '<i class="fa-solid fa-user-tie" style="color:#60a5fa;"></i>';
+      }
     }
 
-    const isAdmin = userProfile.role === 'admin';
     const adminElements = document.querySelectorAll('.admin-only');
     adminElements.forEach(el => {
-      el.style.display = isAdmin ? '' : 'none';
+      el.style.display = (isAdmin || isViewer) ? '' : 'none';
+    });
+
+    const writeElements = document.querySelectorAll('.write-only');
+    writeElements.forEach(el => {
+      el.style.display = '';
     });
 
     // Subtítulo da página de configurações ajustado dinamicamente
     const configSubtitle = document.querySelector('#view-configuracoes .page-subtitle');
     if (configSubtitle) {
-      configSubtitle.textContent = isAdmin 
-        ? 'Aparência, personalização de mensagens, backup e restauração' 
-        : 'Escolha o tema e a cor de aparência do site';
+      configSubtitle.textContent = isAdmin
+        ? 'Gerencie as preferências e funcionalidades do sistema.'
+        : (isViewer
+            ? 'Visualização do tema e preferências locais do painel.'
+            : 'Aparência e preferências pessoais do painel.');
     }
 
     this.renderAnalystsTable();
     this.renderSchoolsTable();
+    if (this.currentView === 'agendamentos') this.renderAnalystDailyCards();
+    if (this.currentView === 'todos-agendamentos') this.renderAllSchedulesTable();
+    if (this.currentView === 'filas-visita') this.renderQueueView();
+    if (this.currentView === 'atendimento-ure') this.renderUreView();
+    this.updateDashboard();
   },
 
-  refreshAfterSync(collection) {
+    refreshAfterSync(collection) {
     this.populateSelects();
     if (this.currentView === 'agenda') {
       this.renderAgenda();
@@ -1061,6 +1091,7 @@ const App = {
   },
 
   toggleCompleted(id) {
+    if (this._blockIfReadOnly()) return;
     store.toggleScheduleCompleted(id);
     this.renderAnalystDailyCards();
     this.renderAllSchedulesTable();
@@ -1068,6 +1099,7 @@ const App = {
   },
 
   deleteSchedule(id) {
+    if (this._blockIfReadOnly()) return;
     const sched = store.getSchedules().find(s => String(s.id).trim() === String(id).trim());
     if (sched && (sched.completed || sched.needsReturn)) {
       alert(`Esta ordem de serviço está ${sched.completed ? 'concluída' : 'com retorno agendado'} e não pode ser excluída. Caso precise ajustar, utilize o botão de edição (lápis).`);
@@ -1083,6 +1115,7 @@ const App = {
   },
 
   openNewScheduleModal() {
+    if (this._blockIfReadOnly()) return;
     const form = document.getElementById('form-schedule');
     if (!form) return;
     form.reset();
@@ -1111,6 +1144,7 @@ const App = {
   },
 
   openEditScheduleModal(id) {
+    if (this._blockIfReadOnly()) return;
     const sched = store.getSchedules().find(s => s.id === id);
     if (!sched) return;
 
@@ -1163,6 +1197,7 @@ const App = {
   },
 
   saveScheduleForm(event) {
+    if (event && event.preventDefault) event.preventDefault(); if (this._blockIfReadOnly()) return false;
     event.preventDefault();
 
     const id = document.getElementById('sched-id').value || ('sched-' + Date.now());
@@ -1348,6 +1383,7 @@ const App = {
   // WHATSAPP E GERAÇÃO DE IMAGEM DA AGENDA
   // =========================================================================
   openWhatsappModal(scheduleId) {
+    if (this._blockIfReadOnly()) return;
     const sched = store.getSchedules().find(s => s.id === scheduleId);
     if (!sched) return;
 
@@ -1714,7 +1750,7 @@ const App = {
            </button>`;
 
       // Ícone ao lado do nome só aparece quando presente (trabalhando normalmente)
-      const absenceActionBtn = isAbsent ? '' : `<button type="button" class="btn-icon-action" onclick="App.openAnalystAbsenceModal('${analyst.id}', '${currentDate}')" style="width: 28px; height: 28px; min-width: 28px; border-radius: 6px; ${absenceBtnStyle}" title="${absenceBtnTitle}">
+      const absenceActionBtn = isAbsent ? '' : `<button type="button" class="btn-icon-action write-only" onclick="App.openAnalystAbsenceModal('${analyst.id}', '${currentDate}')" style="width: 28px; height: 28px; min-width: 28px; border-radius: 6px; ${absenceBtnStyle}" title="${absenceBtnTitle}">
         ${absenceBtnText}
       </button>`;
 
@@ -1732,7 +1768,7 @@ const App = {
           </div>
 
           <!-- Corpo do Card: Ordens do Dia Atual -->
-          <div class="analyst-daily-body" data-analyst-id="${analyst.id}" ${isAbsent ? '' : `ondragover="App.handleAnalystDragOver(event)" ondragenter="App.handleAnalystDragEnter(event)" ondragleave="App.handleAnalystDragLeave(event)" ondrop="App.handleAnalystDrop(event, '${analyst.id}')"`}>
+          <div class="analyst-daily-body" data-analyst-id="${analyst.id}" ${(isAbsent || this._isReadOnly()) ? '' : `ondragover="App.handleAnalystDragOver(event)" ondragenter="App.handleAnalystDragEnter(event)" ondragleave="App.handleAnalystDragLeave(event)" ondrop="App.handleAnalystDrop(event, '${analyst.id}')"`}>
       `;
 
       if (analystOrders.length > 0) {
@@ -1750,7 +1786,7 @@ const App = {
           const osInputHtml = `
             <div class="card-os-inline-group" draggable="false" onmouseenter="App.disableCardDrag(this)" onmouseleave="App.enableCardDrag(this)" ondragstart="event.stopPropagation(); event.preventDefault(); return false;">
               <span class="card-os-label" draggable="false">Nº O.S:</span>
-              <input type="text" class="card-os-inline-input" draggable="false" onfocus="App.disableCardDrag(this)" onblur="App.enableCardDrag(this)" ondragstart="event.stopPropagation(); event.preventDefault(); return false;" placeholder=" " value="${rawOs}" style="width: ${rawOs ? rawOs.length + 'ch' : '80px'}; min-width: ${rawOs ? '0' : '80px'};" oninput="this.style.width = this.value.trim() ? (this.value.trim().length + 'ch') : '80px'; this.style.minWidth = this.value.trim() ? '0' : '80px';" onchange="App.updateScheduleOs('${order.id}', this.value)" title="Digite o número da O.S. (Pressione Enter ou clique fora para salvar)">
+              <input type="text" class="card-os-inline-input" ${this._isReadOnly() ? "readonly" : ""} draggable="false" onfocus="App.disableCardDrag(this)" onblur="App.enableCardDrag(this)" ondragstart="event.stopPropagation(); event.preventDefault(); return false;" placeholder=" " value="${rawOs}" style="width: ${rawOs ? rawOs.length + 'ch' : '80px'}; min-width: ${rawOs ? '0' : '80px'};" oninput="this.style.width = this.value.trim() ? (this.value.trim().length + 'ch') : '80px'; this.style.minWidth = this.value.trim() ? '0' : '80px';" onchange="App.updateScheduleOs('${order.id}', this.value)" title="Digite o número da O.S. (Pressione Enter ou clique fora para salvar)">
             </div>
           `;
 
@@ -1779,7 +1815,7 @@ const App = {
 
           cardsHtml += `
             <div class="card-order-box ${isDone ? 'completed' : ''} ${hasReturn ? 'has-return' : ''} ${isLocked ? 'is-locked' : ''}" 
-                 ${isLocked ? 'draggable="false"' : `draggable="true" ondragstart="App.handleOrderDragStart(event, '${order.id}')" ondragend="App.handleOrderDragEnd(event)"`} 
+                 ${(isLocked || this._isReadOnly()) ? 'draggable="false"' : `draggable="true" ondragstart="App.handleOrderDragStart(event, '${order.id}')" ondragend="App.handleOrderDragEnd(event)"`} 
                  id="order-box-${order.id}" 
                  title="${isLocked ? (isDone ? 'Atendimento concluído (bloqueado para transferências)' : 'Atendimento com retorno agendado (bloqueado para transferências)') : 'Arraste este card para mudar de analista'}">
               ${seqBarHtml}
@@ -1910,7 +1946,7 @@ const App = {
                 ${absenceBadgeHtml}
               </div>
               <div style="color: #94a3b8; font-size: 0.74rem; line-height: 1.35; max-width: 260px; margin: 0 auto 4px auto;">${absentMsg}</div>
-              <button class="btn-secondary" style="font-size:0.74rem; padding:4px 12px; display:inline-flex; align-items:center; gap:5px; margin:2px auto 0 auto;" onclick="App.openAnalystAbsenceModal('${analyst.id}', '${currentDate}')">
+              <button class="btn-secondary write-only" style="font-size:0.74rem; padding:4px 12px; display:inline-flex; align-items:center; gap:5px; margin:2px auto 0 auto;" onclick="App.openAnalystAbsenceModal('${analyst.id}', '${currentDate}')">
                 <i class="fa-solid fa-pen"></i> Alterar Disponibilidade
               </button>
             </div>
@@ -1947,6 +1983,7 @@ const App = {
   },
 
   openNewScheduleForAnalyst(analystId, customDate) {
+    if (this._blockIfReadOnly()) return;
     const targetDate = customDate || this.selectedAgendaDate || App.getLocalDateStr();
     const absence = store.getAbsence(analystId, targetDate);
     if (absence && absence.reason && absence.reason !== 'presente') {
@@ -1964,6 +2001,7 @@ const App = {
   },
 
   updateScheduleOs(scheduleId, newOsValue) {
+    if (this._blockIfReadOnly()) return;
     const schedules = store.getSchedules();
     const sched = schedules.find(s => s.id === scheduleId);
     if (sched) {
@@ -1983,6 +2021,7 @@ const App = {
   currentSurveyFile: null,
 
   openSatisfactionSurvey(scheduleId) {
+    if (this._blockIfReadOnly()) return;
     const sched = store.getSchedules().find(s => String(s.id).trim() === String(scheduleId).trim());
     if (!sched) {
       this.showToast('Atendimento não encontrado.');
@@ -2119,6 +2158,7 @@ const App = {
   },
 
   async sendSatisfactionSurvey(event) {
+    if (event && event.preventDefault) event.preventDefault(); if (this._blockIfReadOnly()) return false;
     if (event) event.preventDefault();
 
     const scheduleId = document.getElementById('survey-schedule-id')?.value;
@@ -2471,6 +2511,7 @@ const App = {
   },
 
   markCardAsCompleted(scheduleId) {
+    if (this._blockIfReadOnly()) return;
     const list = store.getSchedules();
     const item = list.find(s => String(s.id).trim() === String(scheduleId).trim());
     if (item) {
@@ -2493,6 +2534,7 @@ const App = {
   },
 
   openReturnModal(scheduleId) {
+    if (this._blockIfReadOnly()) return;
     const sched = store.getSchedules().find(s => s.id === scheduleId);
     if (!sched) return;
 
@@ -2600,6 +2642,7 @@ const App = {
     }
   },
   handleOrderDragStart(event, scheduleId) {
+    if (this._blockIfReadOnly()) { if (event && event.preventDefault) event.preventDefault(); return false; }
     if (event.target && (event.target.closest(".card-os-inline-group") || event.target.tagName === "INPUT" || event.target.tagName === "BUTTON")) {
       if (event.preventDefault) event.preventDefault();
       return false;
@@ -2651,6 +2694,7 @@ const App = {
   },
 
   handleAnalystDrop(event, targetAnalystId) {
+    if (event && event.preventDefault) event.preventDefault(); if (this._blockIfReadOnly()) return false;
     event.preventDefault();
     const bodyEl = event.currentTarget.closest('.analyst-daily-body');
     if (bodyEl) {
@@ -2718,6 +2762,7 @@ const App = {
   // GESTÃO DE SEQUÊNCIA E AGENDA COMPLETA DO DIA (WHATSAPP EM IMAGEM)
   // =========================================================================
   moveScheduleSequence(scheduleId, direction) {
+    if (this._blockIfReadOnly()) return;
     const schedules = store.getSchedules();
     const target = schedules.find(s => String(s.id).trim() === String(scheduleId).trim());
     if (!target) return;
@@ -2755,6 +2800,7 @@ const App = {
   },
 
   openDailyAgendaModal(analystId, customDate) {
+    if (this._blockIfReadOnly()) return;
     const targetDate = customDate || this.selectedAgendaDate || App.getLocalDateStr();
     const analyst = store.getAnalystById(analystId) || { name: 'Analista', phone: '', neighborhood: '' };
     const schedules = store.getSchedules();
@@ -3108,7 +3154,7 @@ const App = {
           </td>
           <td style="text-align: center;">
             <div class="action-buttons-group" style="justify-content: center;">
-              ${(typeof AuthService !== 'undefined' && AuthService.isAdmin()) ? `
+              ${(typeof AuthService !== 'undefined' && (AuthService.isAdmin() || AuthService.isViewer())) ? `
               <button class="btn-icon-action btn-edit" title="Editar Analista" onclick="App.openEditAnalystModal('${a.id}')">
                 <i class="fa-solid fa-pen"></i>
               </button>
@@ -3125,6 +3171,7 @@ const App = {
   },
 
   openNewAnalystModal() {
+    if (this._blockIfReadOnly()) return;
     if (typeof AuthService !== 'undefined' && !AuthService.isAdmin()) { alert('Apenas o Administrador pode cadastrar analistas.'); return; }
     const form = document.getElementById('form-analyst');
     if (!form) return;
@@ -3140,6 +3187,7 @@ const App = {
   },
 
   openEditAnalystModal(id) {
+    if (this._blockIfReadOnly()) return;
     const a = store.getAnalystById(id);
     if (!a) return;
 
@@ -3158,6 +3206,7 @@ const App = {
   },
 
   saveAnalystForm(event) {
+    if (event && event.preventDefault) event.preventDefault(); if (this._blockIfReadOnly()) return false;
     event.preventDefault();
 
     const id = document.getElementById('analyst-id').value || ('analyst-' + Date.now());
@@ -3199,6 +3248,7 @@ const App = {
   },
 
   deleteAnalyst(id) {
+    if (this._blockIfReadOnly()) return;
     if (typeof AuthService !== 'undefined' && !AuthService.isAdmin()) { alert('Apenas o Administrador pode excluir analistas.'); return; }
     if (confirm('Tem certeza que deseja excluir este analista?')) {
       store.deleteAnalyst(id);
@@ -3509,7 +3559,7 @@ const App = {
           <td>${s.neighborhood || '-'}</td>
           <td style="text-align: center;">
             <div class="action-buttons-group" style="justify-content: center;">
-              ${(typeof AuthService !== 'undefined' && AuthService.isAdmin()) ? `
+              ${(typeof AuthService !== 'undefined' && (AuthService.isAdmin() || AuthService.isViewer())) ? `
               <button class="btn-icon-action btn-edit" title="Editar Escola" onclick="App.openEditSchoolModal('${s.cie}')">
                 <i class="fa-solid fa-pen"></i>
               </button>
@@ -3526,6 +3576,7 @@ const App = {
   },
 
   openNewSchoolModal() {
+    if (this._blockIfReadOnly()) return;
     if (typeof AuthService !== 'undefined' && !AuthService.isAdmin()) { alert('Apenas o Administrador pode cadastrar escolas.'); return; }
     const form = document.getElementById('form-school');
     if (!form) return;
@@ -3537,6 +3588,7 @@ const App = {
   },
 
   openEditSchoolModal(cie) {
+    if (this._blockIfReadOnly()) return;
     const s = store.getSchoolByCie(cie);
     if (!s) return;
 
@@ -3553,6 +3605,7 @@ const App = {
   },
 
   saveSchoolForm(event) {
+    if (event && event.preventDefault) event.preventDefault(); if (this._blockIfReadOnly()) return false;
     event.preventDefault();
 
     const originalCie = document.getElementById('school-original-cie').value;
@@ -3582,6 +3635,7 @@ const App = {
   },
 
   deleteSchool(cie) {
+    if (this._blockIfReadOnly()) return;
     if (typeof AuthService !== 'undefined' && !AuthService.isAdmin()) { alert('Apenas o Administrador pode excluir escolas.'); return; }
     if (confirm(`Tem certeza que deseja excluir a escola com CIE ${cie}?`)) {
       store.deleteSchool(cie);
@@ -3724,6 +3778,7 @@ const App = {
     const notesTextarea = document.getElementById('sr-technical-notes');
     if (notesTextarea) {
       notesTextarea.value = schoolObj?.technicalNotes || '';
+      notesTextarea.readOnly = this._isReadOnly();
     }
 
     // 4. Linha do Tempo de Visitas
@@ -3784,6 +3839,7 @@ const App = {
   },
 
   saveSchoolTechnicalNotes() {
+    if (this._blockIfReadOnly()) return;
     if (!this._currentSchoolRecord) return;
     const { cie, name } = this._currentSchoolRecord;
     const textarea = document.getElementById('sr-technical-notes');
@@ -3815,6 +3871,7 @@ const App = {
   },
 
   openScheduleModalForSchool(cie, schoolName, directorName) {
+    if (this._blockIfReadOnly()) return;
     this.closeModal('modal-school-record');
     this.openNewScheduleModal();
     const cieEl = document.getElementById('sched-school-cie');
@@ -4106,6 +4163,7 @@ const App = {
   },
 
   applyTheme(themeName, showToast = true) {
+    if (showToast && this._blockIfReadOnly()) return;
     try {
       document.documentElement.setAttribute('data-theme', themeName);
       localStorage.setItem('sg_selected_theme', themeName);
@@ -4156,6 +4214,7 @@ const App = {
       const textarea = document.getElementById('textarea-wa-template');
       if (textarea && typeof store !== 'undefined' && store.getWhatsappTemplate) {
         textarea.value = store.getWhatsappTemplate();
+      textarea.readOnly = this._isReadOnly();
         this.updateWhatsappTemplatePreview();
       }
 
@@ -4194,6 +4253,7 @@ const App = {
       const textarea = document.getElementById('textarea-wa-template');
       if (textarea && typeof store !== 'undefined' && store.getWhatsappTemplate) {
         textarea.value = store.getWhatsappTemplate();
+      textarea.readOnly = this._isReadOnly();
         this.updateWhatsappTemplatePreview();
       }
     }
@@ -4211,6 +4271,7 @@ const App = {
   },
 
   toggleSettingsAddForm(key, forceState) {
+    if (forceState !== false && this._blockIfReadOnly()) return;
     const box = document.getElementById(`settings-add-box-${key}`);
     if (!box) return;
     const isHidden = box.style.display === 'none' || !box.style.display;
@@ -4345,6 +4406,7 @@ const App = {
   },
 
   addSettingsCategoryItem(category) {
+    if (this._blockIfReadOnly()) return;
     const cfg = this._getSettingsCategoryConfig(category);
     if (!cfg) return;
     const input = document.getElementById(cfg.inputId);
@@ -4366,6 +4428,7 @@ const App = {
   },
 
   startEditSettingsItem(category, index) {
+    if (this._blockIfReadOnly()) return;
     const cfg = this._getSettingsCategoryConfig(category);
     if (!cfg) return;
     const items = cfg.getList();
@@ -4382,6 +4445,7 @@ const App = {
   },
 
   saveEditSettingsItem() {
+    if (this._blockIfReadOnly()) return;
     if (!this.editingSettingsItem) return;
     const { category, originalName } = this.editingSettingsItem;
     const cfg = this._getSettingsCategoryConfig(category);
@@ -4417,6 +4481,7 @@ const App = {
   },
 
   removeSettingsCategoryItem(category, name) {
+    if (this._blockIfReadOnly()) return;
     const cfg = this._getSettingsCategoryConfig(category);
     if (!cfg || !name) return;
     if (confirm(`Deseja remover "${name}" da lista?`)) {
@@ -4443,6 +4508,7 @@ const App = {
   removeUreTypeFromSettings(name) { this.removeSettingsCategoryItem('ure-types', name); },
 
   insertMsgVariable(variableTag) {
+    if (this._blockIfReadOnly()) return;
     const textarea = document.getElementById('textarea-wa-template');
     if (!textarea) return;
 
@@ -4480,6 +4546,7 @@ const App = {
   },
 
   saveWhatsappTemplate() {
+    if (this._blockIfReadOnly()) return;
     const textarea = document.getElementById('textarea-wa-template');
     if (!textarea) return;
 
@@ -4500,6 +4567,7 @@ const App = {
   },
 
   resetWhatsappTemplateToDefault() {
+    if (this._blockIfReadOnly()) return;
     if (confirm('Deseja restaurar o modelo padrão original de mensagem do WhatsApp?')) {
       if (typeof store !== 'undefined' && store.getDefaultWhatsappTemplate) {
         const defaultTpl = store.getDefaultWhatsappTemplate();
@@ -4519,7 +4587,14 @@ const App = {
   // =========================================================================
   // BACKUP E RESTAURAÇÃO
   // =========================================================================
+  triggerImportBackup() {
+    if (this._blockIfReadOnly()) return;
+    const el = document.getElementById('input-import-backup');
+    if (el) el.click();
+  },
+
   exportBackupJSON() {
+    if (this._blockIfReadOnly()) return;
     const data = {
       backupVersion: 2,
       exportDate: new Date().toISOString(),
@@ -4551,6 +4626,7 @@ const App = {
   },
 
   importBackupJSON(event) {
+    if (event && event.preventDefault) event.preventDefault(); if (this._blockIfReadOnly()) return false;
     const file = event.target.files[0];
     if (!file) return;
 
@@ -4802,6 +4878,7 @@ const App = {
   },
 
   openNewQueueModal(defaultCategory = 'manutencao') {
+    if (this._blockIfReadOnly()) return;
     const form = document.getElementById('form-queue-item');
     if (form) form.reset();
 
@@ -4994,6 +5071,7 @@ const App = {
   },
 
   openEditQueueModal(queueId) {
+    if (this._blockIfReadOnly()) return;
     const item = store.getQueueItemById(queueId);
     if (!item) {
       alert('Solicitação não encontrada.');
@@ -5059,6 +5137,7 @@ const App = {
   },
 
   saveQueueItemForm(e) {
+    if (e && e.preventDefault) e.preventDefault(); if (this._blockIfReadOnly()) return false;
     if (e && e.preventDefault) e.preventDefault();
 
     const cieInput = document.getElementById('queue-school-cie');
@@ -5118,6 +5197,7 @@ const App = {
   },
 
   deleteQueueItemConfirm(queueId) {
+    if (this._blockIfReadOnly()) return;
     const item = store.getQueueItemById(queueId);
     const schoolName = item ? item.schoolName : 'esta escola';
     if (confirm(`Deseja realmente remover ${schoolName} da fila de chamados?`)) {
@@ -5129,6 +5209,7 @@ const App = {
 
   // --- ADICIONAR ITEM DA FILA NA AGENDA DO ANALISTA ---
   openDispatchQueueModal(queueId) {
+    if (this._blockIfReadOnly()) return;
     const item = store.getQueueItemById(queueId);
     if (!item) {
       alert('Solicitação não encontrada.');
@@ -5419,6 +5500,7 @@ const App = {
   },
 
   openAnalystAbsenceModal(analystId, dateStr) {
+    if (this._blockIfReadOnly()) return;
     const targetDate = dateStr || this.selectedAgendaDate || App.getLocalDateStr();
     const analyst = store.getAnalystById(analystId);
     if (!analyst) return;
@@ -5537,6 +5619,7 @@ const App = {
   },
 
   deleteAnalystAbsenceRule(ruleId) {
+    if (this._blockIfReadOnly()) return;
     if (!ruleId) return;
     if (confirm('Deseja remover este período? O analista ficará disponível para agendamentos.')) {
       const analystId = document.getElementById('absence-analyst-id')?.value;
@@ -5593,6 +5676,7 @@ const App = {
   },
 
   saveAnalystAbsence(event) {
+    if (event && event.preventDefault) event.preventDefault(); if (this._blockIfReadOnly()) return false;
     if (event) {
       event.preventDefault();
       event.stopPropagation();
@@ -5907,7 +5991,7 @@ renderUreView() {
             ${this.escapeHtml(item.description || '-')}
           </td>
           <td style="text-align: center;">
-            ${(typeof AuthService === 'undefined' || AuthService.isAdmin()) ? `
+            ${(typeof AuthService === 'undefined' || AuthService.isAdmin() || AuthService.isViewer()) ? `
               <div style="display: flex; gap: 8px; justify-content: center; align-items: center;">
                 <button class="btn-icon-action btn-edit" title="Editar Atendimento" onclick="App.openEditUreModal('${item.id}')">
                   <i class="fa-solid fa-pen"></i>
@@ -5936,6 +6020,7 @@ renderUreView() {
   },
 
   saveQuickUre(event) {
+    if (event && event.preventDefault) event.preventDefault(); if (this._blockIfReadOnly()) return false;
     if (typeof AuthService !== 'undefined' && !AuthService.isAdmin()) {
       alert('Apenas o Administrador pode registrar atendimentos na URE.');
       return false;
@@ -6018,6 +6103,7 @@ renderUreView() {
   },
 
   openEditUreModal(id) {
+    if (this._blockIfReadOnly()) return;
     this.populateSelects();
     const item = store.getUreAttendances().find(a => String(a.id).trim() === String(id).trim());
     if (!item) return;
@@ -6085,6 +6171,7 @@ renderUreView() {
   },
 
   saveEditUreForm(event) {
+    if (event && event.preventDefault) event.preventDefault(); if (this._blockIfReadOnly()) return false;
     if (typeof AuthService !== 'undefined' && !AuthService.isAdmin()) {
       alert('Apenas o Administrador pode editar atendimentos da URE.');
       return false;
@@ -6153,6 +6240,7 @@ renderUreView() {
   },
 
   deleteUreAttendance(id) {
+    if (this._blockIfReadOnly()) return;
     if (typeof AuthService !== 'undefined' && !AuthService.isAdmin()) {
       alert('Apenas o Administrador pode excluir atendimentos da URE.');
       return;

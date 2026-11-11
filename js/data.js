@@ -764,6 +764,10 @@ class DataStore {
     this.init();
   }
 
+  _canMutate() {
+    return typeof AuthService === 'undefined' || !AuthService.canEdit || AuthService.canEdit();
+  }
+
   init() {
     const existingAnalysts = this.getAnalysts();
     const seedAnalysts = (typeof window !== 'undefined' && window.HISTORICAL_SEED_DATA && window.HISTORICAL_SEED_DATA.analysts) ? window.HISTORICAL_SEED_DATA.analysts : (typeof SEED_ANALYSTS !== 'undefined' ? SEED_ANALYSTS : []);
@@ -812,6 +816,7 @@ class DataStore {
   }
 
   saveAnalyst(analyst) {
+    if (!this._canMutate()) return false;
     if (typeof FirestoreSync !== 'undefined') FirestoreSync.saveAnalyst(analyst);
     const list = this.getAnalysts();
     const idx = list.findIndex(a => a.id === analyst.id);
@@ -824,6 +829,7 @@ class DataStore {
   }
 
   deleteAnalyst(id) {
+    if (!this._canMutate()) return false;
     if (typeof FirestoreSync !== 'undefined') FirestoreSync.deleteAnalyst(id);
     const list = this.getAnalysts().filter(a => a.id !== id);
     this.setAnalysts(list);
@@ -848,6 +854,7 @@ class DataStore {
   }
 
   saveSchool(school) {
+    if (!this._canMutate()) return false;
     if (typeof FirestoreSync !== 'undefined') FirestoreSync.saveSchool(school);
     const list = this.getSchools();
     const idx = list.findIndex(s => String(s.cie).trim() === String(school.cie).trim());
@@ -860,6 +867,7 @@ class DataStore {
   }
 
   deleteSchool(cie) {
+    if (!this._canMutate()) return false;
     if (typeof FirestoreSync !== 'undefined') FirestoreSync.deleteSchool(cie);
     const list = this.getSchools().filter(s => String(s.cie).trim() !== String(cie).trim());
     this.setSchools(list);
@@ -886,6 +894,7 @@ class DataStore {
   }
 
   saveSchedule(sched) {
+    if (!this._canMutate()) return false;
     if (typeof FirestoreSync !== 'undefined') FirestoreSync.saveSchedule(sched);
     const list = this.getSchedules();
     const idx = list.findIndex(s => s.id === sched.id);
@@ -898,6 +907,7 @@ class DataStore {
   }
 
   deleteSchedule(id) {
+    if (!this._canMutate()) return false;
     if (typeof FirestoreSync !== 'undefined') FirestoreSync.deleteSchedule(id);
     const list = this.getSchedules().filter(s => String(s.id).trim() !== String(id).trim());
     this.setSchedules(list);
@@ -906,6 +916,7 @@ class DataStore {
 
 
   toggleScheduleCompleted(id) {
+    if (!this._canMutate()) return false;
     const list = this.getSchedules();
     const item = list.find(s => String(s.id).trim() === String(id).trim());
     if (item) {
@@ -1034,6 +1045,7 @@ class DataStore {
   }
 
   setAbsence(analystId, dateStr, reason, note = '') {
+    if (!this._canMutate()) return false;
     const item = { id: `${analystId}_${dateStr}`, type: 'single', analystId, date: dateStr, reason, note, updatedAt: Date.now() };
     if (typeof FirestoreSync !== 'undefined' && FirestoreSync.saveAbsence) {
       FirestoreSync.saveAbsence(item);
@@ -1050,6 +1062,7 @@ class DataStore {
   }
 
   setAbsenceRange(analystId, startDate, endDate, reason, note = '') {
+    if (!this._canMutate()) return false;
     const id = `${analystId}_range_${startDate}_${endDate}_${Date.now()}`;
     const item = { id, type: 'range', analystId, startDate, endDate, reason, note, updatedAt: Date.now() };
     if (typeof FirestoreSync !== 'undefined' && FirestoreSync.saveAbsence) {
@@ -1084,6 +1097,7 @@ class DataStore {
   }
 
   removeAbsence(analystId, dateStr) {
+    if (!this._canMutate()) return false;
     const targetId = `${analystId}_${dateStr}`;
     if (typeof FirestoreSync !== 'undefined' && FirestoreSync.deleteAbsence) {
       FirestoreSync.deleteAbsence(targetId);
@@ -1093,6 +1107,7 @@ class DataStore {
   }
 
   removeAbsenceById(id) {
+    if (!this._canMutate()) return false;
     if (!id) return;
     if (typeof FirestoreSync !== 'undefined' && FirestoreSync.deleteAbsence) {
       FirestoreSync.deleteAbsence(id);
@@ -1121,6 +1136,7 @@ class DataStore {
   }
 
   saveUreAttendance(attendance) {
+    if (!this._canMutate()) return false;
     if (typeof FirestoreSync !== 'undefined' && FirestoreSync.saveUreAttendance) {
       FirestoreSync.saveUreAttendance(attendance);
     }
@@ -1142,6 +1158,7 @@ class DataStore {
   }
 
   deleteUreAttendance(id) {
+    if (!this._canMutate()) return false;
     if (typeof FirestoreSync !== 'undefined' && FirestoreSync.deleteUreAttendance) {
       FirestoreSync.deleteUreAttendance(id);
     }
@@ -1154,6 +1171,7 @@ class DataStore {
   }
 
   saveQueueItem(item) {
+    if (!this._canMutate()) return false;
     if (typeof FirestoreSync !== 'undefined') FirestoreSync.saveQueueItem(item);
     const list = this.getQueue();
     const now = Date.now();
@@ -1181,6 +1199,7 @@ class DataStore {
   }
 
   deleteQueueItem(id) {
+    if (!this._canMutate()) return false;
     if (typeof FirestoreSync !== 'undefined') FirestoreSync.deleteQueueItem(id);
     const list = this.getQueue().filter(q => String(q.id).trim() !== String(id).trim());
     this.setQueue(list);
@@ -1216,6 +1235,7 @@ _Por favor, confirme o recebimento e anexe a ordem concluída._`;
   }
 
   setWhatsappTemplate(template) {
+    if (!this._canMutate()) return false;
     if (typeof FirestoreSync !== 'undefined') FirestoreSync.saveWhatsappTemplate(template);
     try {
       localStorage.setItem(STORAGE_KEYS.WHATSAPP_TEMPLATE, template);
@@ -1249,6 +1269,7 @@ _Por favor, confirme o recebimento e anexe a ordem concluída._`;
   }
 
   setScheduleSubjects(list) {
+    if (!this._canMutate()) return false;
     try {
       localStorage.setItem(STORAGE_KEYS.SCHEDULE_SUBJECTS, JSON.stringify(list));
       if (typeof FirestoreSync !== 'undefined' && FirestoreSync.saveScheduleSubjects) {
@@ -1313,6 +1334,7 @@ _Por favor, confirme o recebimento e anexe a ordem concluída._`;
   }
 
   setUreSectors(list) {
+    if (!this._canMutate()) return false;
     try {
       localStorage.setItem(STORAGE_KEYS.URE_SECTORS, JSON.stringify(list));
       if (typeof FirestoreSync !== 'undefined' && FirestoreSync.saveUreSectors) {
@@ -1377,6 +1399,7 @@ _Por favor, confirme o recebimento e anexe a ordem concluída._`;
   }
 
   setUreTypes(list) {
+    if (!this._canMutate()) return false;
     try {
       localStorage.setItem(STORAGE_KEYS.URE_TYPES, JSON.stringify(list));
       if (typeof FirestoreSync !== 'undefined' && FirestoreSync.saveUreTypes) {

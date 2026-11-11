@@ -6027,3 +6027,9 @@ body.role-analista .admin-only {
   transition: width 0.35s ease;
   min-width: 4px;
 }
+/* ==========================================================================
+   MODO VISUALIZADOR / SOMENTE LEITURA (ROBERTO - BOTOES VISIVEIS, ACOES BLOQUEADAS)
+   ========================================================================== */
+body.role-viewer .card-os-inline-input {
+  caret-color: transparent;
+}

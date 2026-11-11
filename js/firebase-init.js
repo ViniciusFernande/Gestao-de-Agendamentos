@@ -24,7 +24,8 @@ const USER_ROLES = {
   "vinicius@agendamentos.com": { name: "Vinicius", role: "admin", label: "Administrador", isSuper: true },
   "ricardo@agendamentos.com": { name: "Ricardo", role: "analista", label: "Analista", isSuper: false },
   "tiago@agendamentos.com": { name: "Tiago", role: "analista", label: "Analista", isSuper: false },
-  "angelo@agendamentos.com": { name: "Angelo", role: "analista", label: "Analista", isSuper: false }
+  "angelo@agendamentos.com": { name: "Angelo", role: "analista", label: "Analista", isSuper: false },
+  "roberto@agendamentos.com": { name: "Roberto", role: "analista", label: "Analista", isSuper: false }
 };
 
 const AuthService = {
@@ -65,6 +66,14 @@ const AuthService = {
 
   isAdmin() {
     return this.userProfile && this.userProfile.role === "admin";
+  },
+
+  isViewer() {
+    return !!(this.userProfile && this.userProfile.role === "viewer");
+  },
+
+  canEdit() {
+    return !this.isViewer() && !!this.userProfile;
   }
 };
 

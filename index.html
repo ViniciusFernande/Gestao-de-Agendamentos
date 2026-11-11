@@ -12,7 +12,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-  <link rel="stylesheet" href="css/style.css?v=20261111-ranking-bars">
+  <link rel="stylesheet" href="css/style.css?v=20261111-viewer-visible">
   <script>
     (function() {
       try {
@@ -25,7 +25,7 @@
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
-  <script src="js/firebase-init.js?v=20261111-cleanup"></script>
+  <script src="js/firebase-init.js?v=20261111-roberto-analista"></script>
 </head>
 <body>
   <div id="app-layout">
@@ -285,7 +285,7 @@
             </div>
             
             <div style="display:flex; gap:10px;">
-              <button class="btn-primary" onclick="App.openNewScheduleModal()">
+              <button class="btn-primary write-only" onclick="App.openNewScheduleModal()">
                 <i class="fa-solid fa-calendar-plus"></i> Novo Agendamento
               </button>
             </div>
@@ -346,7 +346,7 @@
             </div>
             
             <div style="display:flex; gap:10px;">
-              <button class="btn-primary" onclick="App.openNewQueueModal()">
+              <button class="btn-primary write-only" onclick="App.openNewQueueModal()">
                 <i class="fa-solid fa-plus"></i> Adicionar à Fila
               </button>
             </div>
@@ -916,7 +916,7 @@
               </div>
 
               <!-- Card 2: Assuntos de O.S. -->
-              <div class="settings-hub-card" onclick="App.openSettingsSection('assuntos')">
+              <div class="settings-hub-card write-only" onclick="App.openSettingsSection('assuntos')">
                 <div class="settings-hub-icon" style="color: #a78bfa;">
                   <i class="fa-regular fa-clipboard"></i>
                 </div>
@@ -926,7 +926,7 @@
               </div>
 
               <!-- Card 3: Setores da URE -->
-              <div class="settings-hub-card" onclick="App.openSettingsSection('setores')">
+              <div class="settings-hub-card write-only" onclick="App.openSettingsSection('setores')">
                 <div class="settings-hub-icon" style="color: #38bdf8;">
                   <i class="fa-regular fa-building"></i>
                 </div>
@@ -936,7 +936,7 @@
               </div>
 
               <!-- Card 4: Tipos de atendimento -->
-              <div class="settings-hub-card" onclick="App.openSettingsSection('tipos')">
+              <div class="settings-hub-card write-only" onclick="App.openSettingsSection('tipos')">
                 <div class="settings-hub-icon" style="color: #34d399;">
                   <i class="fa-solid fa-wrench"></i>
                 </div>
@@ -946,7 +946,7 @@
               </div>
 
               <!-- Card 5: Mensagens do sistema -->
-              <div class="settings-hub-card" onclick="App.openSettingsSection('mensagens')">
+              <div class="settings-hub-card write-only" onclick="App.openSettingsSection('mensagens')">
                 <div class="settings-hub-icon" style="color: #f472b6;">
                   <i class="fa-regular fa-comment"></i>
                 </div>
@@ -1209,7 +1209,7 @@
                   Carregue um arquivo JSON de backup para restaurar todos os registros localmente e sincroniz&aacute;-los com a nuvem (Firebase).
                 </p>
                 <input type="file" id="input-import-backup" accept=".json" style="display: none;" onchange="App.importBackupJSON(event)">
-                <button class="btn-secondary" onclick="document.getElementById('input-import-backup').click()">
+                <button class="btn-secondary" onclick="App.triggerImportBackup()">
                   <i class="fa-solid fa-file-import"></i> Selecionar Arquivo JSON
                 </button>
               </div>
@@ -1805,7 +1805,7 @@
                 Registre informa&ccedil;&otilde;es importantes
               </p>
             </div>
-            <button type="button" class="btn-primary" style="padding: 7px 15px; font-size: 0.84rem; border-radius: 8px; display: inline-flex; align-items: center; gap: 6px; flex-shrink: 0;" onclick="App.saveSchoolTechnicalNotes()">
+            <button type="button" id="sr-save-notes-btn" class="btn-primary write-only" style="padding: 7px 15px; font-size: 0.84rem; border-radius: 8px; display: inline-flex; align-items: center; gap: 6px; flex-shrink: 0;" onclick="App.saveSchoolTechnicalNotes()">
               <i class="fa-solid fa-floppy-disk"></i> Salvar Anota&ccedil;&otilde;es
             </button>
           </div>
@@ -1842,11 +1842,11 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 
   <!-- CÓDIGO DA APLICAÇÃO -->
-  <script src="js/data.js?v=20261111-unify-subj"></script>
+  <script src="js/data.js?v=20261111-viewer-role"></script>
   <script src="js/agenda-order-deck.js?v=20261109-deck-tabs-header"></script>
   <script src="js/agenda-card-layout.js?v=20261108-responsive-cards"></script>
   <script src="js/agenda-analyst-photos.js?v=20261106-vini"></script>
-  <script src="js/app.js?v=20261111-ranking-cie-nome"></script>
+  <script src="js/app.js?v=20261111-viewer-fix"></script>
   <script src="js/agenda-radar-data.js?v=20261105"></script>
   <script src="js/agenda-radar.js?v=20261106-ure-fixed"></script>
 <div id="app-toast" class="toast-notification"><i class="fa-solid fa-circle-check" style="color:#4ade80;"></i> <span id="app-toast-text"></span></div>
