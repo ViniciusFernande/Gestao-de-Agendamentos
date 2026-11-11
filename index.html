@@ -12,7 +12,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-  <link rel="stylesheet" href="css/style.css?v=20261109-settings-subjects">
+  <link rel="stylesheet" href="css/style.css?v=20261111-sr-close-btn">
   <script>
     (function() {
       try {
@@ -25,7 +25,7 @@
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
-  <script src="js/firebase-init.js?v=20261109-auth-fix"></script>
+  <script src="js/firebase-init.js?v=20261111-cleanup"></script>
 </head>
 <body>
   <div id="app-layout">
@@ -320,6 +320,7 @@
               <i class="fa-solid fa-circle-info"></i> O número da O.S. pode ser preenchido diretamente no card
             </div>
           </div>
+
 
           <!-- GRID COM UM CARD PARA CADA ANALISTA -->
           <div class="analyst-cards-grid" id="analyst-cards-container">
@@ -902,193 +903,379 @@
 
                 <!-- VIEW 6: CONFIGURAÇÕES -->
         <section id="view-configuracoes" class="view-section">
-          <div class="page-header-actions">
-            <div>
-              <h2 class="page-title">Configurações do Sistema</h2>
-              <p class="page-subtitle">Aparência, personalização de mensagens, backup e restauração</p>
-            </div>
-          </div>
-
-                    <!-- 1. SELETOR DE TEMAS EM DEGRADÊ (COMPACTO E FINO) -->
-          <div class="dash-panel" style="margin-bottom: 16px; padding: 14px 18px;">
-            <div class="panel-header" style="margin-bottom: 10px;">
-              <div class="panel-title" style="display:flex; align-items:center; gap:8px;">
-                <i class="fa-solid fa-palette" style="color:#60a5fa; font-size:1rem;"></i>
-                <span>TEMA E APARÊNCIA DO SITE</span>
+          <!-- HUB PRINCIPAL DE CONFIGURAÇÕES (6 CARDS) -->
+          <div id="settings-hub">
+            <div class="page-header-actions" style="margin-bottom: 22px;">
+              <div>
+                <h2 class="page-title" style="font-size: 1.55rem; margin-bottom: 4px;">Configura&ccedil;&otilde;es</h2>
+                <p class="page-subtitle" style="font-size: 0.9rem;">Gerencie as prefer&ecirc;ncias e funcionalidades do sistema.</p>
               </div>
-              <span style="font-size:0.73rem; color:var(--text-muted); background:var(--bg-input); padding:2px 8px; border-radius:10px; border:1px solid var(--border-color);">
-                5 cores em degradê
-              </span>
             </div>
 
-            <div class="theme-palette-grid">
-              <!-- Cor 1: Escuro Slate (Atual) -->
-              <div class="theme-card-option" data-theme="theme-1" onclick="App.applyTheme('theme-1')">
-                <div class="theme-preview-circle theme-color-1">
-                  <i class="fa-solid fa-check theme-check-icon"></i>
+            <div class="settings-hub-grid">
+              <!-- Card 1: Aparência do sistema -->
+              <div class="settings-hub-card" onclick="App.openSettingsSection('aparencia')">
+                <div class="settings-hub-icon" style="color: #60a5fa;">
+                  <i class="fa-solid fa-palette"></i>
                 </div>
-                <div class="theme-card-content">
-                  <div class="theme-card-title">1. Escuro (Atual)</div>
-                  <div class="theme-card-sub">Slate Noturno</div>
-                </div>
+                <h3 class="settings-hub-title">Apar&ecirc;ncia do sistema</h3>
+                <p class="settings-hub-desc">Temas e personaliza&ccedil;&atilde;o visual.</p>
+                <span class="settings-hub-link">Acessar configura&ccedil;&otilde;es &rarr;</span>
               </div>
 
-              <!-- Cor 2: Azul Marinho Noturno -->
-              <div class="theme-card-option" data-theme="theme-2" onclick="App.applyTheme('theme-2')">
-                <div class="theme-preview-circle theme-color-2">
-                  <i class="fa-solid fa-check theme-check-icon"></i>
+              <!-- Card 2: Assuntos de O.S. -->
+              <div class="settings-hub-card" onclick="App.openSettingsSection('assuntos')">
+                <div class="settings-hub-icon" style="color: #a78bfa;">
+                  <i class="fa-regular fa-clipboard"></i>
                 </div>
-                <div class="theme-card-content">
-                  <div class="theme-card-title">2. Marinho Suave</div>
-                  <div class="theme-card-sub">Azul Noturno</div>
-                </div>
+                <h3 class="settings-hub-title">Assuntos de O.S.</h3>
+                <p class="settings-hub-desc">Gerenciar assuntos de agendamento.</p>
+                <span class="settings-hub-link">Acessar configura&ccedil;&otilde;es &rarr;</span>
               </div>
 
-              <!-- Cor 3: Slate Crepúsculo -->
-              <div class="theme-card-option" data-theme="theme-3" onclick="App.applyTheme('theme-3')">
-                <div class="theme-preview-circle theme-color-3">
-                  <i class="fa-solid fa-check theme-check-icon"></i>
+              <!-- Card 3: Setores da URE -->
+              <div class="settings-hub-card" onclick="App.openSettingsSection('setores')">
+                <div class="settings-hub-icon" style="color: #38bdf8;">
+                  <i class="fa-regular fa-building"></i>
                 </div>
-                <div class="theme-card-content">
-                  <div class="theme-card-title">3. Crepúsculo</div>
-                  <div class="theme-card-sub">Slate Médio</div>
-                </div>
+                <h3 class="settings-hub-title">Setores da URE</h3>
+                <p class="settings-hub-desc">Cadastrar e editar setores.</p>
+                <span class="settings-hub-link">Acessar configura&ccedil;&otilde;es &rarr;</span>
               </div>
 
-              <!-- Cor 4: Cinza -->
-              <div class="theme-card-option" data-theme="theme-4" onclick="App.applyTheme('theme-4')">
-                <div class="theme-preview-circle theme-color-4">
-                  <i class="fa-solid fa-check theme-check-icon"></i>
+              <!-- Card 4: Tipos de atendimento -->
+              <div class="settings-hub-card" onclick="App.openSettingsSection('tipos')">
+                <div class="settings-hub-icon" style="color: #34d399;">
+                  <i class="fa-solid fa-wrench"></i>
                 </div>
-                <div class="theme-card-content">
-                  <div class="theme-card-title">4. Cinza</div>
-                  <div class="theme-card-sub">Cinza Metálico</div>
-                </div>
+                <h3 class="settings-hub-title">Tipos de atendimento</h3>
+                <p class="settings-hub-desc">Gerenciar servi&ccedil;os internos.</p>
+                <span class="settings-hub-link">Acessar configura&ccedil;&otilde;es &rarr;</span>
               </div>
 
-              <!-- Cor 5: Cinza Suave -->
-              <div class="theme-card-option" data-theme="theme-5" onclick="App.applyTheme('theme-5')">
-                <div class="theme-preview-circle theme-color-5">
-                  <i class="fa-solid fa-check theme-check-icon"></i>
+              <!-- Card 5: Mensagens do sistema -->
+              <div class="settings-hub-card" onclick="App.openSettingsSection('mensagens')">
+                <div class="settings-hub-icon" style="color: #f472b6;">
+                  <i class="fa-regular fa-comment"></i>
                 </div>
-                <div class="theme-card-content">
-                  <div class="theme-card-title">5. Cinza Suave</div>
-                  <div class="theme-card-sub">Cinza Grafite Claro</div>
+                <h3 class="settings-hub-title">Mensagens do sistema</h3>
+                <p class="settings-hub-desc">Personalizar avisos e comunicados.</p>
+                <span class="settings-hub-link">Acessar configura&ccedil;&otilde;es &rarr;</span>
+              </div>
+
+              <!-- Card 6: Backup e restauração -->
+              <div class="settings-hub-card admin-only" onclick="App.openSettingsSection('backup')">
+                <div class="settings-hub-icon" style="color: #fbbf24;">
+                  <i class="fa-solid fa-database"></i>
                 </div>
+                <h3 class="settings-hub-title">Backup e restaura&ccedil;&atilde;o</h3>
+                <p class="settings-hub-desc">Exportar e recuperar dados.</p>
+                <span class="settings-hub-link">Acessar configura&ccedil;&otilde;es &rarr;</span>
               </div>
             </div>
           </div>
 
-          <!-- 2. ASSUNTOS PRÉ-DEFINIDOS DE AGENDAMENTO (ORDENS DE SERVIÇO) -->
-          <div class="dash-panel" style="margin-bottom: 20px; padding: 18px 20px;">
-            <div class="panel-header" style="margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
-              <div class="panel-title" style="display: flex; align-items: center; gap: 8px; font-size: 1.02rem;">
-                <i class="fa-solid fa-list-check" style="color: #60a5fa; font-size: 1.05rem;"></i>
-                <span>ASSUNTOS PR&Eacute;-DEFINIDOS DE AGENDAMENTO (ORDENS DE SERVI&Ccedil;O)</span>
+          <!-- SUBTELA 1: APARÊNCIA DO SISTEMA -->
+          <div id="settings-panel-aparencia" class="settings-detail-panel" style="display: none;">
+            <button type="button" class="settings-back-link" onclick="App.closeSettingsSection()">
+              <i class="fa-solid fa-arrow-left"></i> Voltar &agrave;s configura&ccedil;&otilde;es
+            </button>
+
+            <div class="settings-detail-header">
+              <div class="settings-detail-title-row">
+                <i class="fa-solid fa-palette" style="color: #60a5fa; font-size: 1.4rem;"></i>
+                <h2>Apar&ecirc;ncia do sistema</h2>
               </div>
-              <span id="settings-subjects-count" style="font-size: 0.75rem; color: var(--text-muted); background: var(--bg-input); padding: 3px 10px; border-radius: 12px; border: 1px solid var(--border-color); font-weight: 600;">
-                0 assuntos
-              </span>
+              <p>Escolha o tema visual e a paleta de cores de sua prefer&ecirc;ncia.</p>
             </div>
-            <p style="color: var(--text-muted); font-size: 0.86rem; margin-bottom: 14px; line-height: 1.45;">
-              Edite a lista de assuntos pr&eacute;-definidos que aparecem ao agendar uma O.S. para uma escola ou ao incluir uma nova ordem na fila de chamados.
-            </p>
-            
-            <form onsubmit="event.preventDefault(); App.addSubjectFromSettings(); return false;" style="display: flex; gap: 10px; align-items: center; max-width: 640px; margin-bottom: 16px;">
-              <input type="text" id="input-new-subject" class="compact-input" placeholder="Novo assunto de O.S. (ex: Instalação de Ponto de Rede)..." style="flex: 1; height: 40px; border-radius: 8px; padding: 0 14px; font-size: 0.88rem;" required>
-              <button type="submit" class="btn-primary" style="height: 40px; padding: 0 18px; border-radius: 8px; font-size: 0.86rem; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap;">
-                <i class="fa-solid fa-plus"></i> Adicionar Assunto
+
+            <div class="dash-panel" style="padding: 20px;">
+              <div class="panel-header" style="margin-bottom: 14px;">
+                <div class="panel-title">Paleta de Temas</div>
+                <span style="font-size:0.75rem; color:var(--text-muted); background:var(--bg-input); padding:3px 10px; border-radius:10px; border:1px solid var(--border-color);">
+                  5 cores em degrad&ecirc;
+                </span>
+              </div>
+
+              <div class="theme-palette-grid">
+                <div class="theme-card-option" data-theme="theme-1" onclick="App.applyTheme('theme-1')">
+                  <div class="theme-preview-circle theme-color-1">
+                    <i class="fa-solid fa-check theme-check-icon"></i>
+                  </div>
+                  <div class="theme-card-content">
+                    <div class="theme-card-title">1. Escuro (Atual)</div>
+                    <div class="theme-card-sub">Slate Noturno</div>
+                  </div>
+                </div>
+
+                <div class="theme-card-option" data-theme="theme-2" onclick="App.applyTheme('theme-2')">
+                  <div class="theme-preview-circle theme-color-2">
+                    <i class="fa-solid fa-check theme-check-icon"></i>
+                  </div>
+                  <div class="theme-card-content">
+                    <div class="theme-card-title">2. Marinho Suave</div>
+                    <div class="theme-card-sub">Azul Noturno</div>
+                  </div>
+                </div>
+
+                <div class="theme-card-option" data-theme="theme-3" onclick="App.applyTheme('theme-3')">
+                  <div class="theme-preview-circle theme-color-3">
+                    <i class="fa-solid fa-check theme-check-icon"></i>
+                  </div>
+                  <div class="theme-card-content">
+                    <div class="theme-card-title">3. Crep&uacute;sculo</div>
+                    <div class="theme-card-sub">Slate M&eacute;dio</div>
+                  </div>
+                </div>
+
+                <div class="theme-card-option" data-theme="theme-4" onclick="App.applyTheme('theme-4')">
+                  <div class="theme-preview-circle theme-color-4">
+                    <i class="fa-solid fa-check theme-check-icon"></i>
+                  </div>
+                  <div class="theme-card-content">
+                    <div class="theme-card-title">4. Cinza</div>
+                    <div class="theme-card-sub">Cinza Met&aacute;lico</div>
+                  </div>
+                </div>
+
+                <div class="theme-card-option" data-theme="theme-5" onclick="App.applyTheme('theme-5')">
+                  <div class="theme-preview-circle theme-color-5">
+                    <i class="fa-solid fa-check theme-check-icon"></i>
+                  </div>
+                  <div class="theme-card-content">
+                    <div class="theme-card-title">5. Cinza Suave</div>
+                    <div class="theme-card-sub">Cinza Grafite Claro</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- SUBTELA 2: ASSUNTOS DE O.S. -->
+          <div id="settings-panel-assuntos" class="settings-detail-panel" style="display: none;">
+            <button type="button" class="settings-back-link" onclick="App.closeSettingsSection()">
+              <i class="fa-solid fa-arrow-left"></i> Voltar &agrave;s configura&ccedil;&otilde;es
+            </button>
+
+            <div class="settings-detail-header">
+              <div class="settings-detail-title-row">
+                <i class="fa-regular fa-clipboard" style="color: #a78bfa; font-size: 1.4rem;"></i>
+                <h2>Assuntos de O.S.</h2>
+              </div>
+              <p>Gerencie os assuntos dispon&iacute;veis nos agendamentos.</p>
+            </div>
+
+            <div class="settings-stats-grid">
+              <div class="settings-stat-card">
+                <div class="settings-stat-value" id="settings-subjects-count-num">0</div>
+                <div class="settings-stat-label">Assuntos cadastrados</div>
+              </div>
+              <button type="button" class="settings-new-card" onclick="App.toggleSettingsAddForm('subjects')">
+                <div class="settings-stat-value">+</div>
+                <div class="settings-stat-label">Novo assunto</div>
               </button>
-            </form>
+            </div>
 
-            <div id="settings-subjects-list" class="settings-items-grid">
+            <div id="settings-add-box-subjects" class="settings-inline-add-box" style="display: none;">
+              <form onsubmit="event.preventDefault(); App.addSubjectFromSettings(); return false;" class="settings-inline-add-form">
+                <input type="text" id="input-new-subject" class="compact-input" placeholder="Digite o nome do novo assunto (ex: Instala&ccedil;&atilde;o de Ponto de Rede)..." required>
+                <div class="settings-inline-add-actions">
+                  <button type="submit" class="btn-primary">
+                    <i class="fa-solid fa-check"></i> Salvar
+                  </button>
+                  <button type="button" class="btn-secondary" onclick="App.toggleSettingsAddForm('subjects', false)">
+                    Cancelar
+                  </button>
+                </div>
+              </form>
+            </div>
+
+            <div id="settings-subjects-list" class="settings-rows-list">
               <!-- Renderizado dinamicamente via JS -->
             </div>
           </div>
 
-          <!-- 3. ATENDIMENTO URE: SETORES E TIPOS DE ATENDIMENTO -->
-          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 20px; margin-bottom: 20px;">
-            
-            <!-- Painel Setores URE -->
-            <div class="dash-panel" style="padding: 18px 20px;">
-              <div class="panel-header" style="margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
-                <div class="panel-title" style="display: flex; align-items: center; gap: 8px; font-size: 1.02rem;">
-                  <i class="fa-solid fa-building" style="color: #38bdf8; font-size: 1.05rem;"></i>
-                  <span>SETORES DA URE</span>
-                </div>
-                <span id="settings-ure-sectors-count" style="font-size: 0.75rem; color: var(--text-muted); background: var(--bg-input); padding: 3px 10px; border-radius: 12px; border: 1px solid var(--border-color); font-weight: 600;">
-                  0 setores
-                </span>
-              </div>
-              <p style="color: var(--text-muted); font-size: 0.84rem; margin-bottom: 14px; line-height: 1.45;">
-                Setores cadastrados para sele&ccedil;&atilde;o ao registrar ou editar um atendimento interno da URE.
-              </p>
-              
-              <form onsubmit="event.preventDefault(); App.addUreSectorFromSettings(); return false;" style="display: flex; gap: 10px; align-items: center; margin-bottom: 16px;">
-                <input type="text" id="input-new-ure-sector" class="compact-input" placeholder="Novo setor (ex: Almoxarifado)..." style="flex: 1; height: 40px; border-radius: 8px; padding: 0 14px; font-size: 0.88rem;" required>
-                <button type="submit" class="btn-primary" style="height: 40px; padding: 0 16px; border-radius: 8px; font-size: 0.86rem; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap;">
-                  <i class="fa-solid fa-plus"></i> Adicionar
-                </button>
-              </form>
+          <!-- SUBTELA 3: SETORES DA URE -->
+          <div id="settings-panel-setores" class="settings-detail-panel" style="display: none;">
+            <button type="button" class="settings-back-link" onclick="App.closeSettingsSection()">
+              <i class="fa-solid fa-arrow-left"></i> Voltar &agrave;s configura&ccedil;&otilde;es
+            </button>
 
-              <div id="settings-ure-sectors-list" class="settings-items-grid">
-                <!-- Renderizado dinamicamente via JS -->
+            <div class="settings-detail-header">
+              <div class="settings-detail-title-row">
+                <i class="fa-regular fa-building" style="color: #38bdf8; font-size: 1.4rem;"></i>
+                <h2>Setores da URE</h2>
               </div>
+              <p>Gerencie os setores dispon&iacute;veis na aba Atendimento URE.</p>
             </div>
 
-            <!-- Painel Tipos / Assuntos Atendimento URE -->
-            <div class="dash-panel" style="padding: 18px 20px;">
-              <div class="panel-header" style="margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
-                <div class="panel-title" style="display: flex; align-items: center; gap: 8px; font-size: 1.02rem;">
-                  <i class="fa-solid fa-screwdriver-wrench" style="color: #34d399; font-size: 1.05rem;"></i>
-                  <span>TIPOS DE ATENDIMENTO URE</span>
-                </div>
-                <span id="settings-ure-types-count" style="font-size: 0.75rem; color: var(--text-muted); background: var(--bg-input); padding: 3px 10px; border-radius: 12px; border: 1px solid var(--border-color); font-weight: 600;">
-                  0 tipos
-                </span>
+            <div class="settings-stats-grid">
+              <div class="settings-stat-card">
+                <div class="settings-stat-value" id="settings-ure-sectors-count-num">0</div>
+                <div class="settings-stat-label">Setores cadastrados</div>
               </div>
-              <p style="color: var(--text-muted); font-size: 0.84rem; margin-bottom: 14px; line-height: 1.45;">
-                Tipos de servi&ccedil;os / assuntos pr&eacute;-definidos para atendimentos internos da URE.
-              </p>
-              
-              <form onsubmit="event.preventDefault(); App.addUreTypeFromSettings(); return false;" style="display: flex; gap: 10px; align-items: center; margin-bottom: 16px;">
-                <input type="text" id="input-new-ure-type" class="compact-input" placeholder="Novo tipo (ex: Troca de Nobreak)..." style="flex: 1; height: 40px; border-radius: 8px; padding: 0 14px; font-size: 0.88rem;" required>
-                <button type="submit" class="btn-primary" style="height: 40px; padding: 0 16px; border-radius: 8px; font-size: 0.86rem; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap;">
-                  <i class="fa-solid fa-plus"></i> Adicionar
-                </button>
-              </form>
-
-              <div id="settings-ure-types-list" class="settings-items-grid">
-                <!-- Renderizado dinamicamente via JS -->
-              </div>
+              <button type="button" class="settings-new-card" onclick="App.toggleSettingsAddForm('ure-sectors')">
+                <div class="settings-stat-value">+</div>
+                <div class="settings-stat-label">Novo setor</div>
+              </button>
             </div>
 
+            <div id="settings-add-box-ure-sectors" class="settings-inline-add-box" style="display: none;">
+              <form onsubmit="event.preventDefault(); App.addUreSectorFromSettings(); return false;" class="settings-inline-add-form">
+                <input type="text" id="input-new-ure-sector" class="compact-input" placeholder="Digite o nome do novo setor (ex: Almoxarifado)..." required>
+                <div class="settings-inline-add-actions">
+                  <button type="submit" class="btn-primary">
+                    <i class="fa-solid fa-check"></i> Salvar
+                  </button>
+                  <button type="button" class="btn-secondary" onclick="App.toggleSettingsAddForm('ure-sectors', false)">
+                    Cancelar
+                  </button>
+                </div>
+              </form>
+            </div>
+
+            <div id="settings-ure-sectors-list" class="settings-rows-list">
+              <!-- Renderizado dinamicamente via JS -->
+            </div>
           </div>
 
-          <!-- 4. BACKUP & EXPORTAÇÃO (SEM A OPCAO DE ZERAR AGENDAMENTOS) -->
-          <div class="admin-only" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px;">
-            <div class="dash-panel">
-              <div class="panel-title" style="margin-bottom: 14px;">
-                <i class="fa-solid fa-database" style="color: #60a5fa;"></i> Backup &amp; Exporta&ccedil;&atilde;o
+          <!-- SUBTELA 4: TIPOS DE ATENDIMENTO -->
+          <div id="settings-panel-tipos" class="settings-detail-panel" style="display: none;">
+            <button type="button" class="settings-back-link" onclick="App.closeSettingsSection()">
+              <i class="fa-solid fa-arrow-left"></i> Voltar &agrave;s configura&ccedil;&otilde;es
+            </button>
+
+            <div class="settings-detail-header">
+              <div class="settings-detail-title-row">
+                <i class="fa-solid fa-wrench" style="color: #34d399; font-size: 1.4rem;"></i>
+                <h2>Tipos de atendimento</h2>
               </div>
-              <p style="color: var(--text-muted); font-size: 0.86rem; margin-bottom: 16px;">
-                Fa&ccedil;a o download de todos os analistas, escolas, agendamentos e atendimentos URE cadastrados em formato JSON.
-              </p>
-              <button class="btn-secondary" onclick="App.exportBackupJSON()">
-                <i class="fa-solid fa-download"></i> Baixar Backup Completo
+              <p>Gerencie os servi&ccedil;os internos dispon&iacute;veis na aba Atendimento URE.</p>
+            </div>
+
+            <div class="settings-stats-grid">
+              <div class="settings-stat-card">
+                <div class="settings-stat-value" id="settings-ure-types-count-num">0</div>
+                <div class="settings-stat-label">Tipos cadastrados</div>
+              </div>
+              <button type="button" class="settings-new-card" onclick="App.toggleSettingsAddForm('ure-types')">
+                <div class="settings-stat-value">+</div>
+                <div class="settings-stat-label">Novo tipo</div>
               </button>
             </div>
-            <div class="dash-panel">
-              <div class="panel-title" style="margin-bottom: 14px;">
-                <i class="fa-solid fa-upload" style="color: #34d399;"></i> Restaurar Backup
+
+            <div id="settings-add-box-ure-types" class="settings-inline-add-box" style="display: none;">
+              <form onsubmit="event.preventDefault(); App.addUreTypeFromSettings(); return false;" class="settings-inline-add-form">
+                <input type="text" id="input-new-ure-type" class="compact-input" placeholder="Digite o novo tipo de atendimento (ex: Troca de Nobreak)..." required>
+                <div class="settings-inline-add-actions">
+                  <button type="submit" class="btn-primary">
+                    <i class="fa-solid fa-check"></i> Salvar
+                  </button>
+                  <button type="button" class="btn-secondary" onclick="App.toggleSettingsAddForm('ure-types', false)">
+                    Cancelar
+                  </button>
+                </div>
+              </form>
+            </div>
+
+            <div id="settings-ure-types-list" class="settings-rows-list">
+              <!-- Renderizado dinamicamente via JS -->
+            </div>
+          </div>
+
+          <!-- SUBTELA 5: BACKUP E RESTAURAÇÃO -->
+          <div id="settings-panel-backup" class="settings-detail-panel" style="display: none;">
+            <button type="button" class="settings-back-link" onclick="App.closeSettingsSection()">
+              <i class="fa-solid fa-arrow-left"></i> Voltar &agrave;s configura&ccedil;&otilde;es
+            </button>
+
+            <div class="settings-detail-header">
+              <div class="settings-detail-title-row">
+                <i class="fa-solid fa-database" style="color: #fbbf24; font-size: 1.4rem;"></i>
+                <h2>Backup e restaura&ccedil;&atilde;o</h2>
               </div>
-              <p style="color: var(--text-muted); font-size: 0.86rem; margin-bottom: 16px;">
-                Carregue um arquivo JSON gerado anteriormente para recuperar todos os registros.
-              </p>
-              <input type="file" id="input-import-backup" accept=".json" style="display: none;" onchange="App.importBackupJSON(event)">
-              <button class="btn-secondary" onclick="document.getElementById('input-import-backup').click()">
-                <i class="fa-solid fa-file-import"></i> Selecionar Arquivo JSON
-              </button>
+              <p>Exporte todos os registros para um arquivo JSON ou restaure um backup salvo anteriormente.</p>
+            </div>
+
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px;">
+              <div class="dash-panel">
+                <div class="panel-title" style="margin-bottom: 14px;">
+                  <i class="fa-solid fa-download" style="color: #60a5fa;"></i> Backup &amp; Exporta&ccedil;&atilde;o
+                </div>
+                <p style="color: var(--text-muted); font-size: 0.86rem; margin-bottom: 16px;">
+                  Fa&ccedil;a o download completo de analistas, escolas, agendamentos, fila de chamados, aus&ecirc;ncias, atendimentos URE e configura&ccedil;&otilde;es em formato JSON.
+                </p>
+                <button class="btn-secondary" onclick="App.exportBackupJSON()">
+                  <i class="fa-solid fa-download"></i> Baixar Backup Completo
+                </button>
+              </div>
+              <div class="dash-panel">
+                <div class="panel-title" style="margin-bottom: 14px;">
+                  <i class="fa-solid fa-upload" style="color: #34d399;"></i> Restaurar Backup
+                </div>
+                <p style="color: var(--text-muted); font-size: 0.86rem; margin-bottom: 16px;">
+                  Carregue um arquivo JSON de backup para restaurar todos os registros localmente e sincroniz&aacute;-los com a nuvem (Firebase).
+                </p>
+                <input type="file" id="input-import-backup" accept=".json" style="display: none;" onchange="App.importBackupJSON(event)">
+                <button class="btn-secondary" onclick="document.getElementById('input-import-backup').click()">
+                  <i class="fa-solid fa-file-import"></i> Selecionar Arquivo JSON
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- SUBTELA 6: MENSAGENS DO SISTEMA -->
+          <div id="settings-panel-mensagens" class="settings-detail-panel" style="display: none;">
+            <button type="button" class="settings-back-link" onclick="App.closeSettingsSection()">
+              <i class="fa-solid fa-arrow-left"></i> Voltar &agrave;s configura&ccedil;&otilde;es
+            </button>
+
+            <div class="settings-detail-header">
+              <div class="settings-detail-title-row">
+                <i class="fa-regular fa-comment" style="color: #f472b6; font-size: 1.4rem;"></i>
+                <h2>Mensagens do sistema</h2>
+              </div>
+              <p>Personalize o modelo padr&atilde;o de mensagem enviada aos analistas via WhatsApp.</p>
+            </div>
+
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 20px;">
+              <div class="dash-panel">
+                <div class="panel-title" style="margin-bottom: 10px;">
+                  <i class="fa-brands fa-whatsapp" style="color: #4ade80;"></i> Modelo da Mensagem
+                </div>
+                <p style="color: var(--text-muted); font-size: 0.82rem; margin-bottom: 12px;">
+                  Clique nas vari&aacute;veis abaixo para inserir dinamicamente no texto:
+                </p>
+                <div class="wa-vars-bar" style="display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px;">
+                  <button type="button" class="wa-var-chip" onclick="App.insertMsgVariable('{analista}')">{analista}</button>
+                  <button type="button" class="wa-var-chip" onclick="App.insertMsgVariable('{os}')">{os}</button>
+                  <button type="button" class="wa-var-chip" onclick="App.insertMsgVariable('{data}')">{data}</button>
+                  <button type="button" class="wa-var-chip" onclick="App.insertMsgVariable('{escola}')">{escola}</button>
+                  <button type="button" class="wa-var-chip" onclick="App.insertMsgVariable('{cie}')">{cie}</button>
+                  <button type="button" class="wa-var-chip" onclick="App.insertMsgVariable('{diretor}')">{diretor}</button>
+                  <button type="button" class="wa-var-chip" onclick="App.insertMsgVariable('{assunto}')">{assunto}</button>
+                  <button type="button" class="wa-var-chip" onclick="App.insertMsgVariable('{obs}')">{obs}</button>
+                </div>
+                <textarea id="textarea-wa-template" rows="13" class="settings-wa-textarea" oninput="App.updateWhatsappTemplatePreview()"></textarea>
+                <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                  <button type="button" class="btn-primary" onclick="App.saveWhatsappTemplate()">
+                    <i class="fa-solid fa-floppy-disk"></i> Salvar Modelo
+                  </button>
+                  <button type="button" class="btn-secondary" onclick="App.resetWhatsappTemplateToDefault()">
+                    <i class="fa-solid fa-rotate-left"></i> Restaurar Padr&atilde;o
+                  </button>
+                </div>
+              </div>
+
+              <div class="dash-panel">
+                <div class="panel-title" style="margin-bottom: 12px;">
+                  <i class="fa-solid fa-eye" style="color: #60a5fa;"></i> Pr&eacute;-visualiza&ccedil;&atilde;o
+                </div>
+                <p style="color: var(--text-muted); font-size: 0.82rem; margin-bottom: 12px;">
+                  Exemplo de como a mensagem ser&aacute; enviada com dados reais:
+                </p>
+                <div id="wa-template-preview-box" style="background: rgba(15, 23, 42, 0.75); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 16px; white-space: pre-wrap; font-size: 0.85rem; line-height: 1.55; color: #e2e8f0; min-height: 180px;"></div>
+              </div>
             </div>
           </div>
         </section>
@@ -1584,6 +1771,77 @@
     </div>
   </div>
 
+    <!-- MODAL: PRONTUÁRIO TÉCNICO DA ESCOLA -->
+  <div class="modal-overlay" id="modal-school-record">
+    <div class="modal-box school-record-modal-box">
+      <div class="modal-header">
+        <div style="min-width: 0;">
+          <div class="modal-title" style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+            <i class="fa-solid fa-file-medical" style="color:#38bdf8;"></i>
+            <span id="sr-school-name">Prontu&aacute;rio da Escola</span>
+          </div>
+          <div id="sr-school-meta" class="sr-school-meta-bar"></div>
+        </div>
+        <button type="button" class="btn-modal-close sr-close-btn" title="Fechar" onclick="App.closeModal('modal-school-record')"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+
+      <div class="modal-body school-record-body">
+        <!-- 1. RESUMO DE VISITAS & RECORRÊNCIAS -->
+        <div class="sr-kpis-row" id="sr-kpis-container"></div>
+
+        <!-- 2. PROBLEMAS RECORRENTES (ÚLTIMOS 3 MESES + TOTAL) -->
+        <div class="sr-section-card">
+          <div class="sr-section-header">
+            <div class="sr-section-title">
+              <i class="fa-solid fa-triangle-exclamation" style="color:#fbbf24;"></i>
+              <span>Recorr&ecirc;ncia de Problemas / Assuntos</span>
+            </div>
+
+          </div>
+          <div id="sr-recurrence-container" class="sr-recurrence-grid"></div>
+        </div>
+
+        <!-- 3. ANOTAÇÕES TÉCNICAS FIXAS DA ESCOLA -->
+        <div class="sr-section-card">
+          <div class="sr-section-header" style="align-items: center; margin-bottom: 10px;">
+            <div>
+              <div class="sr-section-title">
+                <i class="fa-solid fa-key" style="color:#34d399;"></i>
+                <span>Anota&ccedil;&otilde;es T&eacute;cnicas Fixas da Escola</span>
+              </div>
+              <p class="sr-notes-desc" style="margin: 2px 0 0 0;">
+                Registre informa&ccedil;&otilde;es importantes
+              </p>
+            </div>
+            <button type="button" class="btn-primary" style="padding: 7px 15px; font-size: 0.84rem; border-radius: 8px; display: inline-flex; align-items: center; gap: 6px; flex-shrink: 0;" onclick="App.saveSchoolTechnicalNotes()">
+              <i class="fa-solid fa-floppy-disk"></i> Salvar Anota&ccedil;&otilde;es
+            </button>
+          </div>
+          <textarea id="sr-technical-notes" class="sr-notes-textarea" rows="4" style="margin-bottom: 0;" placeholder="Ex.: Rack na sala da coordena&ccedil;&atilde;o (chave com a secret&aacute;ria Maria - ramal 204). DVR fica no corredor ao lado da diretoria."></textarea>
+        </div>
+
+        <!-- 4. LINHA DO TEMPO DE TODAS AS VISITAS -->
+        <div class="sr-section-card">
+          <div class="sr-section-header">
+            <div class="sr-section-title">
+              <i class="fa-solid fa-timeline" style="color:#60a5fa;"></i>
+              <span>Linha do Tempo de Visitas Realizadas e Agendadas</span>
+            </div>
+            <span id="sr-timeline-count" class="sr-section-hint">0 visitas</span>
+          </div>
+          <div id="sr-timeline-container" class="sr-timeline-list"></div>
+        </div>
+      </div>
+
+      <div class="modal-footer" style="display:flex; justify-content:space-between; align-items:center;">
+        <button type="button" class="btn-secondary" onclick="App.closeModal('modal-school-record')">Fechar</button>
+        <button type="button" class="btn-primary" id="sr-btn-new-schedule">
+          <i class="fa-solid fa-calendar-plus"></i> Agendar Visita para esta Escola
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- BIBLIOTECAS CDN -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
@@ -1592,11 +1850,11 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 
   <!-- CÓDIGO DA APLICAÇÃO -->
-  <script src="js/data.js?v=20261109-settings"></script>
+  <script src="js/data.js?v=20261111-unify-subj"></script>
   <script src="js/agenda-order-deck.js?v=20261109-deck-tabs-header"></script>
   <script src="js/agenda-card-layout.js?v=20261108-responsive-cards"></script>
   <script src="js/agenda-analyst-photos.js?v=20261106-vini"></script>
-  <script src="js/app.js?v=20261109-edit-fix"></script>
+  <script src="js/app.js?v=20261111-rec-count-only"></script>
   <script src="js/agenda-radar-data.js?v=20261105"></script>
   <script src="js/agenda-radar.js?v=20261106-ure-fixed"></script>
 <div id="app-toast" class="toast-notification"><i class="fa-solid fa-circle-check" style="color:#4ade80;"></i> <span id="app-toast-text"></span></div>
@@ -1648,53 +1906,7 @@
   </div>
 
 
-  <script>
-    window.clearAllSchedules = function() {
-      if (typeof App !== 'undefined' && App.clearAllSchedules) {
-        return App.clearAllSchedules();
-      }
-    };
 
-    // Rotina de limpeza profunda do Firestore (acionada via console ou botão)
-    window.wipeFirestoreDemoData = async function() {
-      if (typeof AuthService !== 'undefined' && !AuthService.isAdmin()) {
-        alert('Apenas o Administrador pode limpar o banco de dados.');
-        return;
-      }
-      if (!confirm("Deseja apagar TODOS os agendamentos, analistas e filas do banco Firebase?")) return;
-      try {
-        const agSnap = await db.collection("agendamentos").get();
-        for (let i = 0; i < agSnap.docs.length; i += 400) {
-          const batch = db.batch();
-          agSnap.docs.slice(i, i + 400).forEach(d => batch.delete(d.ref));
-          await batch.commit();
-        }
-
-        const anSnap = await db.collection("analistas").get();
-        for (let i = 0; i < anSnap.docs.length; i += 400) {
-          const batch = db.batch();
-          anSnap.docs.slice(i, i + 400).forEach(d => batch.delete(d.ref));
-          await batch.commit();
-        }
-
-        const fSnap = await db.collection("fila").get();
-        for (let i = 0; i < fSnap.docs.length; i += 400) {
-          const batch = db.batch();
-          fSnap.docs.slice(i, i + 400).forEach(d => batch.delete(d.ref));
-          await batch.commit();
-        }
-
-        localStorage.removeItem(STORAGE_KEYS.SCHEDULES);
-        localStorage.removeItem(STORAGE_KEYS.ANALYSTS);
-        localStorage.removeItem(STORAGE_KEYS.QUEUE);
-
-        alert("Banco de dados do Firebase completamente limpo!");
-        window.location.reload();
-      } catch (e) {
-        alert("Erro ao limpar banco: " + e.message);
-      }
-    };
-  </script>
 
 
   <!-- MODAL: EDITAR ATENDIMENTO URE -->
@@ -1768,41 +1980,82 @@
 
   <!-- MODAL: REGISTRAR AUSÊNCIA DO ANALISTA (DAY OFF, ATESTADO, AUSENTE) -->
   <div class="modal-overlay" id="modal-analyst-absence">
-    <div class="modal-box" style="max-width: 460px;">
+    <div class="modal-box" style="max-width: 520px;">
       <div class="modal-header">
-        <div class="modal-title" id="modal-absence-title">Disponibilidade do Analista</div>
+        <div class="modal-title" id="modal-absence-title">
+          <i class="fa-solid fa-calendar-check" style="color:#60a5fa;"></i> Disponibilidade &amp; F&eacute;rias
+        </div>
         <button class="btn-modal-close" onclick="App.closeModal('modal-analyst-absence')">&times;</button>
       </div>
       <form id="form-analyst-absence" onsubmit="event.preventDefault(); App.saveAnalystAbsence(event); return false;">
-        <div class="modal-body">
+        <div class="modal-body" style="max-height: calc(88vh - 130px); overflow-y: auto;">
           <input type="hidden" id="absence-analyst-id">
           <input type="hidden" id="absence-date">
+          <input type="hidden" id="absence-mode" value="single">
 
-          <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(255,255,255,0.06); border-radius: 10px; padding: 14px 16px; margin-bottom: 16px;">
-            <div style="font-size: 0.8rem; color: #94a3b8; margin-bottom: 2px;">Analista:</div>
-            <div id="absence-analyst-name" style="font-size: 1.05rem; font-weight: 700; color: #f8fafc; margin-bottom: 6px;">-</div>
-            <div style="font-size: 0.8rem; color: #94a3b8;">Data: <span id="absence-date-display" style="color: #60a5fa; font-weight: 600;">-</span></div>
+          <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(255,255,255,0.06); border-radius: 10px; padding: 12px 16px; margin-bottom: 14px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px;">
+            <div>
+              <div style="font-size: 0.76rem; color: #94a3b8;">Analista:</div>
+              <div id="absence-analyst-name" style="font-size: 1.02rem; font-weight: 700; color: #f8fafc;">-</div>
+            </div>
+            <div style="text-align:right;">
+              <div style="font-size: 0.76rem; color: #94a3b8;">Data selecionada:</div>
+              <div id="absence-date-display" style="color: #60a5fa; font-weight: 600; font-size:0.9rem;">-</div>
+            </div>
+          </div>
+
+          <!-- Abas de Modo (Dia Único / Período-Férias / Escala Semanal) -->
+          <div class="absence-mode-tabs" id="absence-mode-tabs">
+            <button type="button" class="absence-mode-btn active" data-mode="single" onclick="App.setAbsenceMode('single')">
+              <i class="fa-regular fa-calendar"></i> Apenas este dia
+            </button>
+            <button type="button" class="absence-mode-btn" data-mode="range" onclick="App.setAbsenceMode('range')">
+              <i class="fa-solid fa-plane-departure"></i> Per&iacute;odo / F&eacute;rias
+            </button>
+
+          </div>
+
+          <!-- Período (data início e fim) -->
+          <div id="group-absence-range" class="form-group" style="display: none; background: rgba(30,41,59,0.45); border: 1px solid rgba(255,255,255,0.07); border-radius: 10px; padding: 12px;">
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+              <div>
+                <label class="form-label" style="font-size:0.78rem;">Data In&iacute;cio <span class="required">*</span></label>
+                <input type="date" id="absence-start-date" class="form-input">
+              </div>
+              <div>
+                <label class="form-label" style="font-size:0.78rem;">Data Fim <span class="required">*</span></label>
+                <input type="date" id="absence-end-date" class="form-input">
+              </div>
+            </div>
           </div>
 
           <div class="form-group">
-            <label class="form-label">Status do Analista no Dia <span class="required">*</span></label>
+            <label class="form-label">Status / Motivo <span class="required">*</span></label>
             <select id="absence-reason" class="form-select" onchange="App.handleAbsenceReasonChange(this.value)" required>
-              <option value="presente">✅ Presente (Trabalhando Normalmente)</option>
-              <option value="day_off">🏖️ Day Off (Folga)</option>
-              <option value="atestado">🩺 Atestado Médico</option>
-              <option value="ausente">🚫 Ausente / Falta Justificada</option>
-              <option value="fixo_ure">💻 Fixo na URE</option>
+              <option value="presente">&#x2705; Presente (Trabalhando Normalmente)</option>
+              <option value="day_off">&#x1F4C5; Day Off (Folga)</option>
+              <option value="ausente">&#x26D4; Ausente</option>
+              <option value="sem_expediente">&#x1F6AB; Sem Expediente</option>
+              <option value="fixo_ure">&#x1F4BB; Fixo na URE</option>
             </select>
           </div>
 
           <div class="form-group" id="group-absence-note" style="display: none;">
-            <label class="form-label">Observações / Detalhes <span style="color:#64748b; font-size:0.75rem;">(Opcional)</span></label>
-            <input type="text" id="absence-note" class="form-input" placeholder="Ex: Atestado de 1 dia, compensação de horas...">
+            <label class="form-label">Observa&ccedil;&otilde;es / Detalhes <span style="color:#64748b; font-size:0.75rem;">(Opcional)</span></label>
+            <input type="text" id="absence-note" class="form-input" placeholder="Ex: F&eacute;rias anuais, Recesso de fim de ano, compensa&ccedil;&atilde;o de horas...">
           </div>
 
-          <div id="absence-warning-box" style="display: none; background: rgba(239, 68, 68, 0.12); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 8px; padding: 10px 14px; font-size: 0.8rem; color: #fca5a5; line-height: 1.4; margin-top: 10px;">
+          <div id="absence-warning-box" style="display: none; background: rgba(239, 68, 68, 0.12); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 8px; padding: 10px 14px; font-size: 0.78rem; color: #fca5a5; line-height: 1.4; margin-top: 8px;">
             <i class="fa-solid fa-triangle-exclamation" style="margin-right: 6px;"></i>
-            Ao marcar como ausente, o card deste analista no dia será bloqueado para novos agendamentos e transferências.
+            O analista ficar&aacute; sinalizado como indispon&iacute;vel e bloqueado para novas O.S. externas nas datas correspondentes.
+          </div>
+
+          <!-- Regras de Período e Escala Semanal ativas para este analista -->
+          <div id="absence-active-rules-box" style="display: none; margin-top: 14px; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 12px;">
+            <div style="font-size: 0.78rem; font-weight: 700; color: #cbd5e1; margin-bottom: 8px; display:flex; align-items:center; gap:6px;">
+              <i class="fa-solid fa-clock-rotate-left" style="color:#38bdf8;"></i> Per&iacute;odos Ativos deste Analista
+            </div>
+            <div id="absence-active-rules-list" class="absence-rules-list"></div>
           </div>
         </div>
         <div class="modal-footer">

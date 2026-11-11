@@ -793,14 +793,6 @@ class DataStore {
     }
   }
 
-  resetToDefault() {
-    localStorage.removeItem(STORAGE_KEYS.ANALYSTS);
-    localStorage.removeItem(STORAGE_KEYS.SCHOOLS);
-    localStorage.removeItem(STORAGE_KEYS.SCHEDULES);
-    localStorage.removeItem(STORAGE_KEYS.QUEUE);
-    this.init();
-  }
-
   // --- ANALISTAS ---
   getAnalysts() {
     try {
@@ -911,9 +903,7 @@ class DataStore {
     this.setSchedules(list);
   }
 
-  clearAllSchedules() {
-    this.setSchedules([]);
-  }
+
 
   toggleScheduleCompleted(id) {
     const list = this.getSchedules();
@@ -967,11 +957,60 @@ class DataStore {
 
   getAbsence(analystId, dateStr) {
     const list = this.getAbsences();
-    const existing = list.find(a => String(a.analystId).trim() === String(analystId).trim() && a.date === dateStr);
-    if (existing) {
-      return existing;
+    const aid = String(analystId).trim();
+
+    // 1. Override exato do dia (incluindo 'presente' explícito)
+    const exact = list.find(a =>
+      String(a.analystId).trim() === aid &&
+      (!a.type || a.type === 'single') &&
+      a.date === dateStr
+    );
+    if (exact) {
+      return exact;
     }
-    // Se o analista for Pleno, o status padrão diário é automaticamente 'fixo_ure'
+
+    // 2. Período / Férias (startDate <= dateStr <= endDate)
+    const rangeMatch = list.find(a =>
+      String(a.analystId).trim() === aid &&
+      a.type === 'range' &&
+      a.startDate && a.endDate &&
+      dateStr >= a.startDate && dateStr <= a.endDate
+    );
+    if (rangeMatch) {
+      return rangeMatch;
+    }
+
+    // 3. Escala Semanal Fixa (weekdays inclui o dia da semana: 0=Dom..6=Sab)
+    if (dateStr) {
+      const d = new Date(dateStr + 'T12:00:00');
+      const dayOfWeek = isNaN(d.getTime()) ? -1 : d.getDay();
+      const weeklyMatch = list.find(a =>
+        String(a.analystId).trim() === aid &&
+        a.type === 'weekly' &&
+        Array.isArray(a.weekdays) &&
+        a.weekdays.includes(dayOfWeek)
+      );
+      if (weeklyMatch) {
+        return weeklyMatch;
+      }
+    }
+
+    // 4. Sábado (6) e Domingo (0) são bloqueados por padrão como "Sem expediente"
+    if (dateStr) {
+      const dWeekend = new Date(dateStr + 'T12:00:00');
+      const dow = isNaN(dWeekend.getTime()) ? -1 : dWeekend.getDay();
+      if (dow === 0 || dow === 6) {
+        return {
+          id: `${analystId}_${dateStr}`,
+          analystId,
+          date: dateStr,
+          reason: 'sem_expediente',
+          note: '',
+          isDefaultWeekend: true
+        };
+      }
+    }
+    // 4. Se o analista for Pleno, o status padrão diário é automaticamente 'fixo_ure'
     const analyst = this.getAnalystById(analystId);
     if (analyst && (analyst.role || '').toLowerCase().includes('pleno')) {
       return {
@@ -986,13 +1025,55 @@ class DataStore {
     return null;
   }
 
+  getAnalystAbsenceRules(analystId) {
+    const aid = String(analystId).trim();
+    return this.getAbsences().filter(a =>
+      String(a.analystId).trim() === aid &&
+      (a.type === 'range' || a.type === 'weekly')
+    );
+  }
+
   setAbsence(analystId, dateStr, reason, note = '') {
+    const item = { id: `${analystId}_${dateStr}`, type: 'single', analystId, date: dateStr, reason, note, updatedAt: Date.now() };
     if (typeof FirestoreSync !== 'undefined' && FirestoreSync.saveAbsence) {
-      FirestoreSync.saveAbsence({ id: `${analystId}_${dateStr}`, analystId, date: dateStr, reason, note, updatedAt: Date.now() });
+      FirestoreSync.saveAbsence(item);
     }
     const list = this.getAbsences();
-    const idx = list.findIndex(a => String(a.analystId).trim() === String(analystId).trim() && a.date === dateStr);
-    const item = { id: `${analystId}_${dateStr}`, analystId, date: dateStr, reason, note, updatedAt: Date.now() };
+    const idx = list.findIndex(a => String(a.id) === item.id || (String(a.analystId).trim() === String(analystId).trim() && (!a.type || a.type === 'single') && a.date === dateStr));
+    if (idx >= 0) {
+      list[idx] = item;
+    } else {
+      list.push(item);
+    }
+    this.saveAbsences(list);
+    return item;
+  }
+
+  setAbsenceRange(analystId, startDate, endDate, reason, note = '') {
+    const id = `${analystId}_range_${startDate}_${endDate}_${Date.now()}`;
+    const item = { id, type: 'range', analystId, startDate, endDate, reason, note, updatedAt: Date.now() };
+    if (typeof FirestoreSync !== 'undefined' && FirestoreSync.saveAbsence) {
+      FirestoreSync.saveAbsence(item);
+    }
+    const list = this.getAbsences();
+    list.push(item);
+    this.saveAbsences(list);
+    return item;
+  }
+
+  setAbsenceWeekly(analystId, weekdays, reason, note = '') {
+    const id = `${analystId}_weekly`;
+    if (!Array.isArray(weekdays) || weekdays.length === 0) {
+      this.removeAbsenceById(id);
+      return null;
+    }
+    const cleanDays = Array.from(new Set(weekdays.map(Number).filter(n => !isNaN(n) && n >= 0 && n <= 6))).sort((a, b) => a - b);
+    const item = { id, type: 'weekly', analystId, weekdays: cleanDays, reason, note, updatedAt: Date.now() };
+    if (typeof FirestoreSync !== 'undefined' && FirestoreSync.saveAbsence) {
+      FirestoreSync.saveAbsence(item);
+    }
+    const list = this.getAbsences();
+    const idx = list.findIndex(a => String(a.id) === id || (String(a.analystId).trim() === String(analystId).trim() && a.type === 'weekly'));
     if (idx >= 0) {
       list[idx] = item;
     } else {
@@ -1003,14 +1084,24 @@ class DataStore {
   }
 
   removeAbsence(analystId, dateStr) {
+    const targetId = `${analystId}_${dateStr}`;
     if (typeof FirestoreSync !== 'undefined' && FirestoreSync.deleteAbsence) {
-      FirestoreSync.deleteAbsence(`${analystId}_${dateStr}`);
+      FirestoreSync.deleteAbsence(targetId);
     }
-    const list = this.getAbsences().filter(a => !(String(a.analystId).trim() === String(analystId).trim() && a.date === dateStr));
+    const list = this.getAbsences().filter(a => !(String(a.analystId).trim() === String(analystId).trim() && (!a.type || a.type === 'single') && a.date === dateStr));
     this.saveAbsences(list);
   }
 
-    // ==========================================
+  removeAbsenceById(id) {
+    if (!id) return;
+    if (typeof FirestoreSync !== 'undefined' && FirestoreSync.deleteAbsence) {
+      FirestoreSync.deleteAbsence(id);
+    }
+    const list = this.getAbsences().filter(a => String(a.id) !== String(id));
+    this.saveAbsences(list);
+  }
+
+  // ==========================================
   // ATENDIMENTOS URE (INTERNO)
   // ==========================================
   getUreAttendances() {
@@ -1183,6 +1274,19 @@ _Por favor, confirme o recebimento e anexe a ordem concluída._`;
     this.setScheduleSubjects(list);
     return true;
   }
+  updateScheduleSubject(oldName, newName) {
+    const trimmedNew = (newName || '').trim();
+    if (!trimmedNew) return { ok: false, reason: 'empty' };
+    const list = this.getScheduleSubjects();
+    const idx = list.findIndex(s => s.toLowerCase() === (oldName || '').trim().toLowerCase());
+    if (idx === -1) return { ok: false, reason: 'not_found' };
+    if (list.some((s, i) => i !== idx && s.toLowerCase() === trimmedNew.toLowerCase())) {
+      return { ok: false, reason: 'duplicate' };
+    }
+    list[idx] = trimmedNew;
+    this.setScheduleSubjects(list);
+    return { ok: true };
+  }
 
   // ==========================================
   // SETORES DA URE
@@ -1234,6 +1338,19 @@ _Por favor, confirme o recebimento e anexe a ordem concluída._`;
     this.setUreSectors(list);
     return true;
   }
+  updateUreSector(oldName, newName) {
+    const trimmedNew = (newName || '').trim();
+    if (!trimmedNew) return { ok: false, reason: 'empty' };
+    const list = this.getUreSectors();
+    const idx = list.findIndex(s => s.toLowerCase() === (oldName || '').trim().toLowerCase());
+    if (idx === -1) return { ok: false, reason: 'not_found' };
+    if (list.some((s, i) => i !== idx && s.toLowerCase() === trimmedNew.toLowerCase())) {
+      return { ok: false, reason: 'duplicate' };
+    }
+    list[idx] = trimmedNew;
+    this.setUreSectors(list);
+    return { ok: true };
+  }
 
   // ==========================================
   // TIPOS / ASSUNTOS ATENDIMENTO URE
@@ -1284,6 +1401,19 @@ _Por favor, confirme o recebimento e anexe a ordem concluída._`;
     const list = this.getUreTypes().filter(s => s.toLowerCase() !== (name || '').trim().toLowerCase());
     this.setUreTypes(list);
     return true;
+  }
+  updateUreType(oldName, newName) {
+    const trimmedNew = (newName || '').trim();
+    if (!trimmedNew) return { ok: false, reason: 'empty' };
+    const list = this.getUreTypes();
+    const idx = list.findIndex(s => s.toLowerCase() === (oldName || '').trim().toLowerCase());
+    if (idx === -1) return { ok: false, reason: 'not_found' };
+    if (list.some((s, i) => i !== idx && s.toLowerCase() === trimmedNew.toLowerCase())) {
+      return { ok: false, reason: 'duplicate' };
+    }
+    list[idx] = trimmedNew;
+    this.setUreTypes(list);
+    return { ok: true };
   }
 }
 

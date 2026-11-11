@@ -310,40 +310,70 @@ const FirestoreSync = {
       console.warn('Falha ao salvar tipos URE no Firestore:', e);
     }
   },
-  async clearAllSchedules() {
-    try {
-      const snap = await db.collection("agendamentos").get();
-      const docs = snap.docs;
-      for (let i = 0; i < docs.length; i += 400) {
-        const chunk = docs.slice(i, i + 400);
-        const batch = db.batch();
-        chunk.forEach(d => batch.delete(d.ref));
-        await batch.commit();
+  async replaceCollection(colName, items, idField) {
+    const snap = await db.collection(colName).get();
+    const newMap = new Map();
+    items.forEach(item => {
+      if (item && item[idField] !== undefined && item[idField] !== null) {
+        newMap.set(String(item[idField]), item);
       }
-      return true;
-    } catch (e) {
-      console.warn("Falha ao zerar agendamentos no Firestore:", e);
-      throw e;
+    });
+
+    const ops = [];
+    snap.forEach(doc => {
+      if (!newMap.has(doc.id)) {
+        ops.push({ type: 'delete', ref: doc.ref });
+      }
+    });
+    newMap.forEach((item, docId) => {
+      ops.push({ type: 'set', ref: db.collection(colName).doc(docId), data: item });
+    });
+
+    for (let i = 0; i < ops.length; i += 400) {
+      const chunk = ops.slice(i, i + 400);
+      const batch = db.batch();
+      chunk.forEach(op => {
+        if (op.type === 'delete') batch.delete(op.ref);
+        else batch.set(op.ref, op.data);
+      });
+      await batch.commit();
     }
   },
 
-
-
-  async wipeAll() {
+  async restoreBackup(data) {
     try {
-      const collections = ["escolas", "analistas", "agendamentos", "fila"];
-      for (const col of collections) {
-        const snap = await db.collection(col).get();
-        const docs = snap.docs;
-        for (let i = 0; i < docs.length; i += 400) {
-          const chunk = docs.slice(i, i + 400);
-          const batch = db.batch();
-          chunk.forEach(d => batch.delete(d.ref));
-          await batch.commit();
+      if (Array.isArray(data.analysts)) {
+        await this.replaceCollection("analistas", data.analysts, "id");
+      }
+      if (Array.isArray(data.schools)) {
+        await this.replaceCollection("escolas", data.schools, "cie");
+      }
+      if (Array.isArray(data.schedules)) {
+        await this.replaceCollection("agendamentos", data.schedules, "id");
+      }
+      if (Array.isArray(data.queue)) {
+        await this.replaceCollection("fila", data.queue, "id");
+      }
+      if (Array.isArray(data.ureAttendances)) {
+        await this.replaceCollection("ure_atendimentos", data.ureAttendances, "id");
+      }
+      if (Array.isArray(data.absences)) {
+        await this.replaceCollection("ausencias_analistas", data.absences, "id");
+      }
+      if (data.config && typeof data.config === "object") {
+        const cfgPayload = {};
+        if (data.config.whatsappTemplate) cfgPayload.whatsappTemplate = data.config.whatsappTemplate;
+        if (Array.isArray(data.config.scheduleSubjects)) cfgPayload.scheduleSubjects = data.config.scheduleSubjects;
+        if (Array.isArray(data.config.ureSectors)) cfgPayload.ureSectors = data.config.ureSectors;
+        if (Array.isArray(data.config.ureTypes)) cfgPayload.ureTypes = data.config.ureTypes;
+        if (Object.keys(cfgPayload).length > 0) {
+          await db.collection("config").doc("geral").set(cfgPayload, { merge: true });
         }
       }
+      return true;
     } catch (e) {
-      console.warn("Falha ao zerar Firestore:", e);
+      console.warn("Falha ao restaurar backup no Firestore:", e);
+      throw e;
     }
   }
 };

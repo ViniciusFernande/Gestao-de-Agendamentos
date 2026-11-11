@@ -151,8 +151,8 @@ const App = {
       this.renderAgenda();
     } else if (this.currentView === 'todos-agendamentos') {
       this.renderAllSchedulesTable();
-    } else if (this.currentView === 'fila') {
-      this.renderQueue();
+    } else if (this.currentView === 'filas-visita') {
+      this.renderQueueView();
     } else if (this.currentView === 'analistas') {
       this.renderAnalystsTable();
     } else if (this.currentView === 'escolas') {
@@ -160,8 +160,8 @@ const App = {
     }
     if (collection === 'schools') {
       this.sanitizeSchoolPhones();
-    } else if (this.currentView === 'ranking') {
-      this.renderRanking();
+    } else if (this.currentView === 'ranking-escolas') {
+      this.renderSchoolsRanking();
     } else if (this.currentView === 'relatorios') {
       this.generateReport();
     }
@@ -189,9 +189,33 @@ const App = {
     this.updateDashboard();
   },
 
+  getLocalDateStr(dateInput = new Date()) {
+    const d = (dateInput instanceof Date) ? dateInput : new Date(dateInput);
+    if (isNaN(d.getTime())) return '';
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  },
+
+  getLocalDateTimeInputStr(dateInput = new Date()) {
+    const d = (dateInput instanceof Date) ? dateInput : new Date(dateInput);
+    if (isNaN(d.getTime())) return '';
+    const hh = String(d.getHours()).padStart(2, '0');
+    const min = String(d.getMinutes()).padStart(2, '0');
+    return `${this.getLocalDateStr(d)}T${hh}:${min}`;
+  },
+
+  extractLocalDateStr(val) {
+    if (!val) return '';
+    const str = String(val).trim();
+    if (/^\d{4}-\d{2}-\d{2}$/.test(str)) return str;
+    return this.getLocalDateStr(new Date(str));
+  },
+
   setupDateDefaults() {
     const today = new Date();
-    const todayStr = today.toISOString().split('T')[0];
+    const todayStr = App.getLocalDateStr(today);
     const day = String(today.getDate()).padStart(2, '0');
     const month = String(today.getMonth() + 1).padStart(2, '0');
     const year = today.getFullYear();
@@ -310,6 +334,10 @@ const App = {
       this.renderSchoolsTable();
     } else if (viewId === 'relatorios') {
       this.generateReport();
+    } else if (viewId === 'configuracoes') {
+      this.currentSettingsSection = null;
+      this.editingSettingsItem = null;
+      this.initSettingsView();
     } else if (viewId === 'configuracoes') {
       this.initSettingsView();
     }
@@ -552,7 +580,7 @@ const App = {
     const now = new Date();
     const currentYear = now.getFullYear();
     const currentMonth = now.getMonth();
-    const todayStr = now.toISOString().split('T')[0];
+    const todayStr = App.getLocalDateStr(now);
 
     // 1. Filtrar conforme o período selecionado (Mês, Dia, Total)
     let filteredCompleted = [];
@@ -752,7 +780,7 @@ const App = {
     const container = document.getElementById('today-schedules-container');
     if (!container) return;
 
-    const todayStr = new Date().toISOString().split('T')[0];
+    const todayStr = App.getLocalDateStr();
     
     // Agendamentos de hoje
     const todayList = schedules.filter(s => s.date === todayStr);
@@ -1015,7 +1043,7 @@ const App = {
   },
 
   clearScheduleFilters() {
-    const todayStr = new Date().toISOString().split('T')[0];
+    const todayStr = App.getLocalDateStr();
     document.getElementById('filter-sched-analyst').value = 'all';
     document.getElementById('filter-sched-date').value = todayStr; // Retorna sempre ao dia atual por padrão
     document.getElementById('filter-sched-status').value = 'all';
@@ -1024,7 +1052,7 @@ const App = {
   },
 
   setScheduleDateFilterToday() {
-    const todayStr = new Date().toISOString().split('T')[0];
+    const todayStr = App.getLocalDateStr();
     const dateInput = document.getElementById('filter-sched-date');
     if (dateInput) {
       dateInput.value = todayStr;
@@ -1063,7 +1091,7 @@ const App = {
     document.getElementById('modal-schedule-title').textContent = 'Novo Agendamento de O.S.';
     
     // Auto-preenche data com hoje
-    document.getElementById('sched-date').value = new Date().toISOString().split('T')[0];
+    document.getElementById('sched-date').value = App.getLocalDateStr();
     // Número da O.S. inicia vazio (opcional)
     document.getElementById('sched-os-number').value = '';
     const svcTypeEl = document.getElementById('sched-service-type'); if (svcTypeEl) svcTypeEl.value = '';
@@ -1112,11 +1140,11 @@ const App = {
     const activeSubjects = (typeof store !== 'undefined' && store.getScheduleSubjects)
       ? store.getScheduleSubjects()
       : PREDEFINED_SUBJECTS.map(s => s.name);
-    const isPredefined = activeSubjects.includes(sched.subject) ||
-      (sched.subject === 'Manutenção de Maquinas' && activeSubjects.includes('Manutenção de Máquinas'));
+    const normSchedSubj = this._normalizeSubjectForStats(sched.subject).display;
+    const isPredefined = activeSubjects.includes(sched.subject) || activeSubjects.includes(normSchedSubj);
 
     if (isPredefined) {
-      if (selectSub) selectSub.value = (sched.subject === 'Manutenção de Maquinas') ? 'Manutenção de Máquinas' : sched.subject;
+      if (selectSub) selectSub.value = activeSubjects.includes(sched.subject) ? sched.subject : normSchedSubj;
       if (inputCustom) {
         inputCustom.style.display = 'none';
         inputCustom.value = '';
@@ -1146,8 +1174,8 @@ const App = {
       if (absence && absence.reason && absence.reason !== 'presente') {
         const analystObj = store.getAnalystById(analystId);
         const name = analystObj ? analystObj.name : 'Este analista';
-        const labels = { day_off: 'Day Off (Folga)', atestado: 'Atestado Médico', ausente: 'Ausente', fixo_ure: 'Fixo na URE' };
-        alert(`Não é possível agendar: ${name} está marcado(a) como "${labels[absence.reason] || 'Ausente'}" na data ${date.split('-').reverse().join('/')}.`);
+        const absMeta = this._getAbsenceMeta(absence.reason);
+        alert(`Não é possível agendar: ${name} está marcado(a) como "${absMeta.label || 'Ausente'}" na data ${date.split('-').reverse().join('/')}.`);
         return;
       }
     }
@@ -1521,21 +1549,21 @@ const App = {
   // Métodos de navegação de data na Agenda Analistas
   prevAgendaDate() {
     if (!this.selectedAgendaDate) {
-      this.selectedAgendaDate = new Date().toISOString().split('T')[0];
+      this.selectedAgendaDate = App.getLocalDateStr();
     }
-    const d = new Date(this.selectedAgendaDate + 'T00:00:00');
+    const d = new Date(this.selectedAgendaDate + 'T12:00:00');
     d.setDate(d.getDate() - 1);
-    this.selectedAgendaDate = d.toISOString().split('T')[0];
+    this.selectedAgendaDate = App.getLocalDateStr(d);
     this.renderAnalystDailyCards();
   },
 
   nextAgendaDate() {
     if (!this.selectedAgendaDate) {
-      this.selectedAgendaDate = new Date().toISOString().split('T')[0];
+      this.selectedAgendaDate = App.getLocalDateStr();
     }
-    const d = new Date(this.selectedAgendaDate + 'T00:00:00');
+    const d = new Date(this.selectedAgendaDate + 'T12:00:00');
     d.setDate(d.getDate() + 1);
-    this.selectedAgendaDate = d.toISOString().split('T')[0];
+    this.selectedAgendaDate = App.getLocalDateStr(d);
     this.renderAnalystDailyCards();
   },
 
@@ -1547,7 +1575,7 @@ const App = {
   },
 
   setAgendaDateToday() {
-    this.selectedAgendaDate = new Date().toISOString().split('T')[0];
+    this.selectedAgendaDate = App.getLocalDateStr();
     this.renderAnalystDailyCards();
   },
 
@@ -1558,7 +1586,7 @@ const App = {
     const container = document.getElementById('analyst-cards-container');
     if (!container) return;
 
-    const todayStr = new Date().toISOString().split('T')[0];
+    const todayStr = App.getLocalDateStr();
     const todayFmt = new Date().toLocaleDateString('pt-BR');
     if (!this.selectedAgendaDate) {
       this.selectedAgendaDate = todayStr;
@@ -1625,6 +1653,8 @@ const App = {
     if (statReturns) statReturns.textContent = returnsCount;
     if (statPending) statPending.textContent = pendingCount;
 
+
+
     if (analysts.length === 0) {
       container.innerHTML = '<div style="grid-column: 1/-1; text-align:center; padding:40px; color:var(--text-muted);">Nenhum analista ativo cadastrado no sistema.</div>';
       return;
@@ -1659,20 +1689,15 @@ const App = {
       let absenceBtnStyle = 'background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); color: #94a3b8;';
 
       if (isAbsent) {
-        const r = absence.reason;
-        if (r === 'day_off') {
-          absenceBadgeHtml = `<div style="background: rgba(245, 158, 11, 0.15); border: 1px solid rgba(245, 158, 11, 0.3); color: #fbbf24; border-radius: 6px; padding: 4px 10px; font-size: 0.75rem; font-weight: 700; display: inline-flex; align-items: center; gap: 6px; margin-top: 6px;"><i class="fa-solid fa-umbrella-beach"></i> DAY OFF (FOLGA)</div>`;
-          absenceBtnStyle = 'background: rgba(245, 158, 11, 0.2); border: 1px solid #f59e0b; color: #fbbf24;';
-        } else if (r === 'atestado') {
-          absenceBadgeHtml = `<div style="background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.3); color: #f87171; border-radius: 6px; padding: 4px 10px; font-size: 0.75rem; font-weight: 700; display: inline-flex; align-items: center; gap: 6px; margin-top: 6px;"><i class="fa-solid fa-notes-medical"></i> ATESTADO MÉDICO</div>`;
-          absenceBtnStyle = 'background: rgba(239, 68, 68, 0.2); border: 1px solid #ef4444; color: #f87171;';
-        } else if (r === 'fixo_ure') {
-          absenceBadgeHtml = `<div style="background: rgba(59, 130, 246, 0.15); border: 1px solid rgba(59, 130, 246, 0.3); color: #60a5fa; border-radius: 6px; padding: 4px 10px; font-size: 0.75rem; font-weight: 700; display: inline-flex; align-items: center; gap: 6px; margin-top: 6px;"><i class="fa-solid fa-laptop"></i> FIXO NA URE</div>`;
-          absenceBtnStyle = 'background: rgba(59, 130, 246, 0.2); border: 1px solid #3b82f6; color: #60a5fa;';
-        } else {
-          absenceBadgeHtml = `<div style="background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.3); color: #f87171; border-radius: 6px; padding: 4px 10px; font-size: 0.75rem; font-weight: 700; display: inline-flex; align-items: center; gap: 6px; margin-top: 6px;"><i class="fa-solid fa-user-xmark"></i> AUSENTE</div>`;
-          absenceBtnStyle = 'background: rgba(239, 68, 68, 0.2); border: 1px solid #ef4444; color: #f87171;';
-        }
+        const meta = this._getAbsenceMeta(absence.reason);
+        let suffixTxt = '';
+        if (absence.type === 'range' && absence.startDate && absence.endDate) {
+          const sFmt = absence.startDate.split('-').reverse().join('/');
+          const eFmt = absence.endDate.split('-').reverse().join('/');
+          suffixTxt = ` (${sFmt} a ${eFmt})`;
+        } 
+        absenceBadgeHtml = `<div style="background: ${meta.bgColor}; border: 1px solid ${meta.borderColor}; color: ${meta.color}; border-radius: 6px; padding: 4px 10px; font-size: 0.75rem; font-weight: 700; display: inline-flex; align-items: center; gap: 6px; margin-top: 6px;"><i class="fa-solid ${meta.icon}"></i> ${meta.badge}${suffixTxt}</div>`;
+        absenceBtnStyle = `background: ${meta.bgColor}; border: 1px solid ${meta.borderColor}; color: ${meta.color};`;
         if (absence.note) {
           absenceBadgeHtml += `<div style="font-size: 0.72rem; color: #94a3b8; font-style: italic; margin-top: 3px;">"${this.escapeHtml(absence.note)}"</div>`;
         }
@@ -1694,7 +1719,7 @@ const App = {
       </button>`;
 
       cardsHtml += `
-        <div class="analyst-daily-card ${isAbsent ? 'is-analyst-absent' : ''}" id="analyst-card-${analyst.id}" style="${isAbsent ? (absence && absence.reason === 'fixo_ure' ? 'border: 1px solid rgba(59,130,246,0.35); background: linear-gradient(180deg, rgba(30,41,59,0.85) 0%, rgba(15,23,42,0.95) 100%); opacity: 0.92;' : 'border: 1px solid rgba(239,68,68,0.35); background: linear-gradient(180deg, rgba(30,41,59,0.85) 0%, rgba(15,23,42,0.95) 100%); opacity: 0.88;') : ''}">
+        <div class="analyst-daily-card ${isAbsent ? 'is-analyst-absent' : ''}" id="analyst-card-${analyst.id}" style="${isAbsent ? (absence && absence.reason === 'fixo_ure' ? 'border: 1px solid rgba(59,130,246,0.35); background: linear-gradient(180deg, rgba(30,41,59,0.85) 0%, rgba(15,23,42,0.95) 100%); opacity: 0.92;' : (absence && absence.reason === 'sem_expediente' ? 'border: 1px solid rgba(148,163,184,0.3); background: linear-gradient(180deg, rgba(30,41,59,0.85) 0%, rgba(15,23,42,0.95) 100%); opacity: 0.9;' : 'border: 1px solid rgba(239,68,68,0.35); background: linear-gradient(180deg, rgba(30,41,59,0.85) 0%, rgba(15,23,42,0.95) 100%); opacity: 0.88;')) : ''}">
           
           <!-- Topo do Card: Nome, Botão Ausência e Botão Enviar Agenda -->
           <div class="analyst-daily-header">
@@ -1855,17 +1880,25 @@ const App = {
       } else {
         // Estado vazio ou ausente
         if (isAbsent) {
+          const absMeta = this._getAbsenceMeta(absence ? absence.reason : 'ausente');
           const isFixoUre = absence && absence.reason === 'fixo_ure';
+          const isFerias = absence && absence.reason === 'ferias';
+          const isRecesso = absence && absence.reason === 'recesso';
+          const isSemExpediente = absence && absence.reason === 'sem_expediente';
           const absentMsg = isFixoUre
             ? 'Analista em atendimento interno na URE. Para agendar visita em escola, altere para Presente.'
-            : 'Card bloqueado para agendamentos devido à ausência informada.';
+            : (isFerias
+                ? 'Analista em período de férias programadas. Card bloqueado para agendamentos.'
+                : (isRecesso
+                    ? 'Analista em período de recesso programado. Card bloqueado para agendamentos.'
+                    : (isSemExpediente
+                        ? 'Atendimentos ocorrem de segunda a sexta-feira. Caso precise trabalhar neste dia, altere para Presente.'
+                        : 'Card bloqueado para agendamentos devido à ausência informada.')));
           const absentTitle = isFixoUre
             ? 'Analista Fixo na URE'
-            : 'Analista Indisponível';
-          const absentIcon = isFixoUre
-            ? '<i class="fa-solid fa-laptop" style="font-size:1.15rem; color:#60a5fa; opacity: 0.95;"></i>'
-            : '<i class="fa-solid fa-ban" style="font-size:1.15rem; color:#ef4444; opacity: 0.9;"></i>';
-          const titleColor = isFixoUre ? '#93c5fd' : '#fca5a5';
+            : (isFerias ? 'Analista em Férias' : (isRecesso ? 'Analista em Recesso' : 'Analista Indisponível'));
+          const absentIcon = `<i class="fa-solid ${absMeta.icon}" style="font-size:1.15rem; color:${absMeta.color}; opacity: 0.95;"></i>`;
+          const titleColor = absMeta.color;
 
           cardsHtml += `
             <div class="card-empty-state" style="padding: 12px 14px; gap: 6px; opacity: 0.95;">
@@ -1914,13 +1947,13 @@ const App = {
   },
 
   openNewScheduleForAnalyst(analystId, customDate) {
-    const targetDate = customDate || this.selectedAgendaDate || new Date().toISOString().split('T')[0];
+    const targetDate = customDate || this.selectedAgendaDate || App.getLocalDateStr();
     const absence = store.getAbsence(analystId, targetDate);
     if (absence && absence.reason && absence.reason !== 'presente') {
       const analystObj = store.getAnalystById(analystId);
       const name = analystObj ? analystObj.name : 'Este analista';
-      const labels = { day_off: 'Day Off (Folga)', atestado: 'Atestado Médico', ausente: 'Ausente', fixo_ure: 'Fixo na URE' };
-      alert(`Agendamento bloqueado: ${name} está marcado(a) como "${labels[absence.reason] || 'Ausente'}" nesta data.`);
+      const absMeta = this._getAbsenceMeta(absence.reason);
+      alert(`Agendamento bloqueado: ${name} está marcado(a) como "${absMeta.label || 'Ausente'}" nesta data.`);
       return;
     }
     this.openNewScheduleModal();
@@ -2473,7 +2506,7 @@ const App = {
     // Data padrão de retorno: amanhã
     const tomorrow = new Date();
     tomorrow.setDate(tomorrow.getDate() + 1);
-    document.getElementById('return-picked-date').value = tomorrow.toISOString().split('T')[0];
+    document.getElementById('return-picked-date').value = App.getLocalDateStr(tomorrow);
     document.getElementById('return-picked-obs').value = '';
 
     this.openModal('modal-return');
@@ -2635,13 +2668,13 @@ const App = {
       return; // Já pertence a este analista
     }
 
-    const currentDate = this.selectedAgendaDate || new Date().toISOString().split('T')[0];
+    const currentDate = this.selectedAgendaDate || App.getLocalDateStr();
     const absence = store.getAbsence(targetAnalystId, currentDate);
     if (absence && absence.reason && absence.reason !== 'presente') {
       const analystObj = store.getAnalystById(targetAnalystId);
       const name = analystObj ? analystObj.name : 'Este analista';
-      const labels = { day_off: 'Day Off (Folga)', atestado: 'Atestado Médico', ausente: 'Ausente', fixo_ure: 'Fixo na URE' };
-      alert(`Transferência bloqueada: ${name} está marcado(a) como "${labels[absence.reason] || 'Ausente'}" nesta data.`);
+      const absMeta = this._getAbsenceMeta(absence.reason);
+      alert(`Transferência bloqueada: ${name} está marcado(a) como "${absMeta.label || 'Ausente'}" nesta data.`);
       return;
     }
 
@@ -2722,7 +2755,7 @@ const App = {
   },
 
   openDailyAgendaModal(analystId, customDate) {
-    const targetDate = customDate || this.selectedAgendaDate || new Date().toISOString().split('T')[0];
+    const targetDate = customDate || this.selectedAgendaDate || App.getLocalDateStr();
     const analyst = store.getAnalystById(analystId) || { name: 'Analista', phone: '', neighborhood: '' };
     const schedules = store.getSchedules();
 
@@ -3099,7 +3132,7 @@ const App = {
 
     document.getElementById('analyst-id').value = '';
     document.getElementById('modal-analyst-title').textContent = 'Novo Analista';
-    document.getElementById('analyst-start-date').value = new Date().toISOString().split('T')[0];
+    document.getElementById('analyst-start-date').value = App.getLocalDateStr();
     document.getElementById('analyst-status').value = 'ativo';
     const roleEl = document.getElementById('analyst-role'); if (roleEl) roleEl.value = '';
 
@@ -3271,7 +3304,7 @@ const App = {
 
     return `
       <!-- 2ª LUGAR: PRATA -->
-      <div class="podium-card podium-silver">
+      <div class="podium-card podium-silver" style="cursor:pointer;" title="Clique para ver o Prontuário da Escola" data-cie="${this.escapeHtml(second.cie)}" data-name="${this.escapeHtml(second.name)}" onclick="App.openSchoolRecordModal(this.dataset.cie, this.dataset.name)">
         <div class="podium-medal-icon">🥈</div>
         <div class="podium-badge medal-badge-silver"><i class="fa-solid fa-medal"></i> 2º Lugar — Prata</div>
         <div class="podium-school-name" title="${second.name}">${second.name}</div>
@@ -3283,7 +3316,7 @@ const App = {
       </div>
 
       <!-- 1ª LUGAR: OURO (DESTAQUE CENTRAL) -->
-      <div class="podium-card podium-gold">
+      <div class="podium-card podium-gold" style="cursor:pointer;" title="Clique para ver o Prontuário da Escola" data-cie="${this.escapeHtml(first.cie)}" data-name="${this.escapeHtml(first.name)}" onclick="App.openSchoolRecordModal(this.dataset.cie, this.dataset.name)">
         <div class="podium-crown"><i class="fa-solid fa-crown"></i></div>
         <div class="podium-medal-icon">🥇</div>
         <div class="podium-badge medal-badge-gold"><i class="fa-solid fa-medal"></i> 1º Lugar — Ouro</div>
@@ -3296,7 +3329,7 @@ const App = {
       </div>
 
       <!-- 3ª LUGAR: BRONZE -->
-      <div class="podium-card podium-bronze">
+      <div class="podium-card podium-bronze" style="cursor:pointer;" title="Clique para ver o Prontuário da Escola" data-cie="${this.escapeHtml(third.cie)}" data-name="${this.escapeHtml(third.name)}" onclick="App.openSchoolRecordModal(this.dataset.cie, this.dataset.name)">
         <div class="podium-medal-icon">🥉</div>
         <div class="podium-badge medal-badge-bronze"><i class="fa-solid fa-medal"></i> 3º Lugar — Bronze</div>
         <div class="podium-school-name" title="${third.name}">${third.name}</div>
@@ -3335,7 +3368,7 @@ const App = {
       const crownHtml = cfg.hasCrown ? '<div class="dash-rank-crown-wrap"><i class="fa-solid fa-crown rank-crown-icon"></i></div>' : '';
 
       html += `
-        <div class="dash-rank-item ${cfg.class}">
+        <div class="dash-rank-item ${cfg.class}" style="cursor:pointer;" title="Clique para ver o Prontuário da Escola" data-cie="${this.escapeHtml(item.cie)}" data-name="${this.escapeHtml(item.name)}" onclick="App.openSchoolRecordModal(this.dataset.cie, this.dataset.name)">
           <div class="dash-rank-medal">
             ${crownHtml}
             <div class="dash-rank-badge ${cfg.badgeClass}">
@@ -3501,7 +3534,7 @@ const App = {
         <tr class="${rowHighlightClass}">
           <td style="text-align: center;">${positionHtml}</td>
           <td>
-            <strong style="color:#ffffff; font-size:0.92rem;">${item.name}</strong>
+            <strong class="school-name-link" style="font-size:0.92rem;" title="Clique para ver o Prontuário Técnico da Escola" data-cie="${this.escapeHtml(item.cie)}" data-name="${this.escapeHtml(item.name)}" onclick="App.openSchoolRecordModal(this.dataset.cie, this.dataset.name)"><i class="fa-solid fa-file-medical" style="color:#38bdf8; font-size:0.8rem;"></i> ${this.escapeHtml(item.name)}</strong>
           </td>
           <td><span style="color:#60a5fa; font-weight:700;">${item.cie}</span></td>
           <td>${item.director}</td>
@@ -3541,7 +3574,7 @@ const App = {
       rows += `
         <tr>
           <td><strong style="color:#60a5fa;">${s.cie}</strong></td>
-          <td><span style="font-weight:600; color:#ffffff;">${s.name}</span></td>
+          <td><span class="school-name-link" title="Clique para ver o Prontuário Técnico da Escola" data-cie="${this.escapeHtml(s.cie)}" data-name="${this.escapeHtml(s.name)}" onclick="App.openSchoolRecordModal(this.dataset.cie, this.dataset.name)"><i class="fa-solid fa-file-medical" style="color:#38bdf8; font-size:0.8rem;"></i> ${this.escapeHtml(s.name)}</span></td>
           <td>${s.director || '-'}</td>
           <td>${this.formatPhone(s.phone)}</td>
           <td>${s.neighborhood || '-'}</td>
@@ -3605,7 +3638,16 @@ const App = {
       store.deleteSchool(originalCie);
     }
 
-    store.saveSchool({ cie, name, director, phone, neighborhood });
+    const existingSchool = store.getSchoolByCie(originalCie || cie);
+    const schoolPayload = {
+      ...(existingSchool || {}),
+      cie,
+      name,
+      director,
+      phone,
+      neighborhood
+    };
+    store.saveSchool(schoolPayload);
     this.closeModal('modal-school');
     this.renderSchoolsTable();
   },
@@ -3616,6 +3658,242 @@ const App = {
       store.deleteSchool(cie);
       this.renderSchoolsTable();
     }
+  },
+
+  // =========================================================================
+  // PRONTUÁRIO TÉCNICO DA ESCOLA (CHECKLIST, RECORRÊNCIA, ANOTAÇÕES E HISTÓRICO)
+  // =========================================================================
+  _normalizeSubjectForStats(rawSubject) {
+    const cleaned = String(rawSubject || 'Atendimento Geral').replace(/^Retorno:\s*/gi, '').trim() || 'Atendimento Geral';
+    const normKey = cleaned
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .replace(/\bmaquians\b/g, 'maquinas')
+      .replace(/\s+/g, ' ')
+      .trim();
+
+    if (normKey === 'manutencao de maquinas') {
+      return { key: normKey, display: 'Manutenção de Máquinas' };
+    }
+
+    const activeSubjects = (typeof store !== 'undefined' && store.getScheduleSubjects) ? store.getScheduleSubjects() : [];
+    const matched = activeSubjects.find(s =>
+      String(s).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\s+/g, ' ').trim() === normKey
+    );
+
+    return { key: normKey, display: matched || cleaned };
+  },
+
+  openSchoolRecordModal(cie, fallbackName = '') {
+    const cleanCie = String(cie || '').trim();
+    const schoolObj = cleanCie ? store.getSchoolByCie(cleanCie) : null;
+    const schoolName = schoolObj?.name || fallbackName || 'Escola';
+    const director = schoolObj?.director || '-';
+    const phone = schoolObj?.phone ? this.formatPhone(schoolObj.phone) : '-';
+    const neighborhood = schoolObj?.neighborhood || '-';
+
+    this._currentSchoolRecord = { cie: cleanCie, name: schoolName, director };
+
+    // Header
+    const nameEl = document.getElementById('sr-school-name');
+    if (nameEl) nameEl.textContent = schoolName;
+
+    const metaEl = document.getElementById('sr-school-meta');
+    if (metaEl) {
+      metaEl.innerHTML = `
+        <span><i class="fa-solid fa-hashtag" style="color:#60a5fa;"></i> CIE: <strong>${this.escapeHtml(cleanCie || '-')}</strong></span>
+        <span><i class="fa-solid fa-user-tie" style="color:#a78bfa;"></i> Diretor(a): ${this.escapeHtml(director)}</span>
+        <span><i class="fa-solid fa-phone" style="color:#34d399;"></i> ${this.escapeHtml(phone)}</span>
+        <span><i class="fa-solid fa-location-dot" style="color:#fbbf24;"></i> ${this.escapeHtml(neighborhood)}</span>
+      `;
+    }
+
+    // Coleta agendamentos da escola (por CIE ou por nome normalizado se CIE não bater)
+    const norm = s => String(s || '').trim().toLowerCase();
+    const allSchedules = store.getSchedules();
+    const schoolSchedules = allSchedules.filter(s => {
+      if (cleanCie && String(s.schoolCie || '').trim() === cleanCie) return true;
+      if (fallbackName && norm(s.schoolName) === norm(fallbackName)) return true;
+      return false;
+    }).sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+
+    // Fila pendente desta escola
+    const queueItems = store.getQueue().filter(q => {
+      if (cleanCie && String(q.schoolCie || '').trim() === cleanCie) return true;
+      if (fallbackName && norm(q.schoolName) === norm(fallbackName)) return true;
+      return false;
+    });
+
+    const totalVisits = schoolSchedules.length;
+    const completedVisits = schoolSchedules.filter(s => s.completed).length;
+    const returnVisits = schoolSchedules.filter(s => s.needsReturn && !s.completed).length;
+
+    // 1. KPIs
+    const kpisEl = document.getElementById('sr-kpis-container');
+    if (kpisEl) {
+      kpisEl.innerHTML = `
+        <div class="sr-kpi-card">
+          <div class="sr-kpi-val">${totalVisits}</div>
+          <div class="sr-kpi-lbl">Total de Visitas</div>
+        </div>
+        <div class="sr-kpi-card">
+          <div class="sr-kpi-val" style="color:#4ade80;">${completedVisits}</div>
+          <div class="sr-kpi-lbl">Conclu&iacute;das</div>
+        </div>
+        <div class="sr-kpi-card">
+          <div class="sr-kpi-val" style="color:#fbbf24;">${returnVisits}</div>
+          <div class="sr-kpi-lbl">Com Retorno Pendente</div>
+        </div>
+        <div class="sr-kpi-card">
+          <div class="sr-kpi-val" style="color:#38bdf8;">${queueItems.length}</div>
+          <div class="sr-kpi-lbl">Na Fila de Chamados</div>
+        </div>
+      `;
+    }
+
+    // 2. Recorrência de problemas nos últimos 3 meses (90 dias) + total
+    const now = new Date();
+    const cutoff = new Date(now);
+    cutoff.setDate(cutoff.getDate() - 90);
+    const cutoffStr = this.getLocalDateStr(cutoff);
+
+    const subjectStats = {};
+    schoolSchedules.forEach(s => {
+      const { key, display } = this._normalizeSubjectForStats(s.subject);
+      if (!subjectStats[key]) {
+        subjectStats[key] = { subject: display, total: 0, last90: 0 };
+      }
+      subjectStats[key].total++;
+      if ((s.date || '') >= cutoffStr) {
+        subjectStats[key].last90++;
+      }
+    });
+
+    const recList = Object.values(subjectStats).sort((a, b) => b.total - a.total);
+    const recEl = document.getElementById('sr-recurrence-container');
+    if (recEl) {
+      if (recList.length === 0) {
+        recEl.innerHTML = '<div class="sr-empty-msg">Nenhuma ocorr&ecirc;ncia registrada para esta escola ainda.</div>';
+      } else {
+        recEl.innerHTML = recList.map(r => {
+          let cls = '';
+          if (r.total >= 3) cls = 'is-critical';
+          else if (r.total >= 2) cls = 'is-alert';
+
+          return `
+            <div class="sr-rec-badge ${cls}">
+              <span>${this.escapeHtml(r.subject)}</span>
+              <span class="sr-rec-count">${r.total}x</span>
+            </div>
+          `;
+        }).join('');
+      }
+    }
+
+    // 3. Anotações Técnicas Fixas
+    const notesTextarea = document.getElementById('sr-technical-notes');
+    if (notesTextarea) {
+      notesTextarea.value = schoolObj?.technicalNotes || '';
+    }
+
+    // 4. Linha do Tempo de Visitas
+    const timelineCountEl = document.getElementById('sr-timeline-count');
+    if (timelineCountEl) {
+      timelineCountEl.textContent = `${totalVisits} registro${totalVisits === 1 ? '' : 's'}`;
+    }
+
+    const timelineEl = document.getElementById('sr-timeline-container');
+    if (timelineEl) {
+      if (schoolSchedules.length === 0) {
+        timelineEl.innerHTML = '<div class="sr-empty-msg">Nenhuma visita encontrada para esta escola.</div>';
+      } else {
+        timelineEl.innerHTML = schoolSchedules.map(s => {
+          const analyst = store.getAnalystById(s.analystId);
+          const analystName = analyst ? analyst.name : 'Analista não identificado';
+          const dateFmt = s.date ? s.date.split('-').reverse().join('/') : '-';
+          const dotClass = s.completed ? 'is-done' : (s.needsReturn ? 'is-return' : '');
+          const statusLabel = s.completed
+            ? '<span class="badge badge-success">Conclu&iacute;da</span>'
+            : (s.needsReturn
+                ? `<span class="badge badge-warning">Retorno${s.returnDate ? ' (' + s.returnDate.split('-').reverse().join('/') + ')' : ''}</span>`
+                : '<span class="badge badge-info">Agendada</span>');
+          const svcLabel = s.serviceType === 'inventario' ? 'Invent&aacute;rio' : 'Manuten&ccedil;&atilde;o';
+          const osTag = s.osNumber ? `<span class="sr-timeline-os">O.S. ${this.escapeHtml(s.osNumber)}</span>` : '';
+          const obsHtml = s.obs ? `<div class="sr-timeline-obs"><i class="fa-regular fa-comment-dots" style="margin-right:5px; color:#94a3b8;"></i>${this.escapeHtml(s.obs)}</div>` : '';
+
+          return `
+            <div class="sr-timeline-item">
+              <span class="sr-timeline-dot ${dotClass}"></span>
+              <div class="sr-timeline-top">
+                <div class="sr-timeline-date">
+                  <i class="fa-regular fa-calendar" style="color:#60a5fa;"></i>
+                  <span>${dateFmt}</span>
+                  ${osTag}
+                </div>
+                ${statusLabel}
+              </div>
+              <div class="sr-timeline-subject">${this.escapeHtml(this._normalizeSubjectForStats(s.subject).display)}</div>
+              <div class="sr-timeline-meta">
+                <span><i class="fa-solid fa-user-gear"></i> ${this.escapeHtml(analystName)}</span>
+                <span><i class="fa-solid fa-tag"></i> ${svcLabel}</span>
+              </div>
+              ${obsHtml}
+            </div>
+          `;
+        }).join('');
+      }
+    }
+
+    // Botão Agendar Visita no footer
+    const btnSched = document.getElementById('sr-btn-new-schedule');
+    if (btnSched) {
+      btnSched.onclick = () => this.openScheduleModalForSchool(cleanCie, schoolName, director === '-' ? '' : director);
+    }
+
+    this.openModal('modal-school-record');
+  },
+
+  saveSchoolTechnicalNotes() {
+    if (!this._currentSchoolRecord) return;
+    const { cie, name } = this._currentSchoolRecord;
+    const textarea = document.getElementById('sr-technical-notes');
+    if (!textarea) return;
+
+    const notes = textarea.value.trim();
+    const existing = cie ? store.getSchoolByCie(cie) : null;
+
+    if (!existing && !cie) {
+      alert('Esta escola não possui um CIE cadastrado para vincular anotações.');
+      return;
+    }
+
+    const updatedBy = (typeof AuthService !== 'undefined' && AuthService.userProfile?.name)
+      ? AuthService.userProfile.name
+      : 'Equipe';
+    const updatedAt = new Date().toISOString();
+
+    const payload = existing
+      ? { ...existing, technicalNotes: notes, technicalNotesUpdatedAt: updatedAt, technicalNotesUpdatedBy: updatedBy }
+      : { cie, name, director: '', phone: '', neighborhood: '', technicalNotes: notes, technicalNotesUpdatedAt: updatedAt, technicalNotesUpdatedBy: updatedBy };
+
+    store.saveSchool(payload);
+
+
+    if (typeof this.showToast === 'function') {
+      this.showToast('Anotações técnicas da escola salvas com sucesso!');
+    }
+  },
+
+  openScheduleModalForSchool(cie, schoolName, directorName) {
+    this.closeModal('modal-school-record');
+    this.openNewScheduleModal();
+    const cieEl = document.getElementById('sched-school-cie');
+    const nameEl = document.getElementById('sched-school-name');
+    const dirEl = document.getElementById('sched-director');
+    if (cieEl) cieEl.value = cie || '';
+    if (nameEl) nameEl.value = schoolName || '';
+    if (dirEl) dirEl.value = directorName || '';
   },
 
   // =========================================================================
@@ -3640,7 +3918,7 @@ const App = {
     const schedules = store.getSchedules();
     const analysts = store.getAnalysts();
     const now = new Date();
-    const todayStr = now.toISOString().split('T')[0];
+    const todayStr = App.getLocalDateStr(now);
 
     // Calcula intervalo de datas do preset
     let startDate = '';
@@ -3650,8 +3928,8 @@ const App = {
     if (preset === 'month') {
       const y = now.getFullYear();
       const m = now.getMonth();
-      startDate = new Date(y, m, 1).toISOString().split('T')[0];
-      endDate = new Date(y, m + 1, 0).toISOString().split('T')[0];
+      startDate = App.getLocalDateStr(new Date(y, m, 1));
+      endDate = App.getLocalDateStr(new Date(y, m + 1, 0));
       periodDesc = `Mês Atual (${now.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })})`;
     } else if (preset === 'day') {
       startDate = todayStr;
@@ -3663,8 +3941,8 @@ const App = {
       start.setDate(now.getDate() - dayOfWeek);
       const end = new Date(start);
       end.setDate(start.getDate() + 6);
-      startDate = start.toISOString().split('T')[0];
-      endDate = end.toISOString().split('T')[0];
+      startDate = App.getLocalDateStr(start);
+      endDate = App.getLocalDateStr(end);
       periodDesc = `Semana Atual (${startDate.split('-').reverse().join('/')} a ${endDate.split('-').reverse().join('/')})`;
     } else if (preset === 'year') {
       const y = now.getFullYear();
@@ -3859,7 +4137,7 @@ const App = {
 
       const opt = {
         margin: 10,
-        filename: `Relatorio_OS_${new Date().toISOString().split('T')[0]}.pdf`,
+        filename: `Relatorio_OS_${App.getLocalDateStr()}.pdf`,
         image: { type: 'jpeg', quality: 0.98 },
         html2canvas: {
           scale: 2,
@@ -3929,20 +4207,30 @@ const App = {
 
   initSettingsView() {
     try {
-      // 1. Marca o tema ativo nas opções
+      const hub = document.getElementById('settings-hub');
+      const panels = document.querySelectorAll('.settings-detail-panel');
+      if (this.currentSettingsSection) {
+        if (hub) hub.style.display = 'none';
+        panels.forEach(p => {
+          p.style.display = (p.id === `settings-panel-${this.currentSettingsSection}`) ? 'block' : 'none';
+        });
+      } else {
+        if (hub) hub.style.display = 'block';
+        panels.forEach(p => { p.style.display = 'none'; });
+      }
+
       const currentTheme = localStorage.getItem('sg_selected_theme') || 'theme-1';
       document.querySelectorAll('.theme-card-option').forEach(el => {
-        if (el.dataset.theme === currentTheme) {
-          el.classList.add('active');
-        } else {
-          el.classList.remove('active');
-        }
+        el.classList.toggle('active', el.dataset.theme === currentTheme);
       });
 
-      // 2. Renderiza Assuntos de Agendamento O.S.
-      this.renderSettingsSubjects();
+      const textarea = document.getElementById('textarea-wa-template');
+      if (textarea && typeof store !== 'undefined' && store.getWhatsappTemplate) {
+        textarea.value = store.getWhatsappTemplate();
+        this.updateWhatsappTemplatePreview();
+      }
 
-      // 3. Renderiza Setores e Tipos URE
+      this.renderSettingsSubjects();
       this.renderSettingsUreSectors();
       this.renderSettingsUreTypes();
     } catch(e) {
@@ -3950,188 +4238,280 @@ const App = {
     }
   },
 
-  // =========================================================================
-  // GERENCIAMENTO DE ASSUNTOS DE O.S. (CONFIGURAÇÕES)
-  // =========================================================================
-  renderSettingsSubjects() {
-    const listEl = document.getElementById('settings-subjects-list');
-    const countEl = document.getElementById('settings-subjects-count');
-    if (!listEl) return;
+  openSettingsSection(section) {
+    this.currentSettingsSection = section;
+    this.editingSettingsItem = null;
+    ['subjects', 'ure-sectors', 'ure-types'].forEach(k => this.toggleSettingsAddForm(k, false));
 
-    const subjects = (typeof store !== 'undefined' && store.getScheduleSubjects) ? store.getScheduleSubjects() : [];
-    if (countEl) countEl.textContent = `${subjects.length} assunto${subjects.length === 1 ? '' : 's'}`;
+    const hub = document.getElementById('settings-hub');
+    const panels = document.querySelectorAll('.settings-detail-panel');
+    if (hub) hub.style.display = 'none';
+    panels.forEach(p => {
+      p.style.display = (p.id === `settings-panel-${section}`) ? 'block' : 'none';
+    });
 
-    if (subjects.length === 0) {
-      listEl.innerHTML = '<span class="settings-items-empty">Nenhum assunto cadastrado. Adicione um assunto acima.</span>';
-      return;
-    }
-
-    listEl.innerHTML = subjects.map(name => `
-      <span class="settings-item-chip">
-        <span>${this.escapeHtml(name)}</span>
-        <button type="button" class="btn-chip-delete" title="Excluir assunto '${this.escapeHtml(name)}'" onclick="App.removeSubjectFromSettings('${this.escapeHtml(name).replace(/'/g, "\\'")}'); event.stopPropagation();">
-          <i class="fa-solid fa-xmark"></i>
-        </button>
-      </span>
-    `).join('');
-  },
-
-  addSubjectFromSettings() {
-    const input = document.getElementById('input-new-subject');
-    if (!input) return;
-    const name = input.value.trim();
-    if (!name) return;
-
-    if (typeof store !== 'undefined' && store.addScheduleSubject) {
-      const added = store.addScheduleSubject(name);
-      if (!added) {
-        alert('Este assunto já está na lista!');
-        return;
-      }
-      input.value = '';
+    if (section === 'aparencia') {
+      const currentTheme = localStorage.getItem('sg_selected_theme') || 'theme-1';
+      document.querySelectorAll('.theme-card-option').forEach(el => {
+        el.classList.toggle('active', el.dataset.theme === currentTheme);
+      });
+    } else if (section === 'assuntos') {
       this.renderSettingsSubjects();
-      this.populateSelects();
-      if (typeof this.showToast === 'function') {
-        this.showToast('Assunto adicionado com sucesso!');
-      }
-    }
-  },
-
-  removeSubjectFromSettings(name) {
-    if (!name) return;
-    if (confirm(`Deseja remover o assunto "${name}" da lista pré-definida?`)) {
-      if (typeof store !== 'undefined' && store.removeScheduleSubject) {
-        store.removeScheduleSubject(name);
-        this.renderSettingsSubjects();
-        this.populateSelects();
-        if (typeof this.showToast === 'function') {
-          this.showToast('Assunto removido com sucesso!');
-        }
-      }
-    }
-  },
-
-  // =========================================================================
-  // GERENCIAMENTO DE SETORES DA URE (CONFIGURAÇÕES)
-  // =========================================================================
-  renderSettingsUreSectors() {
-    const listEl = document.getElementById('settings-ure-sectors-list');
-    const countEl = document.getElementById('settings-ure-sectors-count');
-    if (!listEl) return;
-
-    const sectors = (typeof store !== 'undefined' && store.getUreSectors) ? store.getUreSectors() : [];
-    if (countEl) countEl.textContent = `${sectors.length} setor${sectors.length === 1 ? 'es' : 'es'}`;
-
-    if (sectors.length === 0) {
-      listEl.innerHTML = '<span class="settings-items-empty">Nenhum setor cadastrado. Adicione um setor acima.</span>';
-      return;
-    }
-
-    listEl.innerHTML = sectors.map(name => `
-      <span class="settings-item-chip">
-        <span>${this.escapeHtml(name)}</span>
-        <button type="button" class="btn-chip-delete" title="Excluir setor '${this.escapeHtml(name)}'" onclick="App.removeUreSectorFromSettings('${this.escapeHtml(name).replace(/'/g, "\\'")}'); event.stopPropagation();">
-          <i class="fa-solid fa-xmark"></i>
-        </button>
-      </span>
-    `).join('');
-  },
-
-  addUreSectorFromSettings() {
-    const input = document.getElementById('input-new-ure-sector');
-    if (!input) return;
-    const name = input.value.trim();
-    if (!name) return;
-
-    if (typeof store !== 'undefined' && store.addUreSector) {
-      const added = store.addUreSector(name);
-      if (!added) {
-        alert('Este setor já está na lista!');
-        return;
-      }
-      input.value = '';
+    } else if (section === 'setores') {
       this.renderSettingsUreSectors();
-      this.populateSelects();
-      if (typeof this.showToast === 'function') {
-        this.showToast('Setor adicionado com sucesso!');
+    } else if (section === 'tipos') {
+      this.renderSettingsUreTypes();
+    } else if (section === 'mensagens') {
+      const textarea = document.getElementById('textarea-wa-template');
+      if (textarea && typeof store !== 'undefined' && store.getWhatsappTemplate) {
+        textarea.value = store.getWhatsappTemplate();
+        this.updateWhatsappTemplatePreview();
       }
     }
   },
 
-  removeUreSectorFromSettings(name) {
-    if (!name) return;
-    if (confirm(`Deseja remover o setor "${name}" da lista pré-definida?`)) {
-      if (typeof store !== 'undefined' && store.removeUreSector) {
-        store.removeUreSector(name);
-        this.renderSettingsUreSectors();
-        this.populateSelects();
-        if (typeof this.showToast === 'function') {
-          this.showToast('Setor removido com sucesso!');
-        }
-      }
+  closeSettingsSection() {
+    this.currentSettingsSection = null;
+    this.editingSettingsItem = null;
+    ['subjects', 'ure-sectors', 'ure-types'].forEach(k => this.toggleSettingsAddForm(k, false));
+    document.querySelectorAll('.settings-detail-panel').forEach(p => {
+      p.style.display = 'none';
+    });
+    const hub = document.getElementById('settings-hub');
+    if (hub) hub.style.display = 'block';
+  },
+
+  toggleSettingsAddForm(key, forceState) {
+    const box = document.getElementById(`settings-add-box-${key}`);
+    if (!box) return;
+    const isHidden = box.style.display === 'none' || !box.style.display;
+    const shouldShow = (typeof forceState === 'boolean') ? forceState : isHidden;
+    box.style.display = shouldShow ? 'block' : 'none';
+
+    const inputMap = {
+      'subjects': 'input-new-subject',
+      'ure-sectors': 'input-new-ure-sector',
+      'ure-types': 'input-new-ure-type'
+    };
+    const input = document.getElementById(inputMap[key]);
+    if (input) {
+      input.value = '';
+      if (shouldShow) setTimeout(() => input.focus(), 30);
     }
   },
 
-  // =========================================================================
-  // GERENCIAMENTO DE TIPOS DE ATENDIMENTO URE (CONFIGURAÇÕES)
-  // =========================================================================
-  renderSettingsUreTypes() {
-    const listEl = document.getElementById('settings-ure-types-list');
-    const countEl = document.getElementById('settings-ure-types-count');
+  _getSettingsCategoryConfig(category) {
+    const map = {
+      'subjects': {
+        listId: 'settings-subjects-list',
+        countId: 'settings-subjects-count-num',
+        inputId: 'input-new-subject',
+        iconClass: 'fa-regular fa-clipboard',
+        iconColor: '#60a5fa',
+        emptyMsg: 'Nenhum assunto cadastrado. Clique em "+ Novo assunto" acima para adicionar.',
+        label: 'assunto',
+        getList: () => (typeof store !== 'undefined' && store.getScheduleSubjects) ? store.getScheduleSubjects() : [],
+        addItem: (n) => store.addScheduleSubject(n),
+        updateItem: (o, n) => store.updateScheduleSubject(o, n),
+        removeItem: (n) => store.removeScheduleSubject(n)
+      },
+      'ure-sectors': {
+        listId: 'settings-ure-sectors-list',
+        countId: 'settings-ure-sectors-count-num',
+        inputId: 'input-new-ure-sector',
+        iconClass: 'fa-regular fa-building',
+        iconColor: '#38bdf8',
+        emptyMsg: 'Nenhum setor cadastrado. Clique em "+ Novo setor" acima para adicionar.',
+        label: 'setor',
+        getList: () => (typeof store !== 'undefined' && store.getUreSectors) ? store.getUreSectors() : [],
+        addItem: (n) => store.addUreSector(n),
+        updateItem: (o, n) => store.updateUreSector(o, n),
+        removeItem: (n) => store.removeUreSector(n)
+      },
+      'ure-types': {
+        listId: 'settings-ure-types-list',
+        countId: 'settings-ure-types-count-num',
+        inputId: 'input-new-ure-type',
+        iconClass: 'fa-solid fa-wrench',
+        iconColor: '#34d399',
+        emptyMsg: 'Nenhum tipo cadastrado. Clique em "+ Novo tipo" acima para adicionar.',
+        label: 'tipo de atendimento',
+        getList: () => (typeof store !== 'undefined' && store.getUreTypes) ? store.getUreTypes() : [],
+        addItem: (n) => store.addUreType(n),
+        updateItem: (o, n) => store.updateUreType(o, n),
+        removeItem: (n) => store.removeUreType(n)
+      }
+    };
+    return map[category];
+  },
+
+  renderSettingsCategoryList(category) {
+    const cfg = this._getSettingsCategoryConfig(category);
+    if (!cfg) return;
+
+    const listEl = document.getElementById(cfg.listId);
+    const countEl = document.getElementById(cfg.countId);
     if (!listEl) return;
 
-    const types = (typeof store !== 'undefined' && store.getUreTypes) ? store.getUreTypes() : [];
-    if (countEl) countEl.textContent = `${types.length} tipo${types.length === 1 ? '' : 's'}`;
+    const items = cfg.getList();
+    if (countEl) countEl.textContent = String(items.length);
 
-    if (types.length === 0) {
-      listEl.innerHTML = '<span class="settings-items-empty">Nenhum tipo cadastrado. Adicione um tipo acima.</span>';
+    if (items.length === 0) {
+      listEl.innerHTML = `<div class="settings-items-empty">${cfg.emptyMsg}</div>`;
       return;
     }
 
-    listEl.innerHTML = types.map(name => `
-      <span class="settings-item-chip">
-        <span>${this.escapeHtml(name)}</span>
-        <button type="button" class="btn-chip-delete" title="Excluir tipo '${this.escapeHtml(name)}'" onclick="App.removeUreTypeFromSettings('${this.escapeHtml(name).replace(/'/g, "\\'")}'); event.stopPropagation();">
-          <i class="fa-solid fa-xmark"></i>
-        </button>
-      </span>
-    `).join('');
+    listEl.innerHTML = items.map((name, idx) => {
+      const isEditing = this.editingSettingsItem &&
+        this.editingSettingsItem.category === category &&
+        this.editingSettingsItem.index === idx;
+
+      if (isEditing) {
+        return `
+          <div class="settings-item-row">
+            <div class="settings-item-row-left">
+              <i class="${cfg.iconClass} settings-item-row-icon" style="color: ${cfg.iconColor};"></i>
+              <input type="text" id="settings-inline-edit-input" class="settings-row-edit-input"
+                value="${this.escapeHtml(name)}"
+                onkeydown="if(event.key==='Enter'){event.preventDefault();App.saveEditSettingsItem();}else if(event.key==='Escape'){App.cancelEditSettingsItem();}">
+            </div>
+            <div class="settings-item-row-actions">
+              <button type="button" class="btn-row-save" title="Salvar" onclick="App.saveEditSettingsItem()">
+                <i class="fa-solid fa-check"></i>
+              </button>
+              <button type="button" class="btn-row-cancel" title="Cancelar" onclick="App.cancelEditSettingsItem()">
+                <i class="fa-solid fa-xmark"></i>
+              </button>
+            </div>
+          </div>
+        `;
+      }
+
+      const safeNameAttr = this.escapeHtml(name).replace(/'/g, "\\'");
+      return `
+        <div class="settings-item-row">
+          <div class="settings-item-row-left">
+            <i class="${cfg.iconClass} settings-item-row-icon" style="color: ${cfg.iconColor};"></i>
+            <span class="settings-item-row-text">${this.escapeHtml(name)}</span>
+          </div>
+          <div class="settings-item-row-actions">
+            <button type="button" class="btn-row-edit" title="Editar" onclick="App.startEditSettingsItem('${category}', ${idx})">
+              <i class="fa-solid fa-pen"></i>
+            </button>
+            <button type="button" class="btn-row-delete" title="Excluir" onclick="App.removeSettingsCategoryItem('${category}', '${safeNameAttr}')">
+              <i class="fa-regular fa-trash-can"></i>
+            </button>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    if (this.editingSettingsItem && this.editingSettingsItem.category === category) {
+      const editInput = document.getElementById('settings-inline-edit-input');
+      if (editInput) {
+        editInput.focus();
+        editInput.select();
+      }
+    }
   },
 
-  addUreTypeFromSettings() {
-    const input = document.getElementById('input-new-ure-type');
+  addSettingsCategoryItem(category) {
+    const cfg = this._getSettingsCategoryConfig(category);
+    if (!cfg) return;
+    const input = document.getElementById(cfg.inputId);
     if (!input) return;
     const name = input.value.trim();
     if (!name) return;
 
-    if (typeof store !== 'undefined' && store.addUreType) {
-      const added = store.addUreType(name);
-      if (!added) {
-        alert('Este tipo de atendimento já está na lista!');
-        return;
+    const added = cfg.addItem(name);
+    if (!added) {
+      alert(`Este ${cfg.label} já está na lista!`);
+      return;
+    }
+    this.toggleSettingsAddForm(category, false);
+    this.renderSettingsCategoryList(category);
+    this.populateSelects();
+    if (typeof this.showToast === 'function') {
+      this.showToast('Item adicionado com sucesso!');
+    }
+  },
+
+  startEditSettingsItem(category, index) {
+    const cfg = this._getSettingsCategoryConfig(category);
+    if (!cfg) return;
+    const items = cfg.getList();
+    if (index < 0 || index >= items.length) return;
+    this.editingSettingsItem = { category, index, originalName: items[index] };
+    this.renderSettingsCategoryList(category);
+  },
+
+  cancelEditSettingsItem() {
+    if (!this.editingSettingsItem) return;
+    const cat = this.editingSettingsItem.category;
+    this.editingSettingsItem = null;
+    this.renderSettingsCategoryList(cat);
+  },
+
+  saveEditSettingsItem() {
+    if (!this.editingSettingsItem) return;
+    const { category, originalName } = this.editingSettingsItem;
+    const cfg = this._getSettingsCategoryConfig(category);
+    const input = document.getElementById('settings-inline-edit-input');
+    if (!cfg || !input) return;
+
+    const newName = input.value.trim();
+    if (!newName) {
+      alert('O nome não pode ficar vazio.');
+      input.focus();
+      return;
+    }
+    if (newName === originalName) {
+      this.cancelEditSettingsItem();
+      return;
+    }
+
+    const res = cfg.updateItem(originalName, newName);
+    if (!res.ok) {
+      if (res.reason === 'duplicate') {
+        alert(`Já existe um ${cfg.label} com esse nome!`);
       }
-      input.value = '';
-      this.renderSettingsUreTypes();
+      input.focus();
+      return;
+    }
+
+    this.editingSettingsItem = null;
+    this.renderSettingsCategoryList(category);
+    this.populateSelects();
+    if (typeof this.showToast === 'function') {
+      this.showToast('Alteração salva com sucesso!');
+    }
+  },
+
+  removeSettingsCategoryItem(category, name) {
+    const cfg = this._getSettingsCategoryConfig(category);
+    if (!cfg || !name) return;
+    if (confirm(`Deseja remover "${name}" da lista?`)) {
+      cfg.removeItem(name);
+      this.editingSettingsItem = null;
+      this.renderSettingsCategoryList(category);
       this.populateSelects();
       if (typeof this.showToast === 'function') {
-        this.showToast('Tipo de atendimento adicionado com sucesso!');
+        this.showToast('Item removido com sucesso!');
       }
     }
   },
 
-  removeUreTypeFromSettings(name) {
-    if (!name) return;
-    if (confirm(`Deseja remover o tipo de atendimento "${name}" da lista pré-definida?`)) {
-      if (typeof store !== 'undefined' && store.removeUreType) {
-        store.removeUreType(name);
-        this.renderSettingsUreTypes();
-        this.populateSelects();
-        if (typeof this.showToast === 'function') {
-          this.showToast('Tipo de atendimento removido com sucesso!');
-        }
-      }
-    }
-  },
+  renderSettingsSubjects() { this.renderSettingsCategoryList('subjects'); },
+  addSubjectFromSettings() { this.addSettingsCategoryItem('subjects'); },
+  removeSubjectFromSettings(name) { this.removeSettingsCategoryItem('subjects', name); },
+
+  renderSettingsUreSectors() { this.renderSettingsCategoryList('ure-sectors'); },
+  addUreSectorFromSettings() { this.addSettingsCategoryItem('ure-sectors'); },
+  removeUreSectorFromSettings(name) { this.removeSettingsCategoryItem('ure-sectors', name); },
+
+  renderSettingsUreTypes() { this.renderSettingsCategoryList('ure-types'); },
+  addUreTypeFromSettings() { this.addSettingsCategoryItem('ure-types'); },
+  removeUreTypeFromSettings(name) { this.removeSettingsCategoryItem('ure-types', name); },
 
   insertMsgVariable(variableTag) {
     const textarea = document.getElementById('textarea-wa-template');
@@ -4212,19 +4592,33 @@ const App = {
   // =========================================================================
   exportBackupJSON() {
     const data = {
+      backupVersion: 2,
+      exportDate: new Date().toISOString(),
       analysts: store.getAnalysts(),
       schools: store.getSchools(),
       schedules: store.getSchedules(),
-      exportDate: new Date().toISOString()
+      queue: store.getQueue(),
+      ureAttendances: store.getUreAttendances(),
+      absences: store.getAbsences(),
+      config: {
+        whatsappTemplate: store.getWhatsappTemplate(),
+        scheduleSubjects: store.getScheduleSubjects(),
+        ureSectors: store.getUreSectors(),
+        ureTypes: store.getUreTypes(),
+        theme: localStorage.getItem(STORAGE_KEYS.THEME) || 'theme-1'
+      }
     };
 
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `backup_sg_analistas_${new Date().toISOString().split('T')[0]}.json`;
+    a.download = `backup_completo_sg_${App.getLocalDateStr()}.json`;
     a.click();
     URL.revokeObjectURL(url);
+    if (typeof this.showToast === 'function') {
+      this.showToast('Backup completo baixado com sucesso!');
+    }
   },
 
   importBackupJSON(event) {
@@ -4232,70 +4626,75 @@ const App = {
     if (!file) return;
 
     const reader = new FileReader();
-    reader.onload = (e) => {
+    reader.onload = async (e) => {
       try {
         const json = JSON.parse(e.target.result);
-        if (json.analysts && json.schools && json.schedules) {
-          store.setAnalysts(json.analysts);
-          store.setSchools(json.schools);
-          store.setSchedules(json.schedules);
-          alert('Backup restaurado com sucesso!');
-          location.reload();
-        } else {
-          alert('Arquivo JSON inválido.');
+        const hasCore = Array.isArray(json.analysts) && Array.isArray(json.schools) && Array.isArray(json.schedules);
+        if (!hasCore) {
+          alert('Arquivo JSON inválido: o backup deve conter ao menos analistas, escolas e agendamentos.');
+          return;
         }
+
+        const summaryLines = [
+          `• Analistas: ${json.analysts.length}`,
+          `• Escolas: ${json.schools.length}`,
+          `• Agendamentos (O.S.): ${json.schedules.length}`
+        ];
+        if (Array.isArray(json.queue)) summaryLines.push(`• Fila de Chamados: ${json.queue.length}`);
+        if (Array.isArray(json.ureAttendances)) summaryLines.push(`• Atendimentos URE: ${json.ureAttendances.length}`);
+        if (Array.isArray(json.absences)) summaryLines.push(`• Registros de Ausência: ${json.absences.length}`);
+        if (json.config) summaryLines.push('• Configurações (Assuntos, Setores, Tipos e Mensagem)');
+
+        const ok = confirm(
+          `Deseja restaurar este backup?\n\nOs dados atuais serão substituídos pelos registros do arquivo:\n${summaryLines.join('\n')}`
+        );
+        if (!ok) return;
+
+        if (typeof this.showToast === 'function') {
+          this.showToast('Restaurando backup e sincronizando com a nuvem...');
+        }
+
+        // 1. Atualiza armazenamento local
+        store.setAnalysts(json.analysts);
+        store.setSchools(json.schools);
+        store.setSchedules(json.schedules);
+        if (Array.isArray(json.queue)) store.setQueue(json.queue);
+        if (Array.isArray(json.ureAttendances)) store.saveUreAttendances(json.ureAttendances);
+        if (Array.isArray(json.absences)) store.saveAbsences(json.absences);
+
+        if (json.config && typeof json.config === 'object') {
+          if (json.config.whatsappTemplate) {
+            localStorage.setItem(STORAGE_KEYS.WHATSAPP_TEMPLATE, json.config.whatsappTemplate);
+          }
+          if (Array.isArray(json.config.scheduleSubjects)) {
+            localStorage.setItem(STORAGE_KEYS.SCHEDULE_SUBJECTS, JSON.stringify(json.config.scheduleSubjects));
+          }
+          if (Array.isArray(json.config.ureSectors)) {
+            localStorage.setItem(STORAGE_KEYS.URE_SECTORS, JSON.stringify(json.config.ureSectors));
+          }
+          if (Array.isArray(json.config.ureTypes)) {
+            localStorage.setItem(STORAGE_KEYS.URE_TYPES, JSON.stringify(json.config.ureTypes));
+          }
+          if (json.config.theme) {
+            localStorage.setItem(STORAGE_KEYS.THEME, json.config.theme);
+          }
+        }
+
+        // 2. Sincroniza em lote com o Cloud Firestore antes de recarregar
+        if (typeof FirestoreSync !== 'undefined' && FirestoreSync.restoreBackup) {
+          await FirestoreSync.restoreBackup(json);
+        }
+
+        alert('Backup restaurado e sincronizado com sucesso!');
+        location.reload();
       } catch (err) {
-        alert('Erro ao processar JSON: ' + err.message);
+        alert('Erro ao restaurar backup: ' + err.message);
+      } finally {
+        event.target.value = '';
       }
     };
     reader.readAsText(file);
   },
-
-  resetToDefaultData() {
-    if (confirm('Deseja restaurar os dados de demonstração originais com os 8 analistas e 342 ordens no mês? Todos os dados customizados serão redefinidos.')) {
-      store.resetToDefault();
-      alert('Dados de demonstração restaurados com sucesso!');
-      location.reload();
-    }
-  },
-
-  async clearAllSchedules() {
-    if (typeof AuthService !== 'undefined' && !AuthService.isAdmin()) {
-      alert('Apenas o Administrador pode zerar o histórico de agendamentos.');
-      return;
-    }
-
-    const confirm1 = confirm("⚠️ ATENÇÃO: Deseja realmente zerar TODO o histórico de agendamentos?\n\nTodas as Ordens de Serviço (passadas, de hoje e futuras) serão excluídas do sistema e do Firebase.\n\nEscolas, Analistas, Fila de Chamados e Atendimentos URE serão MANTIDOS intactos.");
-    if (!confirm1) return;
-
-    const confirm2 = confirm("Tem certeza absoluta? Essa ação não poderá ser desfeita.");
-    if (!confirm2) return;
-
-    try {
-      if (typeof FirestoreSync !== 'undefined' && FirestoreSync.clearAllSchedules) {
-        await FirestoreSync.clearAllSchedules();
-      }
-      if (typeof store !== 'undefined' && store.clearAllSchedules) {
-        store.clearAllSchedules();
-      } else {
-        localStorage.setItem(STORAGE_KEYS.SCHEDULES, JSON.stringify([]));
-      }
-
-      this.updateDashboard();
-      if (this.currentView === 'agendamentos') this.renderAnalystDailyCards();
-      if (this.currentView === 'todos-agendamentos') this.renderAllSchedulesTable();
-      if (this.currentView === 'ranking-escolas') this.renderSchoolsRanking();
-      if (this.currentView === 'relatorios') this.generateReport();
-
-      alert("✅ Histórico de agendamentos zerado com sucesso! Agora você pode começar a preencher seus agendamentos manualmente.");
-      window.location.reload();
-    } catch (err) {
-      console.error(err);
-      alert("Erro ao zerar agendamentos: " + (err.message || err));
-    }
-  },
-
-
   // =========================================================================
   // GESTÃO DA FILA DE CHAMADOS (MANUTENÇÃO, CONECTIVIDADE, INVENTÁRIO)
   // =========================================================================
@@ -4508,7 +4907,7 @@ const App = {
 
     // Data de hoje
     const dateInput = document.getElementById('queue-date-added');
-    if (dateInput) dateInput.value = new Date().toISOString().split('T')[0];
+    if (dateInput) dateInput.value = App.getLocalDateStr();
 
     // Oculta input customizado de assunto
     const customSubjInput = document.getElementById('queue-subject-custom');
@@ -4691,7 +5090,7 @@ const App = {
     document.getElementById('queue-category').value = item.category || 'manutencao';
     
     document.getElementById('queue-priority').value = item.priority || 'normal';
-    document.getElementById('queue-date-added').value = item.dateAdded || new Date().toISOString().split('T')[0];
+    document.getElementById('queue-date-added').value = item.dateAdded || App.getLocalDateStr();
     document.getElementById('queue-obs').value = item.obs || '';
 
     // Assunto pré-definido ou customizado
@@ -4764,7 +5163,7 @@ const App = {
     }
 
     const priority = document.getElementById('queue-priority').value || 'normal';
-    const dateAdded = document.getElementById('queue-date-added').value || new Date().toISOString().split('T')[0];
+    const dateAdded = document.getElementById('queue-date-added').value || App.getLocalDateStr();
     const obs = document.getElementById('queue-obs').value.trim();
 
     const existingId = document.getElementById('queue-item-id').value;
@@ -4850,7 +5249,7 @@ const App = {
     // Data padrão: usa a data da agenda atual ou a data de hoje
     const dateInput = document.getElementById('dispatch-date');
     if (dateInput) {
-      dateInput.value = this.currentAgendaDate || new Date().toISOString().split('T')[0];
+      dateInput.value = this.currentAgendaDate || App.getLocalDateStr();
     }
 
     // Nº O.S (opcional, traz o da fila se houver)
@@ -4874,8 +5273,8 @@ const App = {
       if (absence && absence.reason && absence.reason !== 'presente') {
         const analystObj = store.getAnalystById(analystId);
         const name = analystObj ? analystObj.name : 'Este analista';
-        const labels = { day_off: 'Day Off (Folga)', atestado: 'Atestado Médico', ausente: 'Ausente', fixo_ure: 'Fixo na URE' };
-        alert(`Não é possível alocar: ${name} está marcado(a) como "${labels[absence.reason] || 'Ausente'}" na data ${schedDate.split('-').reverse().join('/')}.`);
+        const absMeta = this._getAbsenceMeta(absence.reason);
+        alert(`Não é possível alocar: ${name} está marcado(a) como "${absMeta.label || 'Ausente'}" na data ${schedDate.split('-').reverse().join('/')}.`);
         return;
       }
     }
@@ -5014,8 +5413,84 @@ const App = {
   // =========================================================================
   // GESTÃO DE AUSÊNCIAS (DAY OFF, ATESTADO, AUSENTE)
   // =========================================================================
+  _getAbsenceMeta(reason) {
+    const map = {
+      ferias: {
+        label: 'Férias',
+        shortLabel: 'Férias',
+        badge: 'FÉRIAS',
+        icon: 'fa-plane-departure',
+        pillClass: 'is-ferias',
+        color: '#d8b4fe',
+        bgColor: 'rgba(168, 85, 247, 0.16)',
+        borderColor: 'rgba(168, 85, 247, 0.45)'
+      },
+      recesso: {
+        label: 'Recesso',
+        shortLabel: 'Recesso',
+        badge: 'RECESSO',
+        icon: 'fa-calendar-xmark',
+        pillClass: 'is-day-off',
+        color: '#2dd4bf',
+        bgColor: 'rgba(20, 184, 166, 0.16)',
+        borderColor: 'rgba(20, 184, 166, 0.45)'
+      },
+      day_off: {
+        label: 'Day Off (Folga)',
+        shortLabel: 'Day Off',
+        badge: 'DAY OFF (FOLGA)',
+        icon: 'fa-umbrella-beach',
+        pillClass: 'is-day-off',
+        color: '#fbbf24',
+        bgColor: 'rgba(245, 158, 11, 0.15)',
+        borderColor: 'rgba(245, 158, 11, 0.35)'
+      },
+      atestado: {
+        label: 'Atestado Médico',
+        shortLabel: 'Atestado',
+        badge: 'ATESTADO MÉDICO',
+        icon: 'fa-notes-medical',
+        pillClass: 'is-absent',
+        color: '#f87171',
+        bgColor: 'rgba(239, 68, 68, 0.15)',
+        borderColor: 'rgba(239, 68, 68, 0.35)'
+      },
+      fixo_ure: {
+        label: 'Fixo na URE',
+        shortLabel: 'Fixo URE',
+        badge: 'FIXO NA URE',
+        icon: 'fa-laptop',
+        pillClass: 'is-fixo-ure',
+        color: '#60a5fa',
+        bgColor: 'rgba(59, 130, 246, 0.15)',
+        borderColor: 'rgba(59, 130, 246, 0.35)'
+      },
+      sem_expediente: {
+        label: 'Sem expediente',
+        shortLabel: 'Sem expediente',
+        badge: 'SEM EXPEDIENTE',
+        icon: 'fa-calendar-xmark',
+        pillClass: 'is-absent',
+        color: '#94a3b8',
+        bgColor: 'rgba(148, 163, 184, 0.14)',
+        borderColor: 'rgba(148, 163, 184, 0.35)'
+      },
+      ausente: {
+        label: 'Ausente',
+        shortLabel: 'Ausente',
+        badge: 'AUSENTE',
+        icon: 'fa-user-xmark',
+        pillClass: 'is-absent',
+        color: '#f87171',
+        bgColor: 'rgba(239, 68, 68, 0.15)',
+        borderColor: 'rgba(239, 68, 68, 0.35)'
+      }
+    };
+    return map[reason] || map.ausente;
+  },
+
   openAnalystAbsenceModal(analystId, dateStr) {
-    const targetDate = dateStr || this.selectedAgendaDate || new Date().toISOString().split('T')[0];
+    const targetDate = dateStr || this.selectedAgendaDate || App.getLocalDateStr();
     const analyst = store.getAnalystById(analystId);
     if (!analyst) return;
 
@@ -5026,11 +5501,18 @@ const App = {
     const [y, m, d] = targetDate.split('-');
     document.getElementById('absence-date-display').textContent = `${d}/${m}/${y}`;
 
+    const startInput = document.getElementById('absence-start-date');
+    const endInput = document.getElementById('absence-end-date');
+    if (startInput) startInput.value = targetDate;
+    if (endInput) endInput.value = targetDate;
+
+    this.setAbsenceMode('single');
+
     const existing = store.getAbsence(analyst.id, targetDate);
     const reasonSelect = document.getElementById('absence-reason');
     const noteInput = document.getElementById('absence-note');
 
-    if (existing && existing.reason) {
+    if (existing && existing.reason && ['presente', 'day_off', 'ausente', 'sem_expediente', 'fixo_ure'].includes(existing.reason)) {
       reasonSelect.value = existing.reason;
       noteInput.value = existing.note || '';
     } else {
@@ -5038,11 +5520,141 @@ const App = {
       noteInput.value = '';
     }
 
+    this.renderAnalystAbsenceRules(analyst.id);
     this.handleAbsenceReasonChange(reasonSelect.value);
     this.openModal('modal-analyst-absence');
   },
 
-  handleAbsenceReasonChange(val) {
+  setAbsenceMode(mode) {
+    const modeInput = document.getElementById('absence-mode');
+    if (modeInput) modeInput.value = mode;
+
+    document.querySelectorAll('.absence-mode-btn').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.mode === mode);
+    });
+
+    const groupRange = document.getElementById('group-absence-range');
+    if (groupRange) groupRange.style.display = (mode === 'range') ? 'block' : 'none';
+
+    const reasonSelect = document.getElementById('absence-reason');
+    if (reasonSelect) {
+      const prevVal = reasonSelect.value;
+      if (mode === 'range') {
+        reasonSelect.innerHTML = `
+          <option value="ferias">&#x1F3D6;&#xFE0F; F&eacute;rias</option>
+          <option value="recesso">&#x1F5D3;&#xFE0F; Recesso</option>
+          <option value="ausente">&#x26D4; Ausente</option>
+          <option value="sem_expediente">&#x1F6AB; Sem Expediente</option>
+        `;
+        reasonSelect.value = ['ferias', 'recesso', 'ausente', 'sem_expediente'].includes(prevVal)
+          ? prevVal
+          : 'ferias';
+      } else {
+        reasonSelect.innerHTML = `
+          <option value="presente">&#x2705; Presente (Trabalhando Normalmente)</option>
+          <option value="day_off">&#x1F4C5; Day Off (Folga)</option>
+          <option value="ausente">&#x26D4; Ausente</option>
+          <option value="sem_expediente">&#x1F6AB; Sem Expediente</option>
+          <option value="fixo_ure">&#x1F4BB; Fixo na URE</option>
+        `;
+        reasonSelect.value = ['presente', 'day_off', 'ausente', 'sem_expediente', 'fixo_ure'].includes(prevVal)
+          ? prevVal
+          : 'presente';
+      }
+      this.handleAbsenceReasonChange(reasonSelect.value);
+    }
+  },
+  renderAnalystAbsenceRules(analystId) {
+    const box = document.getElementById('absence-active-rules-box');
+    const listEl = document.getElementById('absence-active-rules-list');
+    if (!box || !listEl || typeof store.getAnalystAbsenceRules !== 'function') return;
+
+    const rules = store.getAnalystAbsenceRules(analystId).filter(r => r.type === 'range');
+    if (rules.length === 0) {
+      box.style.display = 'none';
+      listEl.innerHTML = '';
+      return;
+    }
+
+    box.style.display = 'block';
+    const dayNames = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+
+    listEl.innerHTML = rules.map(rule => {
+      const meta = this._getAbsenceMeta(rule.reason);
+      let desc = '';
+      if (rule.type === 'range') {
+        const sFmt = (rule.startDate || '').split('-').reverse().join('/');
+        const eFmt = (rule.endDate || '').split('-').reverse().join('/');
+        desc = `Período: <strong>${sFmt}</strong> até <strong>${eFmt}</strong>`;
+      } else if (rule.type === 'weekly') {
+        const daysLabel = (rule.weekdays || []).map(d => dayNames[d] || '').filter(Boolean).join(', ');
+        desc = `Escala Semanal: <strong>${daysLabel}</strong>`;
+      }
+      const noteHtml = rule.note ? `<span style="color:#94a3b8; font-size:0.72rem;">"${this.escapeHtml(rule.note)}"</span>` : '';
+
+      return `
+        <div class="absence-rule-item">
+          <div class="absence-rule-info">
+            <span style="color:${meta.color}; font-weight:700;"><i class="fa-solid ${meta.icon}"></i> ${meta.label}</span>
+            <span>${desc}</span>
+            ${noteHtml}
+          </div>
+          <button type="button" class="absence-rule-del" title="Remover regra" onclick="App.deleteAnalystAbsenceRule('${this.escapeHtml(rule.id)}')">
+            <i class="fa-regular fa-trash-can"></i>
+          </button>
+        </div>
+      `;
+    }).join('');
+  },
+
+  deleteAnalystAbsenceRule(ruleId) {
+    if (!ruleId) return;
+    if (confirm('Deseja remover este período? O analista ficará disponível para agendamentos.')) {
+      const analystId = document.getElementById('absence-analyst-id')?.value;
+      const dateStr = document.getElementById('absence-date')?.value;
+
+      if (typeof store.removeAbsenceById === 'function') {
+        store.removeAbsenceById(ruleId);
+      }
+
+      // Garante que o analista volte automaticamente para Presente (disponível) em dias úteis
+      if (analystId && dateStr) {
+        const dCheck = new Date(dateStr + 'T12:00:00');
+        const isWeekend = !isNaN(dCheck.getTime()) && (dCheck.getDay() === 0 || dCheck.getDay() === 6);
+        const analystObj = store.getAnalystById(analystId);
+        const isPleno = analystObj && (analystObj.role || '').toLowerCase().includes('pleno');
+        const currentStatus = store.getAbsence(analystId, dateStr);
+
+        if (!isWeekend && currentStatus && currentStatus.reason && currentStatus.reason !== 'presente' && currentStatus.type !== 'range') {
+          store.removeAbsence(analystId, dateStr);
+          if (isPleno) {
+            store.setAbsence(analystId, dateStr, 'presente', '');
+          }
+        }
+      }
+
+      const remaining = (analystId && typeof store.getAnalystAbsenceRules === 'function')
+        ? store.getAnalystAbsenceRules(analystId).filter(r => r.type === 'range')
+        : [];
+
+      if (analystId) this.renderAnalystAbsenceRules(analystId);
+      this.setAbsenceMode('single');
+      const reasonSelect = document.getElementById('absence-reason');
+      if (reasonSelect) {
+        reasonSelect.value = 'presente';
+        this.handleAbsenceReasonChange('presente');
+      }
+
+      if (remaining.length === 0) {
+        this.closeModal('modal-analyst-absence');
+      }
+
+      this.renderAnalystDailyCards();
+      this.showToast('Período removido! Analista disponível como Presente.');
+    }
+  },
+
+    handleAbsenceReasonChange(val) {
     const groupNote = document.getElementById('group-absence-note');
     const warningBox = document.getElementById('absence-warning-box');
     const isAbsent = val && val !== 'presente';
@@ -5058,26 +5670,58 @@ const App = {
     }
     const analystId = document.getElementById('absence-analyst-id').value;
     const dateStr = document.getElementById('absence-date').value;
+    const mode = document.getElementById('absence-mode')?.value || 'single';
     const reason = document.getElementById('absence-reason').value;
     const note = (document.getElementById('absence-note')?.value || '').trim();
 
-    if (!analystId || !dateStr) return false;
+    if (!analystId) return false;
 
     const targetAnalystObj = store.getAnalystById(analystId);
     const isPlenoAnalyst = targetAnalystObj && (targetAnalystObj.role || '').toLowerCase().includes('pleno');
+    const meta = this._getAbsenceMeta(reason);
 
-    if (reason === 'presente') {
-      if (isPlenoAnalyst) {
-        // Para analista Pleno, gravamos explicitamente 'presente' para liberar agendamentos no dia
-        store.setAbsence(analystId, dateStr, 'presente', note);
-      } else {
-        store.removeAbsence(analystId, dateStr);
+    if (mode === 'range') {
+      const startDate = document.getElementById('absence-start-date')?.value;
+      const endDate = document.getElementById('absence-end-date')?.value;
+      if (!startDate || !endDate) {
+        alert('Informe a data de início e a data de fim do período.');
+        return false;
       }
-      this.showToast('Analista marcado como Presente no dia!');
+      if (endDate < startDate) {
+        alert('A data final deve ser igual ou posterior à data inicial.');
+        return false;
+      }
+      if (reason === 'presente') {
+        alert('Para registrar um período de férias ou ausência, selecione um motivo diferente de "Presente".');
+        return false;
+      }
+      store.setAbsenceRange(analystId, startDate, endDate, reason, note);
+      const sFmt = startDate.split('-').reverse().join('/');
+      const eFmt = endDate.split('-').reverse().join('/');
+      this.showToast(`${meta.label} registrado(a) de ${sFmt} a ${eFmt}!`);
     } else {
-      store.setAbsence(analystId, dateStr, reason, note);
-      const labels = { day_off: 'Day Off (Folga)', atestado: 'Atestado Médico', ausente: 'Ausente', fixo_ure: 'Fixo na URE' };
-      this.showToast(`Marcado como "${labels[reason] || 'Ausente'}"! Card bloqueado.`);
+      if (!dateStr) return false;
+      const existingRule = store.getAbsence(analystId, dateStr);
+      const hasRangeOrWeekly = existingRule && (existingRule.type === 'range' || existingRule.type === 'weekly');
+      const dCheck = new Date(dateStr + 'T12:00:00');
+      const isWeekend = !isNaN(dCheck.getTime()) && (dCheck.getDay() === 0 || dCheck.getDay() === 6);
+
+      if (reason === 'presente') {
+        if (isPlenoAnalyst || isWeekend || hasRangeOrWeekly) {
+          // Grava override explícito para liberar este dia (final de semana, Pleno ou dentro de período)
+          store.setAbsence(analystId, dateStr, 'presente', note);
+        } else {
+          store.removeAbsence(analystId, dateStr);
+        }
+        this.showToast('Analista marcado como Presente neste dia! Card liberado.');
+      } else if (reason === 'sem_expediente' && isWeekend && !note) {
+        // Volta ao padrão bloqueado de fim de semana removendo eventual override 'presente'
+        store.removeAbsence(analystId, dateStr);
+        this.showToast('Marcado como "Sem expediente"! Card bloqueado.');
+      } else {
+        store.setAbsence(analystId, dateStr, reason, note);
+        this.showToast(`Marcado como "${meta.label}"! Card bloqueado.`);
+      }
     }
 
     this.closeModal('modal-analyst-absence');
@@ -5085,10 +5729,7 @@ const App = {
     return false;
   },
 
-    // =========================================================================
-  // ATENDIMENTO URE (INTERNO)
-  // =========================================================================
-  escapeHtml(str) {
+    escapeHtml(str) {
     if (!str) return '';
     return String(str)
       .replace(/&/g, '&amp;')
@@ -5118,7 +5759,7 @@ renderUreView() {
     const now = new Date();
     const currentYear = now.getFullYear();
     const currentMonth = now.getMonth() + 1; // 1-indexed
-    const todayStr = now.toISOString().split('T')[0];
+    const todayStr = App.getLocalDateStr(now);
 
     // Popular select de anos disponíveis se ainda não populado
     const selectYear = document.getElementById('filter-ure-year');
@@ -5166,7 +5807,7 @@ renderUreView() {
     const targetDayStr = filterDate || todayStr;
     all.forEach(item => {
       if (!item.date) return;
-      if (item.date.split('T')[0] === targetDayStr) countDay++;
+      if (this.extractLocalDateStr(item.date) === targetDayStr) countDay++;
     });
 
     // Card 2: Mês Selecionado (no Ano Selecionado ou Ano Atual)
@@ -5256,7 +5897,7 @@ renderUreView() {
     let filtered = all.filter(item => {
       if (!item.date) return false;
       const d = new Date(item.date);
-      const itemDateStr = item.date.split('T')[0];
+      const itemDateStr = this.extractLocalDateStr(item.date);
 
       // Filtro por dia específico
       if (filterDate && itemDateStr !== filterDate) return false;
@@ -5507,7 +6148,7 @@ renderUreView() {
       const min = String(d.getMinutes()).padStart(2, '0');
       dtVal = `${yyyy}-${mm}-${dd}T${hh}:${min}`;
     } else {
-      dtVal = new Date().toISOString().slice(0, 16);
+      dtVal = App.getLocalDateTimeInputStr();
     }
     document.getElementById('edit-ure-datetime').value = dtVal;
 
