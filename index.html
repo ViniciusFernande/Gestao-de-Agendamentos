@@ -12,7 +12,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-  <link rel="stylesheet" href="css/style.css?v=20261111-sr-close-btn">
+  <link rel="stylesheet" href="css/style.css?v=20261111-ranking-bars">
   <script>
     (function() {
       try {
@@ -674,14 +674,8 @@
           <div class="page-header-actions">
             <div>
               <h2 class="page-title"><i class="fa-solid fa-trophy" style="color:#fbbf24; margin-right:8px;"></i> RANKING DE ESCOLAS MAIS VISITADAS</h2>
-              <p class="page-subtitle">Classificação das unidades escolares por volume total de agendamentos realizados</p>
+              <p class="page-subtitle">Classifica&ccedil;&atilde;o das unidades escolares por volume total de agendamentos realizados</p>
             </div>
-
-          </div>
-
-          <!-- PÓDIO DOS 3 PRIMEIROS LUGARES (DESTAQUE) -->
-          <div class="ranking-podium-grid" id="ranking-podium-container">
-            <!-- Renderizado dinamicamente via JS -->
           </div>
 
           <div class="mobile-scroll-hint" data-html2canvas-ignore="true"><i class="fa-solid fa-arrows-left-right"></i> Arraste para o lado para ver mais colunas</div>
@@ -689,12 +683,11 @@
             <table class="custom-table ranking-table">
               <thead>
                 <tr>
-                  <th style="width: 140px; text-align: center;">Posição</th>
-                  <th>Escola</th>
-                  <th>CIE</th>
-                  <th>Diretor(a)</th>
-                  <th>Bairro / Região</th>
-                  <th style="text-align: center;">Total Agendamentos</th>
+                  <th style="width: 85px; text-align: center;">Posi&ccedil;&atilde;o</th>
+                  <th style="width: 100px;">CIE</th>
+                  <th style="width: 1%; white-space: nowrap;">Escola</th>
+                  <th style="min-width: 160px;"></th>
+                  <th style="width: 190px; text-align: center;">Total Agendamentos</th>
                 </tr>
               </thead>
               <tbody id="tbody-ranking-schools"></tbody>
@@ -1854,7 +1847,7 @@
   <script src="js/agenda-order-deck.js?v=20261109-deck-tabs-header"></script>
   <script src="js/agenda-card-layout.js?v=20261108-responsive-cards"></script>
   <script src="js/agenda-analyst-photos.js?v=20261106-vini"></script>
-  <script src="js/app.js?v=20261111-rec-count-only"></script>
+  <script src="js/app.js?v=20261111-ranking-bars-v2"></script>
   <script src="js/agenda-radar-data.js?v=20261105"></script>
   <script src="js/agenda-radar.js?v=20261106-ure-fixed"></script>
 <div id="app-toast" class="toast-notification"><i class="fa-solid fa-circle-check" style="color:#4ade80;"></i> <span id="app-toast-text"></span></div>

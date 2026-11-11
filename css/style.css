@@ -6001,3 +6001,29 @@ body.role-analista .admin-only {
   border-color: rgba(239, 68, 68, 0.45) !important;
   color: #f87171 !important;
 }
+/* ==========================================================================
+   RANKING DE ESCOLAS: BARRA HORIZONTAL PROPORCIONAL
+   ========================================================================== */
+.ranking-bar-cell {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+}
+
+.ranking-bar-track {
+  flex: 1;
+  height: 10px;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 999px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.ranking-bar-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #2563eb 0%, #38bdf8 100%);
+  transition: width 0.35s ease;
+  min-width: 4px;
+}

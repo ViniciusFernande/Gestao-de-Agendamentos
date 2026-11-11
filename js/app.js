@@ -3293,55 +3293,6 @@ const App = {
     });
   },
 
-  buildPodiumCardsHtml(rankingList) {
-    if (!rankingList || rankingList.length < 3) {
-      return '<div style="text-align:center; padding:20px; color:var(--text-muted); font-size:0.85rem; grid-column:1/-1;">Necessário ao menos 3 escolas para compor o Top 3.</div>';
-    }
-
-    const first = rankingList[0];
-    const second = rankingList[1];
-    const third = rankingList[2];
-
-    return `
-      <!-- 2ª LUGAR: PRATA -->
-      <div class="podium-card podium-silver" style="cursor:pointer;" title="Clique para ver o Prontuário da Escola" data-cie="${this.escapeHtml(second.cie)}" data-name="${this.escapeHtml(second.name)}" onclick="App.openSchoolRecordModal(this.dataset.cie, this.dataset.name)">
-        <div class="podium-medal-icon">🥈</div>
-        <div class="podium-badge medal-badge-silver"><i class="fa-solid fa-medal"></i> 2º Lugar — Prata</div>
-        <div class="podium-school-name" title="${second.name}">${second.name}</div>
-        <div class="podium-school-meta">CIE: ${second.cie} &bull; ${second.neighborhood}</div>
-        <div class="podium-count-box">
-          <span class="podium-count-num">${second.total}</span>
-          <span class="podium-count-label">Agendamentos</span>
-        </div>
-      </div>
-
-      <!-- 1ª LUGAR: OURO (DESTAQUE CENTRAL) -->
-      <div class="podium-card podium-gold" style="cursor:pointer;" title="Clique para ver o Prontuário da Escola" data-cie="${this.escapeHtml(first.cie)}" data-name="${this.escapeHtml(first.name)}" onclick="App.openSchoolRecordModal(this.dataset.cie, this.dataset.name)">
-        <div class="podium-crown"><i class="fa-solid fa-crown"></i></div>
-        <div class="podium-medal-icon">🥇</div>
-        <div class="podium-badge medal-badge-gold"><i class="fa-solid fa-medal"></i> 1º Lugar — Ouro</div>
-        <div class="podium-school-name" title="${first.name}">${first.name}</div>
-        <div class="podium-school-meta">CIE: ${first.cie} &bull; ${first.neighborhood}</div>
-        <div class="podium-count-box">
-          <span class="podium-count-num">${first.total}</span>
-          <span class="podium-count-label">Agendamentos</span>
-        </div>
-      </div>
-
-      <!-- 3ª LUGAR: BRONZE -->
-      <div class="podium-card podium-bronze" style="cursor:pointer;" title="Clique para ver o Prontuário da Escola" data-cie="${this.escapeHtml(third.cie)}" data-name="${this.escapeHtml(third.name)}" onclick="App.openSchoolRecordModal(this.dataset.cie, this.dataset.name)">
-        <div class="podium-medal-icon">🥉</div>
-        <div class="podium-badge medal-badge-bronze"><i class="fa-solid fa-medal"></i> 3º Lugar — Bronze</div>
-        <div class="podium-school-name" title="${third.name}">${third.name}</div>
-        <div class="podium-school-meta">CIE: ${third.cie} &bull; ${third.neighborhood}</div>
-        <div class="podium-count-box">
-          <span class="podium-count-num">${third.total}</span>
-          <span class="podium-count-label">Agendamentos</span>
-        </div>
-      </div>
-    `;
-  },
-
   renderDashboardTopSchools() {
     const listEl = document.getElementById('dash-ranking-list-container') || document.getElementById('dash-ranking-podium-container');
     if (!listEl) return;
@@ -3484,61 +3435,40 @@ const App = {
 
   renderSchoolsRanking() {
     const tbody = document.getElementById('tbody-ranking-schools');
-    const podiumEl = document.getElementById('ranking-podium-container');
     if (!tbody) return;
 
     const rankingList = this.getTopSchools();
     const search = (document.getElementById('input-search-ranking-school')?.value || '').toLowerCase().trim();
+    const maxTotal = rankingList.reduce((max, r) => Math.max(max, r.total || 0), 0);
 
-    // 4. Renderiza o pódio com os 3 primeiros (Ouro, Prata e Bronze)
-    if (podiumEl) {
-      podiumEl.innerHTML = this.buildPodiumCardsHtml(rankingList);
-    }
-
-    // 5. Filtro da tabela (o Top 3 já está destacado no pódio acima e não repete na lista)
-    const hasPodium = podiumEl && rankingList.length >= 3;
-    const tableBaseList = hasPodium ? rankingList.slice(3) : rankingList;
-
-    const filteredTableList = tableBaseList.filter(item => {
+    const filteredTableList = rankingList.filter(item => {
       if (!search) return true;
-      return item.name.toLowerCase().includes(search) || item.cie.toLowerCase().includes(search) || item.neighborhood.toLowerCase().includes(search);
+      return item.name.toLowerCase().includes(search) || item.cie.toLowerCase().includes(search);
     });
 
     if (filteredTableList.length === 0) {
-      const msg = hasPodium ? 'Nenhuma outra escola encontrada no ranking.' : 'Nenhuma escola encontrada no ranking.';
-      tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:30px; color:var(--text-muted);">${msg}</td></tr>`;
+      tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:30px; color:var(--text-muted);">Nenhuma escola encontrada no ranking.</td></tr>';
       return;
     }
 
-    // 6. Linhas da tabela a partir do 4ª lugar
     let rows = '';
     filteredTableList.forEach((item) => {
       const rankIndex = rankingList.indexOf(item) + 1;
-      let positionHtml = '';
-      let rowHighlightClass = '';
-
-      if (rankIndex === 1) {
-        positionHtml = '<span class="medal-badge medal-badge-gold"><i class="fa-solid fa-medal"></i> 🥇 1ª Ouro</span>';
-        rowHighlightClass = 'ranking-row-gold';
-      } else if (rankIndex === 2) {
-        positionHtml = '<span class="medal-badge medal-badge-silver"><i class="fa-solid fa-medal"></i> 🥈 2ª Prata</span>';
-        rowHighlightClass = 'ranking-row-silver';
-      } else if (rankIndex === 3) {
-        positionHtml = '<span class="medal-badge medal-badge-bronze"><i class="fa-solid fa-medal"></i> 🥉 3ª Bronze</span>';
-        rowHighlightClass = 'ranking-row-bronze';
-      } else {
-        positionHtml = `<span class="ranking-position-num">${rankIndex}º</span>`;
-      }
+      const positionHtml = `<span class="ranking-position-num">${rankIndex}&ordm;</span>`;
+      const pct = (maxTotal > 0 && item.total > 0) ? Math.max(4, Math.round((item.total / maxTotal) * 100)) : 0;
 
       rows += `
-        <tr class="${rowHighlightClass}">
+        <tr>
           <td style="text-align: center;">${positionHtml}</td>
-          <td>
+          <td><span style="color:#60a5fa; font-weight:700;">${this.escapeHtml(item.cie)}</span></td>
+          <td style="width: 1%; white-space: nowrap; padding-right: 14px;">
             <strong class="school-name-link" style="font-size:0.92rem;" title="Clique para ver o Prontuário Técnico da Escola" data-cie="${this.escapeHtml(item.cie)}" data-name="${this.escapeHtml(item.name)}" onclick="App.openSchoolRecordModal(this.dataset.cie, this.dataset.name)"><i class="fa-solid fa-file-medical" style="color:#38bdf8; font-size:0.8rem;"></i> ${this.escapeHtml(item.name)}</strong>
           </td>
-          <td><span style="color:#60a5fa; font-weight:700;">${item.cie}</span></td>
-          <td>${item.director}</td>
-          <td>${item.neighborhood}</td>
+          <td style="padding-left: 6px; padding-right: 12px;">
+            <div class="ranking-bar-track" title="${item.total} agendamento(s)">
+              <div class="ranking-bar-fill" style="width: ${pct}%;${pct === 0 ? ' min-width: 0;' : ''}"></div>
+            </div>
+          </td>
           <td style="text-align: center;">
             <span class="ranking-total-badge">${item.total}</span>
           </td>
@@ -3549,7 +3479,7 @@ const App = {
     tbody.innerHTML = rows;
   },
 
-  renderSchoolsTable() {
+    renderSchoolsTable() {
     const tbody = document.getElementById('tbody-schools');
     if (!tbody) return;
 
