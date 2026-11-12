@@ -1,4 +1,4 @@
-﻿/**
+/**
  * SISTEMA DE GESTÃO DE AGENDAS - ANALISTAS
  * Lógica principal da aplicação (SPA)
  */
@@ -482,8 +482,27 @@ const App = {
     if (editUreAnalyst) editUreAnalyst.innerHTML = plenoOptions;
 
     if (reportAnalyst) {
+      const prevReportAnalyst = reportAnalyst.value || 'all';
+      const reportAnalystList = this.currentReportSource === 'ure' ? plenoAnalysts : analysts;
       reportAnalyst.innerHTML = '<option value="all">Todos os Analistas</option>' +
-        analysts.map(a => `<option value="${a.id}">${a.name}</option>`).join('');
+        reportAnalystList.map(a => `<option value="${a.id}">${a.name}</option>`).join('');
+      if (Array.from(reportAnalyst.options).some(o => o.value === prevReportAnalyst)) {
+        reportAnalyst.value = prevReportAnalyst;
+      } else {
+        reportAnalyst.value = 'all';
+      }
+    }
+
+    const filterUreAnalyst = document.getElementById('filter-ure-analyst');
+    if (filterUreAnalyst) {
+      const prevUreAnalyst = filterUreAnalyst.value || 'all';
+      filterUreAnalyst.innerHTML = '<option value="all">Todos os Analistas</option>' +
+        plenoAnalysts.map(a => `<option value="${a.id}">${a.name}</option>`).join('');
+      if (Array.from(filterUreAnalyst.options).some(o => o.value === prevUreAnalyst)) {
+        filterUreAnalyst.value = prevUreAnalyst;
+      } else {
+        filterUreAnalyst.value = 'all';
+      }
     }
 
     // Assuntos pré-definidos de agendamento (O.S. e Fila)
@@ -3885,65 +3904,225 @@ const App = {
   // =========================================================================
   // RELATÓRIOS E EXPORTAÇÃO
   // =========================================================================
-  onReportPresetChange() {
-    const preset = document.getElementById('report-period-preset').value;
-    const customGroup = document.getElementById('group-custom-dates');
-    if (preset === 'custom') {
-      customGroup.style.display = 'flex';
+  setReportSource(source) {
+    this.currentReportSource = source === 'ure' ? 'ure' : 'schools';
+    const btnSchools = document.getElementById('btn-report-tab-schools');
+    const btnUre = document.getElementById('btn-report-tab-ure');
+    if (btnSchools && btnUre) {
+      if (this.currentReportSource === 'ure') {
+        btnSchools.className = 'btn-secondary';
+        btnUre.className = 'btn-primary';
+      } else {
+        btnSchools.className = 'btn-primary';
+        btnUre.className = 'btn-secondary';
+      }
+    }
+    this.populateSelects();
+    this.generateReport();
+  },
+
+  toggleReportSort(key) {
+    if (!this.reportSort) {
+      this.reportSort = { key: 'date', dir: 'desc' };
+    }
+    if (this.reportSort.key === key) {
+      this.reportSort.dir = this.reportSort.dir === 'asc' ? 'desc' : 'asc';
     } else {
-      customGroup.style.display = 'none';
+      this.reportSort = { key, dir: 'asc' };
     }
     this.generateReport();
   },
 
+  _renderSortableTh(label, key) {
+    const sort = this.reportSort || { key: 'date', dir: 'desc' };
+    const active = sort.key === key;
+    const icon = active ? (sort.dir === 'asc' ? 'fa-sort-up' : 'fa-sort-down') : 'fa-sort';
+    const opacity = active ? '1' : '0.45';
+    const color = active ? '#60a5fa' : 'inherit';
+    return `<th onclick="App.toggleReportSort('${key}')" style="cursor:pointer; user-select:none; white-space:nowrap;" title="Clique para ordenar por ${label}">${label} <i class="fa-solid ${icon}" style="margin-left:4px; font-size:0.72rem; opacity:${opacity}; color:${color};"></i></th>`;
+  },
+
+  _sortReportItems(items, source, analysts) {
+    const sort = this.reportSort || { key: 'date', dir: 'desc' };
+    const mult = sort.dir === 'asc' ? 1 : -1;
+    const cmpStr = (a, b) => String(a || '').localeCompare(String(b || ''), 'pt-BR', { numeric: true, sensitivity: 'base' });
+
+    return [...items].sort((a, b) => {
+      if (source === 'ure') {
+        switch (sort.key) {
+          case 'analyst': return mult * cmpStr(a.analystName, b.analystName);
+          case 'sector': return mult * cmpStr(a.sector, b.sector);
+          case 'type': return mult * cmpStr(a.type, b.type);
+          case 'description': return mult * cmpStr(a.description, b.description);
+          case 'date':
+          default:
+            return mult * (new Date(a.date || 0) - new Date(b.date || 0));
+        }
+      } else {
+        switch (sort.key) {
+          case 'os': return mult * cmpStr(a.osNumber, b.osNumber);
+          case 'analyst': {
+            const anA = analysts.find(x => x.id === a.analystId)?.name || a.analystName || '';
+            const anB = analysts.find(x => x.id === b.analystId)?.name || b.analystName || '';
+            return mult * cmpStr(anA, anB);
+          }
+          case 'school': {
+            const scA = `${a.schoolCie ? a.schoolCie + ' - ' : ''}${a.schoolName || ''}`;
+            const scB = `${b.schoolCie ? b.schoolCie + ' - ' : ''}${b.schoolName || ''}`;
+            return mult * cmpStr(scA, scB);
+          }
+          case 'subject': return mult * cmpStr(a.subject, b.subject);
+          case 'date':
+          default:
+            return mult * cmpStr(a.date, b.date);
+        }
+      }
+    });
+  },
   generateReport() {
-    const preset = document.getElementById('report-period-preset')?.value || 'month';
+    const now = new Date();
+    const selectedDate = document.getElementById('report-filter-date')?.value || '';
+    const selectedMonth = document.getElementById('report-filter-month')?.value || String(now.getMonth() + 1);
+    const selectedYear = document.getElementById('report-filter-year')?.value || String(Math.max(2026, now.getFullYear()));
     const analystFilter = document.getElementById('report-filter-analyst')?.value || 'all';
     const typeFilter = document.getElementById('report-filter-type')?.value || 'all';
-    
-    const schedules = store.getSchedules();
-    const analysts = store.getAnalysts();
-    const now = new Date();
-    const todayStr = App.getLocalDateStr(now);
+    const source = this.currentReportSource === 'ure' ? 'ure' : 'schools';
 
-    // Calcula intervalo de datas do preset
+    const analysts = store.getAnalysts();
+    const monthNames = ['', 'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+
+    const y = parseInt(selectedYear, 10) || Math.max(2026, now.getFullYear());
     let startDate = '';
     let endDate = '';
     let periodDesc = '';
 
-    if (preset === 'month') {
-      const y = now.getFullYear();
-      const m = now.getMonth();
-      startDate = App.getLocalDateStr(new Date(y, m, 1));
-      endDate = App.getLocalDateStr(new Date(y, m + 1, 0));
-      periodDesc = `Mês Atual (${now.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })})`;
-    } else if (preset === 'day') {
-      startDate = todayStr;
-      endDate = todayStr;
-      periodDesc = `Dia Atual (${todayStr.split('-').reverse().join('/')})`;
-    } else if (preset === 'week') {
-      const dayOfWeek = now.getDay();
-      const start = new Date(now);
-      start.setDate(now.getDate() - dayOfWeek);
-      const end = new Date(start);
-      end.setDate(start.getDate() + 6);
-      startDate = App.getLocalDateStr(start);
-      endDate = App.getLocalDateStr(end);
-      periodDesc = `Semana Atual (${startDate.split('-').reverse().join('/')} a ${endDate.split('-').reverse().join('/')})`;
-    } else if (preset === 'year') {
-      const y = now.getFullYear();
+    if (selectedDate) {
+      startDate = selectedDate;
+      endDate = selectedDate;
+      periodDesc = `Dia ${selectedDate.split('-').reverse().join('/')}`;
+    } else if (selectedMonth === 'all') {
       startDate = `${y}-01-01`;
       endDate = `${y}-12-31`;
-      periodDesc = `Ano de ${y}`;
-    } else if (preset === 'custom') {
-      startDate = document.getElementById('report-date-start')?.value || '2000-01-01';
-      endDate = document.getElementById('report-date-end')?.value || '2099-12-31';
-      periodDesc = `Período Personalizado (${startDate.split('-').reverse().join('/')} a ${endDate.split('-').reverse().join('/')})`;
+      periodDesc = `Ano de ${y} (Todos os Meses)`;
     } else {
-      startDate = '2000-01-01';
-      endDate = '2099-12-31';
-      periodDesc = 'Total Geral (Histórico Completo)';
+      const m = parseInt(selectedMonth, 10) || (now.getMonth() + 1);
+      startDate = App.getLocalDateStr(new Date(y, m - 1, 1));
+      endDate = App.getLocalDateStr(new Date(y, m, 0));
+      periodDesc = `${monthNames[m] || ''} de ${y}`;
     }
+
+    const descEl = document.getElementById('report-header-period-desc');
+    const analystName = analystFilter === 'all' ? 'Todos os Analistas' : (store.getAnalystById(analystFilter)?.name || 'Analista');
+    if (descEl) descEl.textContent = `Período: ${periodDesc} | Filtro: ${analystName}`;
+
+    const genTimeEl = document.getElementById('report-header-generated-time');
+    if (genTimeEl) genTimeEl.textContent = `Emissão: ${new Date().toLocaleString('pt-BR')}`;
+
+    const titleEl = document.getElementById('report-header-title');
+    const t1 = document.getElementById('report-metric-title-1');
+    const t2 = document.getElementById('report-metric-title-2');
+    const t3 = document.getElementById('report-metric-title-3');
+    const sub1 = document.getElementById('report-metric-completed-sub');
+    const sub2 = document.getElementById('report-metric-manut-sub');
+    const sub3 = document.getElementById('report-metric-inv-sub');
+    const tableWrapper = document.getElementById('report-table-wrapper');
+
+    if (source === 'ure') {
+      const allUre = store.getUreAttendances();
+      const filteredUre = allUre.filter(item => {
+        if (!item.date) return false;
+        const dStr = this.extractLocalDateStr(item.date);
+        if (dStr < startDate || dStr > endDate) return false;
+        if (analystFilter !== 'all' && item.analystId !== analystFilter) return false;
+        return true;
+      });
+      const sortedUre = this._sortReportItems(filteredUre, 'ure', analysts);
+
+      const uniqueSectors = new Set(sortedUre.map(i => (i.sector || '').trim()).filter(Boolean)).size;
+      const uniqueAnalysts = new Set(sortedUre.map(i => i.analystId || i.analystName).filter(Boolean)).size;
+      const uniqueTypes = new Set(sortedUre.map(i => (i.type || '').trim()).filter(Boolean)).size;
+
+      if (titleEl) titleEl.textContent = 'RELATÓRIO GERENCIAL DE ATENDIMENTOS URE';
+      if (t1) t1.textContent = 'ATENDIMENTOS NO PERÍODO';
+      if (t2) t2.textContent = 'SETORES ATENDIDOS';
+      if (t3) t3.textContent = 'ANALISTAS ATUANTES';
+      if (sub1) sub1.textContent = 'Registros internos URE';
+      if (sub2) sub2.textContent = 'Setores distintos no período';
+      if (sub3) sub3.textContent = 'Analistas com registros no período';
+
+      document.getElementById('report-metric-completed').textContent = sortedUre.length;
+      document.getElementById('report-metric-manut').textContent = uniqueSectors;
+      document.getElementById('report-metric-inv').textContent = uniqueAnalysts;
+
+      this.currentReportUreFiltered = sortedUre;
+      this.currentReportUreMeta = {
+        periodDesc,
+        analystName,
+        totalFiltered: sortedUre.length,
+        uniqueSectors,
+        uniqueAnalysts,
+        uniqueTypes
+      };
+
+      if (tableWrapper) {
+        tableWrapper.innerHTML = `
+          <table class="custom-table" id="report-print-table">
+            <thead>
+              <tr>
+                ${this._renderSortableTh('Data / Hora', 'date')}
+                ${this._renderSortableTh('Analista', 'analyst')}
+                ${this._renderSortableTh('Setor', 'sector')}
+                ${this._renderSortableTh('Tipo', 'type')}
+                ${this._renderSortableTh('Descrição', 'description')}
+              </tr>
+            </thead>
+            <tbody id="report-table-body"></tbody>
+          </table>
+        `;
+      }
+
+      const tbody = document.getElementById('report-table-body');
+      if (!tbody) return;
+
+      if (sortedUre.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:30px; color:var(--text-muted);">Nenhum atendimento URE encontrado para os filtros selecionados.</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = sortedUre.map(item => {
+        let formattedDate = '---';
+        if (item.date) {
+          const dt = new Date(item.date);
+          const dia = String(dt.getDate()).padStart(2, '0');
+          const mes = String(dt.getMonth() + 1).padStart(2, '0');
+          const ano = dt.getFullYear();
+          const hor = String(dt.getHours()).padStart(2, '0');
+          const min = String(dt.getMinutes()).padStart(2, '0');
+          formattedDate = `${dia}/${mes}/${ano} ${hor}:${min}`;
+        }
+        return `
+          <tr>
+            <td>${formattedDate}</td>
+            <td>${this.escapeHtml(item.analystName || 'Não informado')}</td>
+            <td><strong style="color:#ffffff;">${this.escapeHtml(item.sector || '---')}</strong></td>
+            <td>${this.escapeHtml(item.type || '-')}</td>
+            <td>${this.escapeHtml(item.description || '-')}</td>
+          </tr>
+        `;
+      }).join('');
+      return;
+    }
+
+    // Modo padrão: Atendimentos nas Escolas (O.S.)
+    if (titleEl) titleEl.textContent = 'RELATÓRIO GERENCIAL DE ORDENS CONCLUÍDAS';
+    if (t1) t1.textContent = 'O.S. CONCLUÍDAS NO PERÍODO';
+    if (t2) t2.textContent = 'MANUTENÇÃO / CONECTIVIDADE';
+    if (t3) t3.textContent = 'INVENTÁRIOS CONCLUÍDOS';
+    if (sub1) sub1.textContent = 'Concluídas com sucesso';
+    if (sub2) sub2.textContent = 'Ordens de infraestrutura e rede';
+    if (sub3) sub3.textContent = 'Contagem e tombamento';
+
+    const schedules = store.getSchedules();
 
     // Filtra dados
     const filtered = schedules.filter(s => {
@@ -3952,6 +4131,8 @@ const App = {
       if (typeFilter !== 'all' && s.serviceType !== typeFilter) return false;
       return true;
     });
+
+    const sortedFiltered = this._sortReportItems(filtered, 'schools', analysts);
 
     const completedList = filtered.filter(s => s.completed);
     const countCompleted = completedList.length;
@@ -3965,30 +4146,30 @@ const App = {
     document.getElementById('report-metric-inv').textContent = countInv;
     const returnsEl = document.getElementById('report-metric-returns'); if (returnsEl) returnsEl.textContent = countReturns;
 
-    const descEl = document.getElementById('report-header-period-desc');
-    const analystName = analystFilter === 'all' ? 'Todos os Analistas' : (store.getAnalystById(analystFilter)?.name || 'Analista');
-    if (descEl) descEl.textContent = `Período: ${periodDesc} | Filtro: ${analystName}`;
-
-    const genTimeEl = document.getElementById('report-header-generated-time');
-    if (genTimeEl) genTimeEl.textContent = `Emissão: ${new Date().toLocaleString('pt-BR')}`;
-
     // Guarda dados filtrados para uso eventual na exportação de PDF
-    this.currentReportFiltered = filtered;
+    this.currentReportFiltered = sortedFiltered;
     this.currentReportAnalysts = analysts;
+    this.currentReportMeta = {
+      periodDesc,
+      analystName,
+      totalFiltered: filtered.length,
+      countCompleted,
+      countManut,
+      countInv,
+      countReturns
+    };
 
-    // Garante estrutura da tabela contínua padrão sem divisão na tela
-    const tableWrapper = document.getElementById('report-table-wrapper');
-    if (tableWrapper && !document.getElementById('report-table-body')) {
+    // Garante estrutura da tabela contínua padrão para O.S.
+    if (tableWrapper) {
       tableWrapper.innerHTML = `
         <table class="custom-table" id="report-print-table">
           <thead>
-            <tr>
-              <th>Data</th>
-              <th>O.S.</th>
-              <th>Analista</th>
-              <th>Escola</th>
-              <th>CIE</th>
-              <th>Assunto</th>
+                        <tr>
+              ${this._renderSortableTh('Data', 'date')}
+              ${this._renderSortableTh('O.S.', 'os')}
+              ${this._renderSortableTh('Analista', 'analyst')}
+              ${this._renderSortableTh('CIE - Escola', 'school')}
+              ${this._renderSortableTh('Assunto', 'subject')}
             </tr>
           </thead>
           <tbody id="report-table-body"></tbody>
@@ -3999,14 +4180,14 @@ const App = {
     const tbody = document.getElementById('report-table-body');
     if (!tbody) return;
 
-    if (filtered.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:30px; color:var(--text-muted);">Nenhuma ordem encontrada para os filtros selecionados.</td></tr>';
+    if (sortedFiltered.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:30px; color:var(--text-muted);">Nenhuma ordem encontrada para os filtros selecionados.</td></tr>';
       return;
     }
 
     // Preenche tabela única 100% contínua na tela
     let rows = '';
-    filtered.forEach(item => {
+    sortedFiltered.forEach(item => {
       const analyst = analysts.find(a => a.id === item.analystId) || (item.analystName ? { name: item.analystName } : { name: 'Analista' });
       const dateFmt = item.date.split('-').reverse().join('/');
 
@@ -4015,8 +4196,7 @@ const App = {
           <td>${dateFmt}</td>
           <td><strong style="color:#ffffff;">${item.osNumber || '-'}</strong></td>
           <td>${analyst.name}</td>
-          <td>${item.schoolName}</td>
-          <td>${item.schoolCie}</td>
+          <td>${item.schoolCie ? `${this.escapeHtml(item.schoolCie)} - ` : ''}${this.escapeHtml(item.schoolName)}</td>
           <td>${item.subject}</td>
         </tr>
       `;
@@ -4030,6 +4210,12 @@ const App = {
   },
 
   async exportReportPDF() {
+    const JsPdfClass = (window.jspdf && window.jspdf.jsPDF) || window.jsPDF;
+    if (!JsPdfClass) {
+      alert('Biblioteca de PDF não carregada. Por favor, recarregue a página.');
+      return;
+    }
+
     const btn = document.getElementById('btn-export-pdf') || document.querySelector('button[onclick="App.exportReportPDF()"]');
     const originalContent = btn ? btn.innerHTML : '';
     if (btn) {
@@ -4037,111 +4223,445 @@ const App = {
       btn.disabled = true;
     }
 
-    const element = document.getElementById('report-print-container');
-    const tableWrapper = document.getElementById('report-table-wrapper');
-    if (!element || !tableWrapper) {
-      if (btn) { btn.innerHTML = originalContent; btn.disabled = false; }
-      return;
-    }
-
-    // Salva o HTML contínuo da tela para restaurar imediatamente após o PDF
-    const originalWrapperHtml = tableWrapper.innerHTML;
-
     try {
-      const filtered = this.currentReportFiltered || [];
-      const analysts = this.currentReportAnalysts || store.getAnalysts();
+      // Garante dados atualizados
+      this.generateReport();
 
-      // Monta paginação temporária inteligente somente para o arquivo PDF
-      if (filtered.length > 12) {
-        const P1_LIMIT = 12;
-        const OTHER_LIMIT = 18;
+      if (this.currentReportSource === 'ure') {
+        const ureRows = this.currentReportUreFiltered || [];
+        const ureMeta = this.currentReportUreMeta || {
+          periodDesc: 'Período Selecionado',
+          analystName: 'Todos os Analistas',
+          totalFiltered: ureRows.length,
+          uniqueSectors: 0,
+          uniqueAnalysts: 0,
+          uniqueTypes: 0
+        };
 
-        const pages = [];
-        pages.push(filtered.slice(0, P1_LIMIT));
-        let remainder = filtered.slice(P1_LIMIT);
-        while (remainder.length > 0) {
-          pages.push(remainder.slice(0, OTHER_LIMIT));
-          remainder = remainder.slice(OTHER_LIMIT);
+        let urePdf;
+        try {
+          urePdf = new JsPdfClass({ orientation: 'p', unit: 'mm', format: 'a4' });
+        } catch (_) {
+          urePdf = new JsPdfClass('p', 'mm', 'a4');
         }
 
-        const totalPages = pages.length;
-        let tablesHtml = '';
-        const theadHtml = `
-          <thead>
-            <tr>
-              <th>Data</th>
-              <th>O.S.</th>
-              <th>Analista</th>
-              <th>Escola</th>
-              <th>CIE</th>
-              <th>Assunto</th>
-            </tr>
-          </thead>
-        `;
+        const pageW = 210;
+        const pageH = 297;
+        const marginL = 12;
+        const marginR = 12;
+        const contentW = pageW - marginL - marginR;
+        const footerY = pageH - 10;
+        const maxBodyY = pageH - 16;
 
-        pages.forEach((pageItems, pageIdx) => {
-          let rows = '';
-          pageItems.forEach(item => {
-            const analyst = analysts.find(a => a.id === item.analystId) || { name: 'Analista' };
-            const dateFmt = item.date.split('-').reverse().join('/');
-            rows += `
-              <tr>
-                <td>${dateFmt}</td>
-                <td><strong style="color:#ffffff;">${item.osNumber || '-'}</strong></td>
-                <td>${analyst.name}</td>
-                <td>${item.schoolName}</td>
-                <td>${item.schoolCie}</td>
-                <td>${item.subject}</td>
-              </tr>
-            `;
+        const cols = [
+          { header: 'DATA / HORA', width: 28, align: 'left' },
+          { header: 'ANALISTA', width: 38, align: 'left' },
+          { header: 'SETOR', width: 32, align: 'left' },
+          { header: 'TIPO', width: 34, align: 'left' },
+          { header: 'DESCRIÇÃO', width: 54, align: 'left' }
+        ];
+
+        const drawUreHeader = (isContinuation) => {
+          urePdf.setFillColor(30, 58, 138);
+          urePdf.rect(marginL, 10, contentW, 13, 'F');
+
+          urePdf.setTextColor(255, 255, 255);
+          urePdf.setFont('helvetica', 'bold');
+          urePdf.setFontSize(11);
+          urePdf.text(
+            isContinuation ? 'RELATÓRIO GERENCIAL DE ATENDIMENTOS URE (CONTINUAÇÃO)' : 'RELATÓRIO GERENCIAL DE ATENDIMENTOS URE',
+            marginL + 4,
+            17.5
+          );
+
+          urePdf.setFont('helvetica', 'normal');
+          urePdf.setFontSize(7.5);
+          const emitted = `Emissão: ${new Date().toLocaleString('pt-BR')}`;
+          const emitW = urePdf.getTextWidth(emitted);
+          urePdf.text(emitted, pageW - marginR - emitW - 4, 17.5);
+
+          urePdf.setFillColor(241, 245, 249);
+          urePdf.rect(marginL, 23, contentW, 7.5, 'F');
+          urePdf.setTextColor(30, 41, 59);
+          urePdf.setFont('helvetica', 'bold');
+          urePdf.setFontSize(8);
+          urePdf.text(`Período: ${ureMeta.periodDesc}   |   Filtro: ${ureMeta.analystName}`, marginL + 4, 28);
+
+          if (isContinuation) {
+            return 34;
+          }
+
+          const kpis = [
+            { label: 'TOTAL NO PERÍODO', value: String(ureMeta.totalFiltered), color: [37, 99, 235] },
+            { label: 'SETORES ATENDIDOS', value: String(ureMeta.uniqueSectors), color: [2, 132, 199] },
+            { label: 'ANALISTAS ATUANTES', value: String(ureMeta.uniqueAnalysts), color: [22, 163, 74] },
+            { label: 'TIPOS REGISTRADOS', value: String(ureMeta.uniqueTypes), color: [217, 119, 6] }
+          ];
+
+          const gap = 3;
+          const boxW = (contentW - gap * 3) / 4;
+          const boxY = 33.5;
+          const boxH = 13.5;
+
+          kpis.forEach((k, idx) => {
+            const x = marginL + idx * (boxW + gap);
+            urePdf.setFillColor(248, 250, 252);
+            urePdf.setDrawColor(203, 213, 225);
+            urePdf.setLineWidth(0.25);
+            urePdf.roundedRect(x, boxY, boxW, boxH, 1.5, 1.5, 'FD');
+
+            urePdf.setFillColor(k.color[0], k.color[1], k.color[2]);
+            urePdf.rect(x, boxY, 1.6, boxH, 'F');
+
+            urePdf.setTextColor(100, 116, 139);
+            urePdf.setFont('helvetica', 'bold');
+            urePdf.setFontSize(6.5);
+            urePdf.text(k.label, x + 4, boxY + 4.8);
+
+            urePdf.setTextColor(15, 23, 42);
+            urePdf.setFont('helvetica', 'bold');
+            urePdf.setFontSize(11);
+            urePdf.text(k.value, x + 4, boxY + 11.2);
           });
 
-          if (pageIdx === 0) {
-            tablesHtml += `
-              <table class="custom-table" id="report-print-table">
-                ${theadHtml}
-                <tbody>${rows}</tbody>
-              </table>
-            `;
-          } else {
-            tablesHtml += `
-              <div class="html2pdf__page-break" style="page-break-after: always; break-after: page; height: 16px; margin-top: 14px;"></div>
-              <div class="report-continuation-header" style="display:flex; justify-content:space-between; align-items:center; margin: 14px 0 8px 0; padding-bottom: 6px; border-bottom: 1px solid #23314f;">
-                <span style="font-size: 0.85rem; font-weight: 700; color: #60a5fa;">RELATÓRIO GERENCIAL DE ORDENS CONCLUÍDAS <span style="font-size: 0.75rem; color: #94a3b8; font-weight: 400;">(Continuação)</span></span>
-                <span style="font-size: 0.75rem; color: #94a3b8;">Página ${pageIdx + 1} de ${totalPages}</span>
-              </div>
-              <table class="custom-table">
-                ${theadHtml}
-                <tbody>${rows}</tbody>
-              </table>
-            `;
-          }
-        });
+          return boxY + boxH + 4;
+        };
 
-        tableWrapper.innerHTML = tablesHtml;
+        const drawUreTableHeader = (y) => {
+          urePdf.setFillColor(30, 41, 59);
+          urePdf.rect(marginL, y, contentW, 6.8, 'F');
+          urePdf.setTextColor(255, 255, 255);
+          urePdf.setFont('helvetica', 'bold');
+          urePdf.setFontSize(7.2);
+
+          let curX = marginL;
+          cols.forEach(c => {
+            urePdf.text(c.header, curX + 2, y + 4.6);
+            curX += c.width;
+          });
+          return y + 6.8;
+        };
+
+        let curY = drawUreHeader(false);
+        curY = drawUreTableHeader(curY);
+
+        if (ureRows.length === 0) {
+          urePdf.setTextColor(100, 116, 139);
+          urePdf.setFont('helvetica', 'italic');
+          urePdf.setFontSize(8.5);
+          urePdf.text('Nenhum atendimento URE encontrado para os filtros selecionados.', marginL + 2, curY + 8);
+        } else {
+          urePdf.setFontSize(7.2);
+          ureRows.forEach((item, idx) => {
+            let formattedDate = '---';
+            if (item.date) {
+              const dt = new Date(item.date);
+              const dia = String(dt.getDate()).padStart(2, '0');
+              const mes = String(dt.getMonth() + 1).padStart(2, '0');
+              const ano = dt.getFullYear();
+              const hor = String(dt.getHours()).padStart(2, '0');
+              const min = String(dt.getMinutes()).padStart(2, '0');
+              formattedDate = `${dia}/${mes}/${ano} ${hor}:${min}`;
+            }
+
+            const cellTexts = [
+              formattedDate,
+              item.analystName || 'Não informado',
+              item.sector || '---',
+              item.type || '-',
+              item.description || '-'
+            ];
+
+            urePdf.setFont('helvetica', 'normal');
+            const wrappedCells = cellTexts.map((txt, cIdx) => {
+              const maxW = cols[cIdx].width - 4;
+              return urePdf.splitTextToSize(txt, maxW);
+            });
+
+            const maxLines = Math.max(...wrappedCells.map(lines => lines.length), 1);
+            const lineHeight = 3.5;
+            const rowH = Math.max(5.8, maxLines * lineHeight + 2.3);
+
+            if (curY + rowH > maxBodyY) {
+              urePdf.addPage();
+              curY = drawUreHeader(true);
+              curY = drawUreTableHeader(curY);
+            }
+
+            if (idx % 2 === 1) {
+              urePdf.setFillColor(248, 250, 252);
+              urePdf.rect(marginL, curY, contentW, rowH, 'F');
+            }
+
+            urePdf.setDrawColor(226, 232, 240);
+            urePdf.setLineWidth(0.15);
+            urePdf.line(marginL, curY + rowH, pageW - marginR, curY + rowH);
+
+            let curX = marginL;
+            wrappedCells.forEach((lines, cIdx) => {
+              if (cIdx === 2) {
+                urePdf.setFont('helvetica', 'bold');
+                urePdf.setTextColor(30, 58, 138);
+              } else {
+                urePdf.setFont('helvetica', 'normal');
+                urePdf.setTextColor(30, 41, 59);
+              }
+              lines.forEach((ln, lIdx) => {
+                urePdf.text(ln, curX + 2, curY + 4 + lIdx * lineHeight);
+              });
+              curX += cols[cIdx].width;
+            });
+
+            curY += rowH;
+          });
+        }
+
+        const totalPages = urePdf.internal.getNumberOfPages();
+        for (let p = 1; p <= totalPages; p++) {
+          urePdf.setPage(p);
+          urePdf.setDrawColor(203, 213, 225);
+          urePdf.setLineWidth(0.2);
+          urePdf.line(marginL, footerY - 3.5, pageW - marginR, footerY - 3.5);
+
+          urePdf.setTextColor(100, 116, 139);
+          urePdf.setFont('helvetica', 'normal');
+          urePdf.setFontSize(7.2);
+          urePdf.text('SG - Sistema de Gestão de Agendas | Relatório Gerencial URE', marginL, footerY);
+
+          const pageLabel = `Página ${p} de ${totalPages}`;
+          const pw = urePdf.getTextWidth(pageLabel);
+          urePdf.text(pageLabel, pageW - marginR - pw, footerY);
+        }
+
+        const ureFileName = `Relatorio_Atendimento_URE_${App.getLocalDateStr()}.pdf`;
+        urePdf.save(ureFileName);
+
+        if (typeof this.showToast === 'function') {
+          this.showToast('Relatório URE em PDF exportado com sucesso!');
+        }
+        return;
       }
-
-      const opt = {
-        margin: 10,
-        filename: `Relatorio_OS_${App.getLocalDateStr()}.pdf`,
-        image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: {
-          scale: 2,
-          useCORS: true,
-          backgroundColor: '#0f172a'
-        },
-        jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' },
-        pagebreak: { mode: ['css', 'legacy'] }
+      const rowsData = this.currentReportFiltered || [];
+      const analysts = this.currentReportAnalysts || store.getAnalysts();
+      const meta = this.currentReportMeta || {
+        periodDesc: document.getElementById('report-header-period-desc')?.textContent || 'Período Selecionado',
+        analystName: 'Todos os Analistas',
+        totalFiltered: rowsData.length,
+        countCompleted: rowsData.filter(s => s.completed).length,
+        countManut: rowsData.filter(s => s.completed && (s.serviceType === 'manutencao' || s.serviceType === 'chamado_interno')).length,
+        countInv: rowsData.filter(s => s.completed && s.serviceType === 'inventario').length,
+        countReturns: rowsData.filter(s => s.needsReturn).length
       };
 
-      await html2pdf().set(opt).from(element).save();
+      let pdf;
+      try {
+        pdf = new JsPdfClass({ orientation: 'p', unit: 'mm', format: 'a4' });
+      } catch (_) {
+        pdf = new JsPdfClass('p', 'mm', 'a4');
+      }
 
+      const pageW = 210;
+      const pageH = 297;
+      const marginL = 12;
+      const marginR = 12;
+      const contentW = pageW - marginL - marginR; // 186mm
+      const footerY = pageH - 10;
+      const maxBodyY = pageH - 16;
+
+      // Colunas compactas (soma = 186mm)
+      const cols = [
+        { header: 'DATA', width: 20, align: 'left' },
+        { header: 'O.S.', width: 25, align: 'left' },
+        { header: 'ANALISTA', width: 39, align: 'left' },
+        { header: 'CIE - ESCOLA', width: 67, align: 'left' },
+        { header: 'ASSUNTO', width: 35, align: 'left' }
+      ];
+
+      const drawHeader = (isContinuation) => {
+        // Barra superior institucional
+        pdf.setFillColor(30, 58, 138); // #1e3a8a
+        pdf.rect(marginL, 10, contentW, 13, 'F');
+
+        pdf.setTextColor(255, 255, 255);
+        pdf.setFont('helvetica', 'bold');
+        pdf.setFontSize(11);
+        pdf.text(
+          isContinuation ? 'RELATÓRIO GERENCIAL DE ORDENS DE SERVIÇO (CONTINUAÇÃO)' : 'RELATÓRIO GERENCIAL DE ORDENS DE SERVIÇO',
+          marginL + 4,
+          17.5
+        );
+
+        pdf.setFont('helvetica', 'normal');
+        pdf.setFontSize(7.5);
+        const emitted = `Emissão: ${new Date().toLocaleString('pt-BR')}`;
+        const emitW = pdf.getTextWidth(emitted);
+        pdf.text(emitted, pageW - marginR - emitW - 4, 17.5);
+
+        // Subtítulo com filtros aplicados
+        pdf.setFillColor(241, 245, 249); // #f1f5f9
+        pdf.rect(marginL, 23, contentW, 7.5, 'F');
+        pdf.setTextColor(30, 41, 59);
+        pdf.setFont('helvetica', 'bold');
+        pdf.setFontSize(8);
+        pdf.text(`Período: ${meta.periodDesc}   |   Filtro: ${meta.analystName}`, marginL + 4, 28);
+
+        if (isContinuation) {
+          return 34;
+        }
+
+        // 4 Cards compactos de resumo
+        const kpis = [
+          { label: 'TOTAL NO PERÍODO', value: String(meta.totalFiltered), color: [37, 99, 235] },
+          { label: 'CONCLUÍDAS', value: String(meta.countCompleted), color: [22, 163, 74] },
+          { label: 'MANUTENÇÃO', value: String(meta.countManut), color: [2, 132, 199] },
+          { label: 'INVENTÁRIO', value: String(meta.countInv), color: [217, 119, 6] }
+        ];
+
+        const gap = 3;
+        const boxW = (contentW - gap * 3) / 4;
+        const boxY = 33.5;
+        const boxH = 13.5;
+
+        kpis.forEach((k, idx) => {
+          const x = marginL + idx * (boxW + gap);
+          pdf.setFillColor(248, 250, 252);
+          pdf.setDrawColor(203, 213, 225);
+          pdf.setLineWidth(0.25);
+          pdf.roundedRect(x, boxY, boxW, boxH, 1.5, 1.5, 'FD');
+
+          // Barra lateral colorida
+          pdf.setFillColor(k.color[0], k.color[1], k.color[2]);
+          pdf.rect(x, boxY, 1.6, boxH, 'F');
+
+          pdf.setTextColor(100, 116, 139);
+          pdf.setFont('helvetica', 'bold');
+          pdf.setFontSize(6.5);
+          pdf.text(k.label, x + 4, boxY + 4.8);
+
+          pdf.setTextColor(15, 23, 42);
+          pdf.setFont('helvetica', 'bold');
+          pdf.setFontSize(11);
+          pdf.text(k.value, x + 4, boxY + 11.2);
+        });
+
+        return boxY + boxH + 4; // 51mm
+      };
+
+      const drawTableHeader = (y) => {
+        pdf.setFillColor(30, 41, 59); // #1e293b
+        pdf.rect(marginL, y, contentW, 6.8, 'F');
+        pdf.setTextColor(255, 255, 255);
+        pdf.setFont('helvetica', 'bold');
+        pdf.setFontSize(7.2);
+
+        let curX = marginL;
+        cols.forEach(c => {
+          pdf.text(c.header, curX + 2, y + 4.6);
+          curX += c.width;
+        });
+        return y + 6.8;
+      };
+
+      let curY = drawHeader(false);
+      curY = drawTableHeader(curY);
+
+      if (rowsData.length === 0) {
+        pdf.setFillColor(248, 250, 252);
+        pdf.setDrawColor(226, 232, 240);
+        pdf.rect(marginL, curY, contentW, 12, 'FD');
+        pdf.setTextColor(100, 116, 139);
+        pdf.setFont('helvetica', 'italic');
+        pdf.setFontSize(8.5);
+        pdf.text('Nenhuma ordem de serviço encontrada para os filtros selecionados.', marginL + 4, curY + 7.5);
+      } else {
+        pdf.setFontSize(7.4);
+
+        rowsData.forEach((item, idx) => {
+          const analyst = analysts.find(a => a.id === item.analystId) || (item.analystName ? { name: item.analystName } : { name: 'Analista' });
+          const dateFmt = item.date ? item.date.split('-').reverse().join('/') : '-';
+          const osTxt = String(item.osNumber || '-').trim();
+          const analystTxt = String(analyst.name || '-').trim();
+          const schoolTxt = `${item.schoolCie ? item.schoolCie + ' - ' : ''}${item.schoolName || '-'}`;
+          const subjTxt = String(item.subject || '-').trim();
+
+          const cellTexts = [dateFmt, osTxt, analystTxt, schoolTxt, subjTxt];
+
+          // Quebra automática de linhas para nunca cortar ou sobrepor colunas
+          pdf.setFont('helvetica', 'normal');
+          const wrappedCells = cellTexts.map((txt, cIdx) => {
+            const maxW = cols[cIdx].width - 4;
+            return pdf.splitTextToSize(txt, maxW);
+          });
+
+          const maxLines = Math.max(...wrappedCells.map(lines => lines.length), 1);
+          const lineHeight = 3.5;
+          const rowH = Math.max(5.8, maxLines * lineHeight + 2.3);
+
+          // Quebra de página automática se não couber
+          if (curY + rowH > maxBodyY) {
+            pdf.addPage();
+            curY = drawHeader(true);
+            curY = drawTableHeader(curY);
+          }
+
+          // Zebra striping suave
+          if (idx % 2 === 1) {
+            pdf.setFillColor(248, 250, 252);
+            pdf.rect(marginL, curY, contentW, rowH, 'F');
+          }
+
+          // Borda inferior discreta
+          pdf.setDrawColor(226, 232, 240);
+          pdf.setLineWidth(0.15);
+          pdf.line(marginL, curY + rowH, pageW - marginR, curY + rowH);
+
+          let curX = marginL;
+          wrappedCells.forEach((lines, cIdx) => {
+            if (cIdx === 1) {
+              pdf.setFont('helvetica', 'bold');
+              pdf.setTextColor(30, 58, 138);
+            } else {
+              pdf.setFont('helvetica', 'normal');
+              pdf.setTextColor(30, 41, 59);
+            }
+            lines.forEach((ln, lIdx) => {
+              pdf.text(ln, curX + 2, curY + 4 + lIdx * lineHeight);
+            });
+            curX += cols[cIdx].width;
+          });
+
+          curY += rowH;
+        });
+      }
+
+      // Rodapé com numeração de páginas em todas as folhas
+      const totalPages = pdf.internal.getNumberOfPages();
+      for (let p = 1; p <= totalPages; p++) {
+        pdf.setPage(p);
+        pdf.setDrawColor(203, 213, 225);
+        pdf.setLineWidth(0.2);
+        pdf.line(marginL, footerY - 3.5, pageW - marginR, footerY - 3.5);
+
+        pdf.setTextColor(100, 116, 139);
+        pdf.setFont('helvetica', 'normal');
+        pdf.setFontSize(7.2);
+        pdf.text('SG - Sistema de Gestão de Agendas | Relatório Gerencial', marginL, footerY);
+
+        const pageLabel = `Página ${p} de ${totalPages}`;
+        const pw = pdf.getTextWidth(pageLabel);
+        pdf.text(pageLabel, pageW - marginR - pw, footerY);
+      }
+
+      const fileName = `Relatorio_OS_${App.getLocalDateStr()}.pdf`;
+      pdf.save(fileName);
+
+      if (typeof this.showToast === 'function') {
+        this.showToast('Relatório PDF exportado com sucesso!');
+      }
     } catch (err) {
       console.error('Erro ao gerar PDF:', err);
       alert('Erro ao gerar PDF: ' + err.message);
     } finally {
-      // Restaura imediatamente a visualização 100% contínua da tela
-      tableWrapper.innerHTML = originalWrapperHtml;
       if (btn) {
         btn.innerHTML = originalContent;
         btn.disabled = false;
@@ -4149,11 +4669,7 @@ const App = {
     }
   },
 
-
-  // =========================================================================
-  // GESTÃO DE TEMAS (5 TONALIDADES EM DEGRADÊ) E CONFIGURAÇÕES
-  // =========================================================================
-  initTheme() {
+    initTheme() {
     try {
       const savedTheme = localStorage.getItem('sg_selected_theme') || 'theme-1';
       this.applyTheme(savedTheme, false);
