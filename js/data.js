@@ -966,19 +966,89 @@ class DataStore {
     }
   }
 
+  sanitizeAbsences() {
+    let list = [];
+    try {
+      list = JSON.parse(localStorage.getItem(STORAGE_KEYS.ABSENCES)) || [];
+    } catch (e) {
+      return;
+    }
+    if (!Array.isArray(list) || list.length === 0) return;
+
+    let modified = false;
+
+    // 1. Remove duplicatas de range (mesmo analystId, startDate, endDate e reason)
+    const seenRanges = new Map();
+    const cleanList = [];
+    for (const item of list) {
+      if (item && item.type === 'range') {
+        const key = `${String(item.analystId).trim()}_${item.startDate}_${item.endDate}_${item.reason}`;
+        if (seenRanges.has(key)) {
+          const prev = seenRanges.get(key);
+          if ((item.updatedAt || 0) > (prev.updatedAt || 0)) {
+            if (typeof FirestoreSync !== 'undefined' && FirestoreSync.deleteAbsence && prev.id) {
+              FirestoreSync.deleteAbsence(prev.id);
+            }
+            const idx = cleanList.indexOf(prev);
+            if (idx >= 0) cleanList[idx] = item;
+            seenRanges.set(key, item);
+          } else {
+            if (typeof FirestoreSync !== 'undefined' && FirestoreSync.deleteAbsence && item.id) {
+              FirestoreSync.deleteAbsence(item.id);
+            }
+          }
+          modified = true;
+          continue;
+        }
+        seenRanges.set(key, item);
+      }
+      cleanList.push(item);
+    }
+    list = cleanList;
+
+    // 2. Remove overrides 'single' mais antigos ou sem updatedAt que conflitam com um período (range) ativo
+    const activeRanges = list.filter(a => a && a.type === 'range' && a.startDate && a.endDate);
+    if (activeRanges.length > 0) {
+      list = list.filter(item => {
+        if (item && (!item.type || item.type === 'single')) {
+          const aid = String(item.analystId).trim();
+          const overridingRange = activeRanges.find(r =>
+            String(r.analystId).trim() === aid &&
+            item.date >= r.startDate &&
+            item.date <= r.endDate &&
+            (!item.updatedAt || (r.updatedAt && r.updatedAt >= item.updatedAt))
+          );
+          if (overridingRange) {
+            if (typeof FirestoreSync !== 'undefined' && FirestoreSync.deleteAbsence && item.id) {
+              FirestoreSync.deleteAbsence(item.id);
+            }
+            modified = true;
+            return false;
+          }
+        }
+        return true;
+      });
+    }
+
+    if (modified) {
+      this.saveAbsences(list);
+    }
+  }
+
   getAbsence(analystId, dateStr) {
+    if (!this._sanitizedAbsencesOnce) {
+      this._sanitizedAbsencesOnce = true;
+      this.sanitizeAbsences();
+    }
     const list = this.getAbsences();
     const aid = String(analystId).trim();
 
-    // 1. Override exato do dia (incluindo 'presente' explícito)
+    // 1. Override exato do dia (type === 'single')
     const exact = list.find(a =>
       String(a.analystId).trim() === aid &&
       (!a.type || a.type === 'single') &&
       a.date === dateStr
     );
-    if (exact) {
-      return exact;
-    }
 
     // 2. Período / Férias (startDate <= dateStr <= endDate)
     const rangeMatch = list.find(a =>
@@ -987,6 +1057,19 @@ class DataStore {
       a.startDate && a.endDate &&
       dateStr >= a.startDate && dateStr <= a.endDate
     );
+
+    if (exact && rangeMatch) {
+      // Se o período (range) foi criado depois ou o single não tem timestamp, o período vence
+      if (!exact.updatedAt || (rangeMatch.updatedAt && rangeMatch.updatedAt >= exact.updatedAt)) {
+        return rangeMatch;
+      }
+      return exact;
+    }
+
+    if (exact) {
+      return exact;
+    }
+
     if (rangeMatch) {
       return rangeMatch;
     }
@@ -1063,12 +1146,35 @@ class DataStore {
 
   setAbsenceRange(analystId, startDate, endDate, reason, note = '') {
     if (!this._canMutate()) return false;
-    const id = `${analystId}_range_${startDate}_${endDate}_${Date.now()}`;
-    const item = { id, type: 'range', analystId, startDate, endDate, reason, note, updatedAt: Date.now() };
+    const aid = String(analystId).trim();
+    const now = Date.now();
+    const id = `${analystId}_range_${startDate}_${endDate}_${now}`;
+    const item = { id, type: 'range', analystId, startDate, endDate, reason, note, updatedAt: now };
+
+    let list = this.getAbsences();
+
+    // Remove quaisquer registros pontuais (single) do mesmo analista dentro do intervalo [startDate, endDate]
+    // para que o período (ex: Recesso/Férias) passe a valer imediatamente sem conflito
+    list = list.filter(a => {
+      if (String(a.analystId).trim() === aid && (!a.type || a.type === 'single') && a.date >= startDate && a.date <= endDate) {
+        if (typeof FirestoreSync !== 'undefined' && FirestoreSync.deleteAbsence && a.id) {
+          FirestoreSync.deleteAbsence(a.id);
+        }
+        return false;
+      }
+      // Evita duplicata de range idêntico
+      if (String(a.analystId).trim() === aid && a.type === 'range' && a.startDate === startDate && a.endDate === endDate && a.reason === reason) {
+        if (typeof FirestoreSync !== 'undefined' && FirestoreSync.deleteAbsence && a.id) {
+          FirestoreSync.deleteAbsence(a.id);
+        }
+        return false;
+      }
+      return true;
+    });
+
     if (typeof FirestoreSync !== 'undefined' && FirestoreSync.saveAbsence) {
       FirestoreSync.saveAbsence(item);
     }
-    const list = this.getAbsences();
     list.push(item);
     this.saveAbsences(list);
     return item;

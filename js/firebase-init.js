@@ -160,6 +160,7 @@ const FirestoreSync = {
       const absencesList = [];
       snapshot.forEach(doc => absencesList.push(doc.data()));
       localStorage.setItem(STORAGE_KEYS.ABSENCES, JSON.stringify(absencesList));
+      if (typeof store !== 'undefined' && store.sanitizeAbsences) { store.sanitizeAbsences(); }
       if (onDataUpdated) onDataUpdated("absences");
     }, err => console.warn("Erro ao sincronizar ausências:", err));
     this.unsubscribers.push(unsubAbsences);
