@@ -473,9 +473,10 @@
                 <option value="needs_return">Com Retorno Agendado</option>
               </select>
 
-              <div class="header-search-wrap">
+                            <div class="header-search-wrap" style="position: relative;">
                 <i class="fa-solid fa-magnifying-glass"></i>
-                <input type="text" id="filter-all-search" class="compact-input" placeholder="Buscar CIE, Escola ou O.S..." oninput="App.renderAllSchedulesTable()" title="Buscar por CIE, Escola ou O.S.">
+                <input type="text" id="filter-all-search" class="compact-input" style="padding-right: 28px;" placeholder="Buscar CIE, Escola ou O.S..." oninput="App.toggleAllSearchClearBtn(); App.renderAllSchedulesTable()" title="Buscar por CIE, Escola ou O.S.">
+                <button type="button" id="btn-clear-all-search" onclick="App.clearAllSearch()" title="Limpar pesquisa" style="display: none; position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: transparent; border: none; color: #94a3b8; cursor: pointer; padding: 0; width: 20px; height: 20px; align-items: center; justify-content: center; font-size: 1rem; font-weight: 700; line-height: 1; z-index: 2;">&times;</button>
               </div>
 
             </div>
@@ -771,7 +772,10 @@
               <p class="page-subtitle">Cadastro de unidades escolares, código CIE e direção responsável</p>
             </div>
             <div style="display:flex; gap:10px;">
-              <input type="text" id="input-search-school" class="filter-input" placeholder="Buscar por CIE ou Nome..." oninput="App.renderSchoolsTable()" style="width:240px;">
+              <div style="position: relative; display: inline-flex; align-items: center;">
+                <input type="text" id="input-search-school" class="filter-input" placeholder="Buscar por CIE ou Nome..." oninput="App.toggleSchoolSearchClearBtn(); App.renderSchoolsTable()" style="width:240px; padding-right:28px;">
+                <button type="button" id="btn-clear-school-search" onclick="App.clearSchoolSearch()" title="Limpar pesquisa" style="display: none; position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: transparent; border: none; color: #94a3b8; cursor: pointer; padding: 0; width: 20px; height: 20px; align-items: center; justify-content: center; font-size: 1rem; font-weight: 700; line-height: 1; z-index: 2;">&times;</button>
+              </div>
               <button class="btn-primary admin-only" onclick="App.openNewSchoolModal()">
                 <i class="fa-solid fa-plus"></i> Nova Escola
               </button>
@@ -796,20 +800,21 @@
         </section>
         <!-- VIEW 5: RELATÓRIOS -->
                 <section id="view-relatorios" class="view-section">
-          <div data-html2canvas-ignore="true" style="display:flex; align-items:center; gap:8px; margin-bottom:14px; flex-wrap:wrap;">
-            <button type="button" id="btn-report-tab-schools" class="btn-primary" onclick="App.setReportSource('schools')" style="padding:7px 14px; font-size:0.82rem; border-radius:8px; display:inline-flex; align-items:center; gap:6px;">
-              <i class="fa-solid fa-school"></i> Atendimentos nas Escolas
-            </button>
-            <button type="button" id="btn-report-tab-ure" class="btn-secondary" onclick="App.setReportSource('ure')" style="padding:7px 14px; font-size:0.82rem; border-radius:8px; display:inline-flex; align-items:center; gap:6px;">
-              <i class="fa-solid fa-building-user"></i> Atendimento URE
-            </button>
-          </div>
           <div id="report-print-container">
             <div id="report-header-print" style="margin-bottom:18px; border-bottom:2px solid #23314f; padding-bottom:12px;">
               <div style="display:flex; justify-content:space-between; align-items:flex-end; flex-wrap:wrap; gap:12px;">
                 <div style="min-width:240px;">
                   <h3 id="report-header-title" style="font-size:1.15rem; color:#60a5fa; margin-bottom:4px;">RELATÓRIO GERENCIAL DE ORDENS CONCLUÍDAS</h3>
                   <p style="font-size:0.82rem; color:#94a3b8;" id="report-header-period-desc">Período: Mês Atual | Todos os Analistas</p>
+                </div>
+
+                <div class="report-source-tabs" data-html2canvas-ignore="true" style="display:flex; align-items:center; justify-content:center; gap:8px; flex:1 1 auto; flex-wrap:wrap;">
+                  <button type="button" id="btn-report-tab-schools" class="btn-primary" onclick="App.setReportSource('schools')" style="padding:6px 12px; font-size:0.8rem; height:34px; border-radius:8px; display:inline-flex; align-items:center; gap:5px;">
+                    <i class="fa-solid fa-school"></i> Atendimentos nas Escolas
+                  </button>
+                  <button type="button" id="btn-report-tab-ure" class="btn-secondary" onclick="App.setReportSource('ure')" style="padding:6px 12px; font-size:0.8rem; height:34px; border-radius:8px; display:inline-flex; align-items:center; gap:5px;">
+                    <i class="fa-solid fa-building-user"></i> Atendimento URE
+                  </button>
                 </div>
 
                 <!-- Filtros Compactos: Mês, Ano (>= 2026), Analistas, Tipo e Salvar PDF -->
@@ -1857,7 +1862,7 @@
   <script src="js/agenda-order-deck.js?v=20261109-deck-tabs-header"></script>
   <script src="js/agenda-card-layout.js?v=20261108-responsive-cards"></script>
   <script src="js/agenda-analyst-photos.js?v=20261106-vini"></script>
-  <script src="js/app.js?v=20261112-ure-report-v5"></script>
+  <script src="js/app.js?v=20261112-search-clear-v2"></script>
   <script src="js/agenda-radar-data.js?v=20261105"></script>
   <script src="js/agenda-radar.js?v=20261106-ure-fixed"></script>
 <div id="app-toast" class="toast-notification"><i class="fa-solid fa-circle-check" style="color:#4ade80;"></i> <span id="app-toast-text"></span></div>

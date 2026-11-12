@@ -1498,7 +1498,25 @@ const App = {
   // =========================================================================
   // GESTÃO DE TODOS OS AGENDAMENTOS (HISTÓRICO COMPLETO)
   // =========================================================================
+  toggleAllSearchClearBtn() {
+    const input = document.getElementById('filter-all-search');
+    const btn = document.getElementById('btn-clear-all-search');
+    if (btn && input) {
+      btn.style.display = input.value.length > 0 ? 'inline-flex' : 'none';
+    }
+  },
+
+  clearAllSearch() {
+    const input = document.getElementById('filter-all-search');
+    if (input) {
+      input.value = '';
+      input.focus();
+    }
+    this.toggleAllSearchClearBtn();
+    this.renderAllSchedulesTable();
+  },
   renderAllSchedulesTable() {
+    this.toggleAllSearchClearBtn();
     const tbody = document.getElementById('tbody-all-schedules');
     if (!tbody) return;
 
@@ -3547,7 +3565,25 @@ const App = {
     tbody.innerHTML = rows;
   },
 
+  toggleSchoolSearchClearBtn() {
+    const input = document.getElementById('input-search-school');
+    const btn = document.getElementById('btn-clear-school-search');
+    if (btn && input) {
+      btn.style.display = input.value.length > 0 ? 'inline-flex' : 'none';
+    }
+  },
+
+  clearSchoolSearch() {
+    const input = document.getElementById('input-search-school');
+    if (input) {
+      input.value = '';
+      input.focus();
+    }
+    this.toggleSchoolSearchClearBtn();
+    this.renderSchoolsTable();
+  },
     renderSchoolsTable() {
+    this.toggleSchoolSearchClearBtn();
     const tbody = document.getElementById('tbody-schools');
     if (!tbody) return;
 
@@ -5575,7 +5611,7 @@ const App = {
       // Auto ajusta a categoria da fila de acordo com o assunto pré-definido
       const catSelect = document.getElementById('queue-category');
       if (catSelect && val) {
-        if (val === 'Conectividade' || val === 'Verificar AP') {
+        if (val === 'Conectividade' || val === 'Verificar AP' || val === 'Espelhamento DVR') {
           catSelect.value = 'conectividade';
         } else if (val === 'Inventário Escolar') {
           catSelect.value = 'inventario';
