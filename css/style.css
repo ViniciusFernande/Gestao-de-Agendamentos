@@ -6038,3 +6038,53 @@ body.role-analista .admin-only {
 body.role-viewer .card-os-inline-input {
   caret-color: transparent;
 }
+/* ==========================================================================
+   ALERTA DE VISITAS (> 15 DIAS) E NAV BADGE
+   ========================================================================== */
+.nav-item .nav-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 6px;
+  border-radius: 999px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  background: #ef4444;
+  color: #ffffff;
+  margin-left: auto;
+  line-height: 1;
+  box-shadow: 0 0 8px rgba(239, 68, 68, 0.4);
+}
+
+#sidebar.collapsed .nav-badge {
+  display: none !important;
+}
+
+#view-alerta-visitas .custom-table th {
+  white-space: nowrap;
+}
+@media (max-width: 768px) {
+  #view-alerta-visitas .schedules-header-filters {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 8px !important;
+    width: 100% !important;
+  }
+  #view-alerta-visitas #filter-alert-severity,
+  #view-alerta-visitas .header-search-wrap,
+  #view-alerta-visitas #filter-alert-search {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+  }
+  #view-alerta-visitas .header-search-wrap {
+    grid-column: 1 / -1;
+  }
+  #view-alerta-visitas #btn-export-alert-pdf {
+    grid-column: 1 / -1;
+    width: 100% !important;
+    justify-content: center !important;
+  }
+}

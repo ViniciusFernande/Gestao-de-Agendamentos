@@ -170,9 +170,11 @@ const App = {
     this.renderSchoolsTable();
     if (this.currentView === 'agendamentos') this.renderAnalystDailyCards();
     if (this.currentView === 'todos-agendamentos') this.renderAllSchedulesTable();
+    if (this.currentView === 'alerta-visitas') this.renderVisitAlertsTable();
     if (this.currentView === 'filas-visita') this.renderQueueView();
     if (this.currentView === 'atendimento-ure') this.renderUreView();
     this.updateDashboard();
+    this.updateVisitAlertsBadge();
   },
 
     refreshAfterSync(collection) {
@@ -181,6 +183,8 @@ const App = {
       this.renderAgenda();
     } else if (this.currentView === 'todos-agendamentos') {
       this.renderAllSchedulesTable();
+    } else if (this.currentView === 'alerta-visitas') {
+      this.renderVisitAlertsTable();
     } else if (this.currentView === 'filas-visita') {
       this.renderQueueView();
     } else if (this.currentView === 'analistas') {
@@ -204,6 +208,7 @@ const App = {
       this.initSettingsView();
     }
     this.updateDashboard();
+    this.updateVisitAlertsBadge();
   },
 
   init() {
@@ -217,6 +222,7 @@ const App = {
     this.populateSelects();
     this.setupEventListeners();
     this.updateDashboard();
+    this.updateVisitAlertsBadge();
   },
 
   getLocalDateStr(dateInput = new Date()) {
@@ -354,6 +360,8 @@ const App = {
       this.renderQueueView(); this.renderDashboardQueue();
     } else if (viewId === 'todos-agendamentos') {
       this.renderAllSchedulesTable();
+    } else if (viewId === 'alerta-visitas') {
+      this.renderVisitAlertsTable();
     } else if (viewId === 'atendimento-ure') {
       this.renderUreView();
     } else if (viewId === 'ranking-escolas') {
@@ -691,7 +699,7 @@ const App = {
     this.updateHistoryChart();
 
     // 5. Renderiza Top 3 Escolas no Dashboard (Formato Lista)
-    this.renderDashboardTopSchools();
+    this.renderDashboardVisitAlerts();
 
     // 6. Renderiza Fila de Chamados no Dashboard
     this.renderDashboardQueue();
@@ -1115,6 +1123,7 @@ const App = {
     this.renderAnalystDailyCards();
     this.renderAllSchedulesTable();
     this.updateDashboard();
+    this.updateVisitAlertsBadge();
   },
 
   deleteSchedule(id) {
@@ -1289,6 +1298,7 @@ const App = {
     this.renderAnalystDailyCards();
     this.renderAllSchedulesTable();
     this.updateDashboard();
+    this.updateVisitAlertsBadge();
   },
 
   handleSubjectSelectChange(val) {
@@ -2568,6 +2578,7 @@ const App = {
     this.renderAnalystDailyCards();
     this.renderAllSchedulesTable();
     this.updateDashboard();
+    this.updateVisitAlertsBadge();
   },
 
   openReturnModal(scheduleId) {
@@ -3282,6 +3293,7 @@ const App = {
     this.populateSelects();
     this.renderAnalystsTable();
     this.updateDashboard();
+    this.updateVisitAlertsBadge();
   },
 
   deleteAnalyst(id) {
@@ -3380,47 +3392,54 @@ const App = {
     });
   },
 
-  renderDashboardTopSchools() {
-    const listEl = document.getElementById('dash-ranking-list-container') || document.getElementById('dash-ranking-podium-container');
+  renderDashboardVisitAlerts() {
+    const listEl = document.getElementById('dash-alerts-list-container') || document.getElementById('dash-ranking-list-container');
     if (!listEl) return;
-    const rankingList = this.getTopSchools();
-    const top5 = rankingList.slice(0, 5);
+    const allAlerts = this.getSchoolsVisitAlerts();
+    const alertSchools = allAlerts.filter(s => s.isAlert);
+    alertSchools.sort((a, b) => b.daysSinceLast - a.daysSinceLast);
+    const top5 = alertSchools.slice(0, 5);
 
     if (top5.length === 0) {
-      listEl.innerHTML = '<div style="text-align:center; padding:20px; color:var(--text-muted); font-size:0.8rem;">Nenhuma escola visitada ainda.</div>';
+      listEl.innerHTML = `
+        <div style="text-align:center; padding:32px 16px; color:var(--text-muted); font-size:0.84rem;">
+          <i class="fa-solid fa-circle-check" style="color:#22c55e; font-size:1.8rem; margin-bottom:8px; display:block;"></i>
+          Nenhuma escola em alerta no momento.
+        </div>
+      `;
       return;
     }
 
-    const medalsConfig = [
-      { class: 'rank-gold', badgeClass: 'badge-gold', pos: '1ª', icon: 'fa-medal', hasCrown: true },
-      { class: 'rank-silver', badgeClass: 'badge-silver', pos: '2ª', icon: 'fa-medal', hasCrown: false },
-      { class: 'rank-bronze', badgeClass: 'badge-bronze', pos: '3ª', icon: 'fa-medal', hasCrown: false },
-      { class: 'rank-fourth', badgeClass: 'badge-fourth', pos: '4ª', icon: 'fa-award', hasCrown: false },
-      { class: 'rank-fifth', badgeClass: 'badge-fifth', pos: '5ª', icon: 'fa-award', hasCrown: false }
-    ];
-
     let html = '';
     top5.forEach((item, idx) => {
-      const cfg = medalsConfig[idx] || medalsConfig[4];
-      const safeName = (item.name || '').replace(/"/g, '&quot;');
-      const crownHtml = cfg.hasCrown ? '<div class="dash-rank-crown-wrap"><i class="fa-solid fa-crown rank-crown-icon"></i></div>' : '';
+      const pos = `${idx + 1}ª`;
+      const isCritical = item.status === 'critical' || item.daysSinceLast > 30;
+      const isNever = item.status === 'never';
+      const safeName = this.escapeHtml(item.name || 'Escola sem nome');
+      const safeCie = this.escapeHtml(item.cie || '-');
+      const safeNeigh = this.escapeHtml(item.neighborhood || '-');
+
+      const numTxt = isNever ? '---' : `${item.daysSinceLast}`;
+      const lblTxt = isNever ? 'nunca visitada' : 'dias sem visita';
+
+      const borderStyle = isCritical
+        ? 'border-color: rgba(239, 68, 68, 0.45); background: linear-gradient(90deg, rgba(239, 68, 68, 0.12) 0%, rgba(19, 27, 45, 0.75) 100%);'
+        : 'border-color: rgba(245, 158, 11, 0.35); background: linear-gradient(90deg, rgba(245, 158, 11, 0.08) 0%, rgba(19, 27, 45, 0.75) 100%);';
 
       html += `
-        <div class="dash-rank-item ${cfg.class}" style="cursor:pointer;" title="Clique para ver o Prontuário da Escola" data-cie="${this.escapeHtml(item.cie)}" data-name="${this.escapeHtml(item.name)}" onclick="App.openSchoolRecordModal(this.dataset.cie, this.dataset.name)">
+        <div class="dash-rank-item" style="cursor:pointer; ${borderStyle}" title="Clique para abrir os Alertas de Visitas" onclick="App.navigateTo('alerta-visitas')">
           <div class="dash-rank-medal">
-            ${crownHtml}
-            <div class="dash-rank-badge ${cfg.badgeClass}">
-              <i class="fa-solid ${cfg.icon}"></i>
-              <span>${cfg.pos}</span>
+            <div class="dash-rank-badge" style="display:inline-flex; align-items:center; justify-content:center; width:28px; height:28px; border-radius:8px; font-weight:800; font-size:0.75rem; gap:3px; ${isCritical ? 'background:rgba(239, 68, 68, 0.22); color:#f87171; border:1px solid rgba(239, 68, 68, 0.5);' : 'background:rgba(245, 158, 11, 0.2); color:#fbbf24; border:1px solid rgba(245, 158, 11, 0.5);'}">
+              <span>${pos}</span>
             </div>
           </div>
           <div class="dash-rank-info">
             <div class="dash-rank-name" title="${safeName}">${safeName}</div>
-            <div class="dash-rank-meta">CIE: ${item.cie || '-'} — ${item.neighborhood || ''}</div>
+            <div class="dash-rank-meta">CIE: ${safeCie} — ${safeNeigh}</div>
           </div>
           <div class="dash-rank-val">
-            <span class="dash-rank-num">${item.total}</span>
-            <span class="dash-rank-lbl">visitas</span>
+            <span class="dash-rank-num" style="color:${isCritical ? '#f87171' : '#fbbf24'};">${numTxt}</span>
+            <span class="dash-rank-lbl">${lblTxt}</span>
           </div>
         </div>
       `;
@@ -3429,6 +3448,9 @@ const App = {
     listEl.innerHTML = html;
   },
 
+  renderDashboardTopSchools() {
+    this.renderDashboardVisitAlerts();
+  },
   renderDashboardQueue() {
     const listEl = document.getElementById('dash-queue-items-container');
     const badgeEl = document.getElementById('dash-queue-badge');
@@ -3565,6 +3587,533 @@ const App = {
     tbody.innerHTML = rows;
   },
 
+  // =========================================================================
+  // ALERTA DE VISITAS (ESCOLAS COM MAIS DE 20 DIAS SEM ORDEM AGENDADA)
+  // =========================================================================
+  getSchoolsVisitAlerts() {
+    const schools = store.getSchools();
+    const schedules = store.getSchedules();
+    const todayStr = App.getLocalDateStr();
+    const [curY, curM, curD] = todayStr.split('-').map(Number);
+    const todayTime = new Date(curY, curM - 1, curD).getTime();
+
+    const isUre = (name, cie) => {
+      const n = (name || '').toLowerCase().trim();
+      const c = (cie || '').toLowerCase().trim();
+      return n.includes('ure sorocaba') || (/\bure\b/i).test(n) || c === 'ure-sor' || c === 'ure';
+    };
+
+    // Mapa com a data mais recente de ordem agendada por CIE e por Nome Normalizado
+    const lastScheduleMap = {};
+
+    schedules.forEach(s => {
+      if (isUre(s.schoolName, s.schoolCie)) return;
+      if (!s.date) return;
+
+      const keys = [];
+      if (s.schoolCie) keys.push(String(s.schoolCie).trim());
+      if (s.schoolName) keys.push(s.schoolName.toLowerCase().trim());
+
+      keys.forEach(k => {
+        if (!lastScheduleMap[k] || s.date > lastScheduleMap[k].date) {
+          lastScheduleMap[k] = {
+            date: s.date,
+            scheduleId: s.id,
+            osNumber: s.osNumber,
+            analystName: s.analystName,
+            subject: s.subject,
+            completed: s.completed
+          };
+        }
+      });
+    });
+
+    const list = [];
+
+    schools.forEach(school => {
+      if (isUre(school.name, school.cie)) return;
+
+      const cieKey = String(school.cie || '').trim();
+      const nameKey = (school.name || '').toLowerCase().trim();
+
+      const lastSched = lastScheduleMap[cieKey] || lastScheduleMap[nameKey] || null;
+
+      let daysSinceLast = null;
+      let status = 'never'; // 'never', 'critical' (>30), 'warning' (21 a 30), 'ok' (<= 20 ou futuro)
+
+      if (lastSched && lastSched.date) {
+        const [sy, sm, sd] = lastSched.date.split('-').map(Number);
+        const schedTime = new Date(sy, sm - 1, sd).getTime();
+        const diffDays = Math.round((todayTime - schedTime) / (1000 * 60 * 60 * 24));
+
+        daysSinceLast = diffDays;
+        if (diffDays <= 20) {
+          status = 'ok';
+        } else if (diffDays > 30) {
+          status = 'critical';
+        } else {
+          status = 'warning';
+        }
+      } else {
+        status = 'never';
+        daysSinceLast = 99999;
+      }
+
+      list.push({
+        cie: school.cie || '-',
+        name: school.name || 'Escola sem nome',
+        director: school.director || 'Não informado',
+        neighborhood: school.neighborhood || '-',
+        phone: school.phone || '',
+        lastDate: lastSched ? lastSched.date : null,
+        lastSched,
+        daysSinceLast,
+        status,
+        isAlert: status !== 'ok'
+      });
+    });
+
+    return list;
+  },
+
+  updateVisitAlertsBadge() {
+    const badge = document.getElementById('nav-badge-alerta-visitas');
+    if (badge) badge.style.display = 'none';
+  },
+
+  renderVisitAlertsTable() {
+    const tbody = document.getElementById('tbody-visit-alerts');
+    if (!tbody) return;
+
+    this.toggleAlertSearchClearBtn();
+    this.updateVisitAlertsBadge();
+
+    const all = this.getSchoolsVisitAlerts();
+
+    // Contadores para os Cards de Métricas
+    const totalAlerts = all.filter(s => s.isAlert).length;
+    const countCritical = all.filter(s => s.status === 'critical').length;
+    const countWarning = all.filter(s => s.status === 'warning').length;
+    const countNever = all.filter(s => s.status === 'never').length;
+
+    const elTotal = document.getElementById('alert-metric-total');
+    const elCrit = document.getElementById('alert-metric-critical');
+    const elWarn = document.getElementById('alert-metric-warning');
+    const elNever = document.getElementById('alert-metric-never');
+    if (elTotal) elTotal.textContent = totalAlerts.toLocaleString('pt-BR');
+    if (elCrit) elCrit.textContent = countCritical.toLocaleString('pt-BR');
+    if (elWarn) elWarn.textContent = countWarning.toLocaleString('pt-BR');
+    if (elNever) elNever.textContent = countNever.toLocaleString('pt-BR');
+
+    // Filtros
+    const severityFilter = document.getElementById('filter-alert-severity')?.value || 'all';
+    const search = (document.getElementById('filter-alert-search')?.value || '').toLowerCase().trim();
+
+    let filtered = all.filter(item => {
+      if (severityFilter === 'all') {
+        if (!item.isAlert) return false;
+      } else if (severityFilter === 'critical') {
+        if (item.status !== 'critical') return false;
+      } else if (severityFilter === 'warning') {
+        if (item.status !== 'warning') return false;
+      } else if (severityFilter === 'never') {
+        if (item.status !== 'never') return false;
+      } else if (severityFilter === 'all_schools') {
+        // Mostra todas as escolas cadastradas
+      }
+
+      if (search) {
+        const targetStr = `${item.cie} ${item.name} ${item.neighborhood} ${item.director}`.toLowerCase();
+        if (!targetStr.includes(search)) return false;
+      }
+
+      return true;
+    });
+
+    // Ordenação
+    const sort = this.visitAlertsSort || { key: 'days', dir: 'desc' };
+    const mult = sort.dir === 'asc' ? 1 : -1;
+    const cmpStr = (a, b) => String(a || '').localeCompare(String(b || ''), 'pt-BR', { numeric: true, sensitivity: 'base' });
+
+    filtered.sort((a, b) => {
+      switch (sort.key) {
+        case 'cie':
+          return mult * cmpStr(a.cie, b.cie);
+        case 'name':
+          return mult * cmpStr(a.name, b.name);
+        case 'neighborhood':
+          return mult * cmpStr(a.neighborhood, b.neighborhood);
+        case 'subject':
+          return mult * cmpStr(a.lastSched?.subject, b.lastSched?.subject);
+        case 'lastDate': {
+          const tA = a.lastDate ? new Date(a.lastDate).getTime() : 0;
+          const tB = b.lastDate ? new Date(b.lastDate).getTime() : 0;
+          return mult * (tA - tB);
+        }
+        case 'days':
+        default:
+          return mult * (a.daysSinceLast - b.daysSinceLast);
+      }
+    });
+
+    // Atualiza ícones visuais do cabeçalho
+    ['cie', 'name', 'neighborhood', 'subject', 'lastDate', 'days'].forEach(k => {
+      const icon = document.getElementById(`sort-icon-${k}`);
+      if (icon) {
+        if (sort.key === k) {
+          icon.className = `fa-solid ${sort.dir === 'asc' ? 'fa-sort-up' : 'fa-sort-down'}`;
+          icon.style.opacity = '1';
+          icon.style.color = '#60a5fa';
+        } else {
+          icon.className = 'fa-solid fa-sort';
+          icon.style.opacity = '0.45';
+          icon.style.color = 'inherit';
+        }
+      }
+    });
+
+    this.currentVisitAlertsFiltered = filtered;
+
+    if (filtered.length === 0) {
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="7" style="text-align:center; padding:36px 20px; color:var(--text-muted);">
+            <i class="fa-solid fa-circle-check" style="color:#22c55e; font-size:2rem; margin-bottom:10px; display:block;"></i>
+            Nenhuma escola em alerta encontrada para os filtros selecionados.
+          </td>
+        </tr>
+      `;
+      return;
+    }
+
+    let rows = '';
+    filtered.forEach(item => {
+      let badgeHtml = '';
+      if (item.status === 'never') {
+        badgeHtml = `<span class="badge" style="background:rgba(168, 85, 247, 0.18); color:#c084fc; border:1px solid rgba(168, 85, 247, 0.4); padding:4px 10px; border-radius:12px; font-weight:700; font-size:0.78rem; display:inline-flex; align-items:center; gap:5px;"><i class="fa-solid fa-ban"></i> Nunca agendada</span>`;
+      } else if (item.status === 'critical') {
+        badgeHtml = `<span class="badge" style="background:rgba(239, 68, 68, 0.2); color:#f87171; border:1px solid rgba(239, 68, 68, 0.45); padding:4px 10px; border-radius:12px; font-weight:700; font-size:0.78rem; display:inline-flex; align-items:center; gap:5px;"><i class="fa-solid fa-triangle-exclamation"></i> ${item.daysSinceLast} dias</span>`;
+      } else if (item.status === 'warning') {
+        badgeHtml = `<span class="badge" style="background:rgba(245, 158, 11, 0.18); color:#fbbf24; border:1px solid rgba(245, 158, 11, 0.45); padding:4px 10px; border-radius:12px; font-weight:700; font-size:0.78rem; display:inline-flex; align-items:center; gap:5px;"><i class="fa-regular fa-clock"></i> ${item.daysSinceLast} dias</span>`;
+      } else {
+        const dLabel = item.daysSinceLast <= 0 ? 'Agendada p/ hoje/futuro' : `${item.daysSinceLast} dias`;
+        badgeHtml = `<span class="badge" style="background:rgba(34, 197, 94, 0.18); color:#4ade80; border:1px solid rgba(34, 197, 94, 0.4); padding:4px 10px; border-radius:12px; font-weight:600; font-size:0.78rem; display:inline-flex; align-items:center; gap:5px;"><i class="fa-solid fa-check"></i> ${dLabel}</span>`;
+      }
+
+      let lastDateHtml = '<span style="color:#64748b; font-style:italic;">Sem agendamentos</span>';
+      if (item.lastDate) {
+        const dFmt = item.lastDate.split('-').reverse().join('/');
+        lastDateHtml = `
+          <div style="font-weight:600; color:#f1f5f9; display:inline-flex; align-items:center; justify-content:center; gap:6px;">
+            <i class="fa-regular fa-calendar" style="color:#60a5fa;"></i><span>${dFmt}</span>
+          </div>
+        `;
+      }
+
+      const subjectTxt = item.lastSched?.subject
+        ? this.escapeHtml(item.lastSched.subject)
+        : '<span style="color:#64748b; font-style:italic;">---</span>';
+
+      rows += `
+        <tr>
+          <td><strong style="color:#60a5fa; font-weight:700;">${this.escapeHtml(item.cie)}</strong></td>
+          <td>
+            <div>
+              <span class="school-name-link" style="font-size:0.88rem; font-weight:600;" title="Clique para ver o Prontuário Técnico" data-cie="${this.escapeHtml(item.cie)}" data-name="${this.escapeHtml(item.name)}" onclick="App.openSchoolRecordModal(this.dataset.cie, this.dataset.name)">
+                <i class="fa-solid fa-file-medical" style="color:#38bdf8; font-size:0.8rem; margin-right:4px;"></i> ${this.escapeHtml(item.name)}
+              </span>
+            </div>
+          </td>
+          <td style="color:#cbd5e1; font-size:0.84rem;">
+            ${this.escapeHtml(item.neighborhood)}
+          </td>
+          <td style="color:#cbd5e1; font-size:0.84rem; font-weight:500;">
+            ${subjectTxt}
+          </td>
+          <td style="text-align: center;">
+            ${lastDateHtml}
+          </td>
+          <td style="text-align: center;">
+            ${badgeHtml}
+          </td>
+          <td style="text-align: center;">
+            <div style="display:flex; justify-content:center; align-items:center;">
+              ${(typeof AuthService === 'undefined' || AuthService.isAdmin() || AuthService.isViewer()) ? `
+                <button type="button" class="btn-primary" style="padding:5px 12px; font-size:0.76rem; height:30px; display:inline-flex; align-items:center; gap:5px; border-radius:6px; white-space:nowrap;" title="Agendar nova Ordem de Serviço" onclick="App.openScheduleModalForSchool('${this.escapeHtml(item.cie)}', '${this.escapeHtml(item.name)}', '${this.escapeHtml(item.director === '-' ? '' : item.director)}')">
+                  <i class="fa-solid fa-calendar-plus"></i> Agendar
+                </button>
+              ` : ''}
+            </div>
+          </td>
+        </tr>
+      `;
+    });
+
+    tbody.innerHTML = rows;
+  },
+
+  toggleAlertSort(key) {
+    if (!this.visitAlertsSort) {
+      this.visitAlertsSort = { key: 'days', dir: 'desc' };
+    }
+    if (this.visitAlertsSort.key === key) {
+      this.visitAlertsSort.dir = this.visitAlertsSort.dir === 'asc' ? 'desc' : 'asc';
+    } else {
+      this.visitAlertsSort = { key, dir: 'asc' };
+    }
+    this.renderVisitAlertsTable();
+  },
+
+  toggleAlertSearchClearBtn() {
+    const input = document.getElementById('filter-alert-search');
+    const btn = document.getElementById('btn-clear-alert-search');
+    if (btn && input) {
+      btn.style.display = input.value.length > 0 ? 'inline-flex' : 'none';
+    }
+  },
+
+  clearAlertSearch() {
+    const input = document.getElementById('filter-alert-search');
+    if (input) {
+      input.value = '';
+      input.focus();
+    }
+    this.toggleAlertSearchClearBtn();
+    this.renderVisitAlertsTable();
+  },
+
+  async exportVisitAlertsPDF() {
+    const JsPdfClass = (window.jspdf && window.jspdf.jsPDF) || window.jsPDF;
+    if (!JsPdfClass) {
+      alert('Biblioteca de PDF não carregada. Por favor, recarregue a página.');
+      return;
+    }
+
+    const btn = document.getElementById('btn-export-alert-pdf');
+    const originalContent = btn ? btn.innerHTML : '';
+    if (btn) {
+      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Gerando PDF...';
+      btn.disabled = true;
+    }
+
+    try {
+      this.renderVisitAlertsTable();
+      const rowsData = this.currentVisitAlertsFiltered || [];
+      const all = this.getSchoolsVisitAlerts();
+      const totalAlerts = all.filter(s => s.isAlert).length;
+      const countCrit = all.filter(s => s.status === 'critical').length;
+      const countWarn = all.filter(s => s.status === 'warning').length;
+      const countNever = all.filter(s => s.status === 'never').length;
+
+      let pdf;
+      try {
+        pdf = new JsPdfClass({ orientation: 'p', unit: 'mm', format: 'a4' });
+      } catch (_) {
+        pdf = new JsPdfClass('p', 'mm', 'a4');
+      }
+
+      const pageW = 210;
+      const pageH = 297;
+      const marginL = 12;
+      const marginR = 12;
+      const contentW = pageW - marginL - marginR;
+      const footerY = pageH - 10;
+      const maxBodyY = pageH - 16;
+      const emittedAt = new Date().toLocaleString('pt-BR');
+
+      const cols = [
+        { header: 'CIE', width: 20 },
+        { header: 'ESCOLA', width: 55 },
+        { header: 'BAIRRO / REGIÃO', width: 32 },
+        { header: 'ASSUNTO O.S', width: 33 },
+        { header: 'ÚLTIMO AGENDAMENTO', width: 26 },
+        { header: 'TEMPO SEM VISITA', width: 20 }
+      ];
+
+      const drawHeader = (isContinuation) => {
+        pdf.setFillColor(30, 58, 138);
+        pdf.rect(marginL, 10, contentW, 13, 'F');
+
+        pdf.setTextColor(255, 255, 255);
+        pdf.setFont('helvetica', 'bold');
+        pdf.setFontSize(11);
+        pdf.text(
+          isContinuation ? 'RELATÓRIO DE ALERTA DE VISITAS - ESCOLAS (CONTINUAÇÃO)' : 'RELATÓRIO DE ALERTAS DE VISITAS - ESCOLAS (>20 DIAS)',
+          marginL + 4,
+          17.5
+        );
+
+        pdf.setFont('helvetica', 'normal');
+        pdf.setFontSize(7.5);
+        const emitted = `Emissão: ${emittedAt}`;
+        const emitW = pdf.getTextWidth(emitted);
+        pdf.text(emitted, pageW - marginR - emitW - 4, 17.5);
+
+        pdf.setFillColor(241, 245, 249);
+        pdf.rect(marginL, 23, contentW, 7.5, 'F');
+        pdf.setTextColor(30, 41, 59);
+        pdf.setFont('helvetica', 'bold');
+        pdf.setFontSize(8);
+        pdf.text(`Critério: Escolas com mais de 20 dias sem ordem agendada   |   Listando: ${rowsData.length} escola(s)`, marginL + 4, 28);
+
+        if (isContinuation) return 34;
+
+        const kpis = [
+          { label: 'TOTAL EM ALERTA', value: String(totalAlerts), color: [239, 68, 68] },
+          { label: 'CRÍTICO (>30 DIAS)', value: String(countCrit), color: [220, 38, 38] },
+          { label: 'ATENÇÃO (16-30 DIAS)', value: String(countWarn), color: [217, 119, 6] },
+          { label: 'NUNCA AGENDADAS', value: String(countNever), color: [147, 51, 234] }
+        ];
+
+        const gap = 3;
+        const boxW = (contentW - gap * 3) / 4;
+        const boxY = 33.5;
+        const boxH = 13.5;
+
+        kpis.forEach((k, idx) => {
+          const x = marginL + idx * (boxW + gap);
+          pdf.setFillColor(248, 250, 252);
+          pdf.setDrawColor(203, 213, 225);
+          pdf.setLineWidth(0.25);
+          pdf.roundedRect(x, boxY, boxW, boxH, 1.5, 1.5, 'FD');
+
+          pdf.setFillColor(k.color[0], k.color[1], k.color[2]);
+          pdf.rect(x, boxY, 1.6, boxH, 'F');
+
+          pdf.setTextColor(100, 116, 139);
+          pdf.setFont('helvetica', 'bold');
+          pdf.setFontSize(6.5);
+          pdf.text(k.label, x + 4, boxY + 4.8);
+
+          pdf.setTextColor(15, 23, 42);
+          pdf.setFont('helvetica', 'bold');
+          pdf.setFontSize(11);
+          pdf.text(k.value, x + 4, boxY + 11.2);
+        });
+
+        return boxY + boxH + 4;
+      };
+
+      const drawTableHeader = (y) => {
+        pdf.setFillColor(30, 41, 59);
+        pdf.rect(marginL, y, contentW, 6.8, 'F');
+        pdf.setTextColor(255, 255, 255);
+        pdf.setFont('helvetica', 'bold');
+        pdf.setFontSize(7.2);
+
+        let curX = marginL;
+        cols.forEach(c => {
+          pdf.text(c.header, curX + 2, y + 4.6);
+          curX += c.width;
+        });
+        return y + 6.8;
+      };
+
+      let curY = drawHeader(false);
+      curY = drawTableHeader(curY);
+
+      if (rowsData.length === 0) {
+        pdf.setTextColor(100, 116, 139);
+        pdf.setFont('helvetica', 'italic');
+        pdf.setFontSize(8.5);
+        pdf.text('Nenhuma escola em alerta encontrada para os filtros selecionados.', marginL + 2, curY + 8);
+      } else {
+        pdf.setFontSize(7.2);
+        rowsData.forEach((item, idx) => {
+          const lastDateStr = item.lastDate ? item.lastDate.split('-').reverse().join('/') : 'Nunca';
+          const tempoStr = item.status === 'never' ? 'Nunca visitada' : `${item.daysSinceLast} dias`;
+
+          const cellTexts = [
+            item.cie || '-',
+            item.name || '-',
+            item.neighborhood || '-',
+            item.lastSched?.subject || '-',
+            lastDateStr,
+            tempoStr
+          ];
+
+          pdf.setFont('helvetica', 'normal');
+          const wrappedCells = cellTexts.map((txt, cIdx) => {
+            const maxW = cols[cIdx].width - 4;
+            return pdf.splitTextToSize(txt, maxW);
+          });
+
+          const maxLines = Math.max(...wrappedCells.map(lines => lines.length), 1);
+          const lineHeight = 3.5;
+          const rowH = Math.max(5.8, maxLines * lineHeight + 2.3);
+
+          if (curY + rowH > maxBodyY) {
+            pdf.addPage();
+            curY = drawHeader(true);
+            curY = drawTableHeader(curY);
+          }
+
+          if (idx % 2 === 1) {
+            pdf.setFillColor(248, 250, 252);
+            pdf.rect(marginL, curY, contentW, rowH, 'F');
+          }
+
+          pdf.setDrawColor(226, 232, 240);
+          pdf.setLineWidth(0.15);
+          pdf.line(marginL, curY + rowH, pageW - marginR, curY + rowH);
+
+          let curX = marginL;
+          wrappedCells.forEach((lines, cIdx) => {
+            if (cIdx === 0) {
+              pdf.setFont('helvetica', 'bold');
+              pdf.setTextColor(30, 58, 138);
+            } else if (cIdx === 4) {
+              pdf.setFont('helvetica', 'bold');
+              if (item.status === 'critical') pdf.setTextColor(220, 38, 38);
+              else if (item.status === 'warning') pdf.setTextColor(217, 119, 6);
+              else pdf.setTextColor(147, 51, 234);
+            } else {
+              pdf.setFont('helvetica', 'normal');
+              pdf.setTextColor(30, 41, 59);
+            }
+            lines.forEach((ln, lIdx) => {
+              pdf.text(ln, curX + 2, curY + 4 + lIdx * lineHeight);
+            });
+            curX += cols[cIdx].width;
+          });
+
+          curY += rowH;
+        });
+      }
+
+      const totalPages = pdf.internal.getNumberOfPages();
+      for (let p = 1; p <= totalPages; p++) {
+        pdf.setPage(p);
+        pdf.setDrawColor(203, 213, 225);
+        pdf.setLineWidth(0.2);
+        pdf.line(marginL, footerY - 3.5, pageW - marginR, footerY - 3.5);
+
+        pdf.setTextColor(100, 116, 139);
+        pdf.setFont('helvetica', 'normal');
+        pdf.setFontSize(7.2);
+        pdf.text('SG - Sistema de Gestão de Agendas | Alertas de Visitas às Escolas', marginL, footerY);
+
+        const pageLabel = `Página ${p} de ${totalPages}`;
+        const pw = pdf.getTextWidth(pageLabel);
+        pdf.text(pageLabel, pageW - marginR - pw, footerY);
+      }
+
+      const alertFileName = `Alerta_Visitas_Escolas_${App.getLocalDateStr()}.pdf`;
+      pdf.save(alertFileName);
+
+      if (typeof this.showToast === 'function') {
+        this.showToast('Relatório de Alertas de Visitas exportado com sucesso!');
+      }
+    } catch (err) {
+      console.error('Erro ao gerar PDF de alertas:', err);
+      alert('Erro ao gerar PDF de alertas. Tente novamente.');
+    } finally {
+      if (btn) {
+        btn.innerHTML = originalContent;
+        btn.disabled = false;
+      }
+    }
+  },
   toggleSchoolSearchClearBtn() {
     const input = document.getElementById('input-search-school');
     const btn = document.getElementById('btn-clear-school-search');

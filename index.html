@@ -12,7 +12,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-  <link rel="stylesheet" href="css/style.css?v=20261112-zoom-grid-fix-v1">
+  <link rel="stylesheet" href="css/style.css?v=20261112-alerta-visitas-v1">
   <script>
     (function() {
       try {
@@ -60,6 +60,11 @@
         <a href="#" class="nav-item" data-view="todos-agendamentos">
           <i class="fa-solid fa-list-check"></i>
           <span class="nav-text">Histórico de Agendamentos</span>
+        </a>
+        <a href="#" class="nav-item" data-view="alerta-visitas" title="Escolas com mais de 20 dias sem ordem agendada">
+          <i class="fa-solid fa-bell"></i>
+          <span class="nav-text">Alertas de Visitas</span>
+          
         </a>
         <a href="#" class="nav-item" data-view="ranking-escolas">
           <i class="fa-solid fa-trophy"></i>
@@ -217,19 +222,19 @@
               </div>
             </div>
 
-            <!-- 2. TOP 5 ESCOLAS MAIS VISITADAS (Lista Compacta) -->
+            <!-- 2. ALERTAS DE VISITAS (Top 5 Mais Tempo Sem Visita) -->
             <div class="dash-panel dash-top-schools-panel">
               <div class="panel-header">
                 <div class="panel-title">
-                  <i class="fa-solid fa-trophy" style="color:#fbbf24;"></i>
-                  <span>TOP 5 ESCOLAS MAIS VISITADAS</span>
+                  <i class="fa-solid fa-bell" style="color:#ef4444;"></i>
+                  <span>ALERTAS DE VISITAS</span>
                 </div>
-                <button class="btn-panel-link" onclick="App.navigateTo('ranking-escolas')" title="Ver Ranking Completo">
+                <button class="btn-panel-link" onclick="App.navigateTo('alerta-visitas')" title="Ver Alertas de Visitas">
                   <span>Ver todas</span> <i class="fa-solid fa-arrow-right"></i>
                 </button>
               </div>
-              <div class="dash-top-schools-list" id="dash-ranking-list-container">
-                <!-- Renderizado via JS em formato de lista vertical moderna -->
+              <div class="dash-top-schools-list" id="dash-alerts-list-container">
+                <!-- Renderizado via JS (Top 5 escolas mais tempo sem visita) -->
               </div>
             </div>
 
@@ -496,6 +501,36 @@
                 </tr>
               </thead>
               <tbody id="tbody-all-schedules"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- VIEW: ALERTA DE VISITAS (ESCOLAS SEM ORDEM > 20 DIAS) -->
+        <section id="view-alerta-visitas" class="view-section">
+          <div class="page-header-actions" style="margin-bottom: 22px;">
+            <div>
+              <h2 class="page-title" style="display: flex; align-items: center; gap: 10px;">
+                <i class="fa-solid fa-bell" style="color: #ef4444;"></i> Alertas de Visitas
+              </h2>
+              <p class="page-subtitle">Escolas com mais de 20 dias sem ordem de servi&ccedil;o agendada ou sem registro de visita</p>
+            </div>
+          </div>
+
+          <div class="mobile-scroll-hint" data-html2canvas-ignore="true"><i class="fa-solid fa-arrows-left-right"></i> Arraste para o lado para ver mais colunas</div>
+          <div class="table-responsive">
+            <table class="custom-table">
+              <thead>
+                <tr>
+                  <th onclick="App.toggleAlertSort('cie')" style="width: 95px; cursor:pointer;" title="Ordenar por CIE">CIE <i id="sort-icon-cie" class="fa-solid fa-sort" style="margin-left:4px; font-size:0.72rem; opacity:0.5;"></i></th>
+                  <th onclick="App.toggleAlertSort('name')" style="cursor:pointer;" title="Ordenar por Escola">Escola <i id="sort-icon-name" class="fa-solid fa-sort" style="margin-left:4px; font-size:0.72rem; opacity:0.5;"></i></th>
+                  <th onclick="App.toggleAlertSort('neighborhood')" style="cursor:pointer;" title="Ordenar por Bairro">Bairro / Regi&atilde;o <i id="sort-icon-neighborhood" class="fa-solid fa-sort" style="margin-left:4px; font-size:0.72rem; opacity:0.5;"></i></th>
+                  <th onclick="App.toggleAlertSort('subject')" style="cursor:pointer; width: 180px;" title="Ordenar por Assunto da O.S.">Assunto O.S <i id="sort-icon-subject" class="fa-solid fa-sort" style="margin-left:4px; font-size:0.72rem; opacity:0.5;"></i></th>
+                  <th onclick="App.toggleAlertSort('lastDate')" style="cursor:pointer; width: 180px; text-align: center;" title="Ordenar por Data da &Uacute;ltima Ordem">&Uacute;ltimo Agendamento <i id="sort-icon-lastDate" class="fa-solid fa-sort" style="margin-left:4px; font-size:0.72rem; opacity:0.5;"></i></th>
+                  <th onclick="App.toggleAlertSort('days')" style="text-align: center; width: 160px; cursor:pointer;" title="Ordenar por Tempo sem Visita">Tempo sem Visita <i id="sort-icon-days" class="fa-solid fa-sort" style="margin-left:4px; font-size:0.72rem; opacity:0.5;"></i></th>
+                  <th style="text-align: center; width: 130px;">A&ccedil;&otilde;es</th>
+                </tr>
+              </thead>
+              <tbody id="tbody-visit-alerts"></tbody>
             </table>
           </div>
         </section>
@@ -1862,7 +1897,7 @@
   <script src="js/agenda-order-deck.js?v=20261109-deck-tabs-header"></script>
   <script src="js/agenda-card-layout.js?v=20261108-responsive-cards"></script>
   <script src="js/agenda-analyst-photos.js?v=20261106-vini"></script>
-  <script src="js/app.js?v=20261112-search-clear-v2"></script>
+  <script src="js/app.js?v=20261112-dash-fix-login-v2"></script>
   <script src="js/agenda-radar-data.js?v=20261105"></script>
   <script src="js/agenda-radar.js?v=20261106-ure-fixed"></script>
 <div id="app-toast" class="toast-notification"><i class="fa-solid fa-circle-check" style="color:#4ade80;"></i> <span id="app-toast-text"></span></div>
