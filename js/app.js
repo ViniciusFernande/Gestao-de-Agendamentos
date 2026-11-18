@@ -631,6 +631,16 @@ const App = {
   // =========================================================================
   // DASHBOARD & GRÁFICOS
   // =========================================================================
+  getNormalizedServiceType(s) {
+    if (!s) return 'manutencao';
+    const st = String(s.serviceType || '').toLowerCase().trim();
+    if (st === 'inventario') return 'inventario';
+    if (st === 'manutencao' || st === 'chamado_interno' || st === 'conectividade') return 'manutencao';
+    const subj = String(s.subject || '').toLowerCase();
+    if (subj.includes('inventário') || subj.includes('inventario')) return 'inventario';
+    return 'manutencao';
+  },
+
   updateDashboard() {
     const schedules = store.getSchedules();
     const analysts = store.getAnalysts();
@@ -664,8 +674,8 @@ const App = {
 
     // Contadores
     const countCompleted = filteredCompleted.length;
-    const countManut = filteredCompleted.filter(s => (s.serviceType === 'manutencao' || s.serviceType === 'chamado_interno')).length;
-    const countInv = filteredCompleted.filter(s => s.serviceType === 'inventario').length;
+    const countManut = filteredCompleted.filter(s => this.getNormalizedServiceType(s) === 'manutencao').length;
+    const countInv = filteredCompleted.filter(s => this.getNormalizedServiceType(s) === 'inventario').length;
     
     // Ordens agendadas hoje (independente de concluída ou não)
     const todayScheduled = schedules.filter(s => s.date === todayStr).length;
@@ -907,8 +917,8 @@ const App = {
         return itemDate.getFullYear() === y && itemDate.getMonth() === m && s.completed;
       });
 
-      const mCount = monthScheds.filter(s => (s.serviceType === 'manutencao' || s.serviceType === 'chamado_interno')).length;
-      const iCount = monthScheds.filter(s => s.serviceType === 'inventario').length;
+      const mCount = monthScheds.filter(s => this.getNormalizedServiceType(s) === 'manutencao').length;
+      const iCount = monthScheds.filter(s => this.getNormalizedServiceType(s) === 'inventario').length;
 
       manutCounts.push(mCount);
       invCounts.push(iCount);
@@ -4697,7 +4707,7 @@ const App = {
     const filtered = schedules.filter(s => {
       if (s.date < startDate || s.date > endDate) return false;
       if (analystFilter !== 'all' && s.analystId !== analystFilter) return false;
-      if (typeFilter !== 'all' && s.serviceType !== typeFilter) return false;
+      if (typeFilter !== 'all' && this.getNormalizedServiceType(s) !== typeFilter) return false;
       return true;
     });
 
@@ -4705,8 +4715,8 @@ const App = {
 
     const completedList = filtered.filter(s => s.completed);
     const countCompleted = completedList.length;
-    const countManut = completedList.filter(s => (s.serviceType === 'manutencao' || s.serviceType === 'chamado_interno')).length;
-    const countInv = completedList.filter(s => s.serviceType === 'inventario').length;
+    const countManut = completedList.filter(s => this.getNormalizedServiceType(s) === 'manutencao').length;
+    const countInv = completedList.filter(s => this.getNormalizedServiceType(s) === 'inventario').length;
     const countReturns = filtered.filter(s => s.needsReturn).length;
 
     // Atualiza cards de métricas do relatório
@@ -5017,8 +5027,8 @@ const App = {
         analystName: 'Todos os Analistas',
         totalFiltered: rowsData.length,
         countCompleted: rowsData.filter(s => s.completed).length,
-        countManut: rowsData.filter(s => s.completed && (s.serviceType === 'manutencao' || s.serviceType === 'chamado_interno')).length,
-        countInv: rowsData.filter(s => s.completed && s.serviceType === 'inventario').length,
+        countManut: rowsData.filter(s => s.completed && this.getNormalizedServiceType(s) === 'manutencao').length,
+        countInv: rowsData.filter(s => s.completed && this.getNormalizedServiceType(s) === 'inventario').length,
         countReturns: rowsData.filter(s => s.needsReturn).length
       };
 
@@ -6403,6 +6413,7 @@ const App = {
       date: schedDate,
       period: 'Manhã',
       subject: item.subject,
+      serviceType: (item.category === 'inventario' || /invent[áa]rio/i.test(item.subject || '')) ? 'inventario' : 'manutencao',
       osNumber: osNumber,
       obs: item.obs || '',
       completed: false,
