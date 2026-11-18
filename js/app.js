@@ -1,4 +1,4 @@
-/**
+﻿/**
  * SISTEMA DE GESTÃO DE AGENDAS - ANALISTAS
  * Lógica principal da aplicação (SPA)
  */
@@ -1727,7 +1727,7 @@ const App = {
     const statPending = document.getElementById('stat-card-pending');
 
     const completedCount = todaySchedules.filter(s => s.completed).length;
-    const returnsCount = todaySchedules.filter(s => !s.completed && s.needsReturn).length;
+    const returnsCount = todaySchedules.filter(s => s.needsReturn).length;
     const pendingCount = todaySchedules.filter(s => !s.completed && !s.needsReturn).length;
 
     if (statAnalysts) statAnalysts.textContent = presentAnalystsCount;
@@ -1853,7 +1853,7 @@ const App = {
               <div class="card-seq-left">
                 <span class="seq-pill"><i class="fa-solid fa-route"></i> ${index + 1}º Atendimento</span>
                 ${osInputHtml}
-                ${isDone ? `<span class="badge-card-os-ok" title="${this.escapeHtml((index + 1) + 'º atendimento concluído - O.S. ' + (order.osNumber || 'não informada'))}"><i class="fa-solid fa-check"></i> OK</span>` : ''}
+                ${(isDone && !order.needsReturn) ? `<span class="badge-card-os-ok" title="${this.escapeHtml((index + 1) + 'º atendimento concluído - O.S. ' + (order.osNumber || 'não informada'))}"><i class="fa-solid fa-check"></i> OK</span>` : ''}
               </div>
             </div>`;
 
@@ -1861,7 +1861,7 @@ const App = {
           const isLocked = isDone || hasReturn;
 
           cardsHtml += `
-            <div class="card-order-box ${isDone ? 'completed' : ''} ${hasReturn ? 'has-return' : ''} ${isLocked ? 'is-locked' : ''}" 
+            <div class="card-order-box ${(isDone && !hasReturn) ? 'completed' : ''} ${hasReturn ? 'has-return' : ''} ${isLocked ? 'is-locked' : ''}" 
                  ${(isLocked || this._isReadOnly()) ? 'draggable="false"' : `draggable="true" ondragstart="App.handleOrderDragStart(event, '${order.id}')" ondragend="App.handleOrderDragEnd(event)"`} 
                  id="order-box-${order.id}" 
                  title="${isLocked ? (isDone ? 'Atendimento concluído (bloqueado para transferências)' : 'Atendimento com retorno agendado (bloqueado para transferências)') : 'Arraste este card para mudar de analista'}">
@@ -1885,13 +1885,13 @@ const App = {
 
               <!-- Linha de Ações: Concluído / Precisa Retornar / WhatsApp / Editar / Excluir -->
               <div class="card-actions-row">
-                ${isDone 
-                  ? `<button type="button" class="card-btn-action card-btn-complete is-done" disabled title="Atendimento marcado como concluído. Para reabrir ou alterar caso tenha clicado errado, use o botão do lápis (editar)." style="cursor:not-allowed; opacity:0.92;">
-                      <i class="fa-solid fa-circle-check"></i> Concluído
+                ${order.needsReturn
+                  ? `<button type="button" class="card-btn-action card-btn-complete" disabled title="Atendimento com retorno já agendado (contabilizado como concluído)." style="cursor:not-allowed; opacity:0.35; filter:grayscale(0.85);">
+                      <i class="fa-solid fa-check"></i> Concluir
                     </button>`
-                  : (order.needsReturn
-                      ? `<button type="button" class="card-btn-action card-btn-complete" disabled title="Atendimento com retorno já agendado. Botão de conclusão bloqueado." style="cursor:not-allowed; opacity:0.35; filter:grayscale(0.85);">
-                          <i class="fa-solid fa-check"></i> Concluir
+                  : (isDone
+                      ? `<button type="button" class="card-btn-action card-btn-complete is-done" disabled title="Atendimento marcado como concluído. Para reabrir ou alterar caso tenha clicado errado, use o botão do lápis (editar)." style="cursor:not-allowed; opacity:0.92;">
+                          <i class="fa-solid fa-circle-check"></i> Concluído
                         </button>`
                       : `<button type="button" class="card-btn-action card-btn-complete" onclick="App.markCardAsCompleted('${order.id}')" title="Marcar atendimento como concluído">
                           <i class="fa-solid fa-check"></i> Concluir
@@ -1916,7 +1916,7 @@ const App = {
 
 
 
-                ${isDone
+                ${(isDone && !order.needsReturn)
                   ? (order.surveySent
                       ? `<button type="button" class="btn-icon-action btn-survey sent" onclick="App.openSatisfactionSurvey('${order.id}')" title="Pesquisa de Satisfação já Enviada (Clique para ver comprovante ou reenviar)">
                           <i class="fa-solid fa-star"></i>
@@ -1925,7 +1925,7 @@ const App = {
                           <i class="fa-solid fa-star"></i>
                         </button>`
                     )
-                  : `<button type="button" class="btn-icon-action btn-survey is-disabled" disabled title="Pesquisa de satisfação liberada apenas após a ordem ser concluída" style="cursor:not-allowed; opacity:0.35; filter:grayscale(0.85);">
+                  : `<button type="button" class="btn-icon-action btn-survey is-disabled" disabled title="${order.needsReturn ? 'Pesquisa de satisfação desabilitada para atendimentos marcados como retorno' : 'Pesquisa de satisfação liberada apenas após a ordem ser concluída'}" style="cursor:not-allowed; opacity:0.35; filter:grayscale(0.85);">
                       <i class="fa-solid fa-star"></i>
                     </button>`
                 }
@@ -2072,6 +2072,10 @@ const App = {
     const sched = store.getSchedules().find(s => String(s.id).trim() === String(scheduleId).trim());
     if (!sched) {
       this.showToast('Atendimento não encontrado.');
+      return;
+    }
+    if (sched.needsReturn) {
+      this.showToast('Pesquisa de satisfação desabilitada para atendimentos marcados como retorno.');
       return;
     }
 
@@ -2618,35 +2622,15 @@ const App = {
     const sourceSched = schedules.find(s => s.id === sourceId);
     if (!sourceSched) return;
 
-    // 1. Marca a O.S. atual como necessitando de retorno com a data
+    // 1. Marca o atendimento atual como retorno E contabiliza como concluído (sem habilitar pesquisa)
+    sourceSched.completed = true;
     sourceSched.needsReturn = true;
     sourceSched.returnDate = returnDate;
     store.saveSchedule(sourceSched);
 
-    // Se sourceSched já for um retorno anterior, localiza a ordem original raiz para atualizar a data do último retorno nela também
-    let rootSchedule = null;
-    if (sourceSched.parentScheduleId) {
-      rootSchedule = schedules.find(s => String(s.id).trim() === String(sourceSched.parentScheduleId).trim());
-      while (rootSchedule && rootSchedule.parentScheduleId) {
-        const parent = schedules.find(s => String(s.id).trim() === String(rootSchedule.parentScheduleId).trim());
-        if (!parent) break;
-        rootSchedule = parent;
-      }
-      if (rootSchedule) {
-        rootSchedule.needsReturn = true;
-        rootSchedule.returnDate = returnDate; // Atualiza no histórico para exibir a nova data de retorno mais recente!
-        store.saveSchedule(rootSchedule);
-      }
-    }
-
-    // 2. CRIA AUTOMATICAMENTE O CARD DE RETORNO PARA O DIA DO RETORNO INFORMADO (com flag isReturnVisit: true)
-    const rootId = (rootSchedule ? rootSchedule.id : (sourceSched.parentScheduleId || sourceSched.id));
-    const returnOsNumber = sourceSched.osNumber ? sourceSched.osNumber.replace(/(-RET)+$/gi, '').trim() : '';
-    
+    // 2. CRIA AUTOMATICAMENTE UM NOVO AGENDAMENTO PARA A DATA DE RETORNO (sem nº da O.S. anterior e contabilizado como novo agendamento)
     const newReturnSchedule = {
       id: 'sched-ret-' + Date.now(),
-      parentScheduleId: rootId,
-      isReturnVisit: true, // Identifica que é continuação de atendimento/retorno e não uma nova ordem
       analystId: sourceSched.analystId,
       schoolCie: sourceSched.schoolCie,
       schoolName: sourceSched.schoolName,
@@ -2654,7 +2638,7 @@ const App = {
       date: returnDate,
       subject: (sourceSched.subject || '').replace(/^Retorno:\s*/gi, '').trim(),
       serviceType: sourceSched.serviceType,
-      osNumber: returnOsNumber,
+      osNumber: '',
       completed: false,
       needsReturn: false,
       returnDate: '',
