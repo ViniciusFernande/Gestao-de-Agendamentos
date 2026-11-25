@@ -1,4 +1,4 @@
-/* ==========================================================================
+﻿/* ==========================================================================
    SISTEMA DE GESTÃO DE AGENDAS - ANALISTAS
    Dark Modern Dashboard Style - 100% Responsivo (Desktop, Notebook, Tablet, Mobile)
    ========================================================================== */
@@ -4525,7 +4525,7 @@ body.role-analista .admin-only {
 #view-agendamentos .analyst-daily-header { flex-direction:row!important; align-items:center!important; justify-content:space-between!important; gap:10px!important; padding:10px 14px!important; flex-wrap:nowrap!important; min-height:56px!important; }
 #view-agendamentos .analyst-daily-header-left { width:auto!important; gap:10px!important; min-width:0!important; flex:1 1 auto!important; display:inline-flex!important; align-items:center!important; }
 #view-agendamentos .analyst-daily-name { white-space:nowrap!important; overflow:hidden!important; text-overflow:ellipsis!important; font-size:1.02rem!important; font-weight:800!important; line-height:1.25!important; color:var(--text-primary,#fff)!important; min-width:0!important; letter-spacing:-0.2px!important; }
-#view-agendamentos .analyst-daily-header>div:last-child { display:inline-flex!important; align-items:center!important; justify-content:flex-end!important; flex-wrap:nowrap!important; gap:5px!important; flex-shrink:0!important; }
+#view-agendamentos .analyst-daily-header>div:last-child:not(.agenda-deck-tabs) { display:inline-flex!important; align-items:center!important; justify-content:flex-end!important; flex-wrap:nowrap!important; gap:5px!important; flex-shrink:0!important; }
 #view-agendamentos .analyst-avatar-img, #view-agendamentos .analyst-avatar-fallback { width:44px!important; height:44px!important; min-width:44px!important; flex:0 0 44px!important; border:2px solid #3b82f6!important; border-radius:50%!important; object-fit:cover!important; box-shadow:0 0 0 2.5px rgba(96,165,250,0.22)!important; }
 #view-agendamentos .analyst-daily-body { padding:12px; min-width:0; }
 #view-agendamentos .card-order-box { min-width:0; padding:12px; }
@@ -4575,7 +4575,7 @@ body.role-analista .admin-only {
 
 /* Mantém a ordem dos botões em qualquer largura/zoom; a grade rola sem comprimir os cards. */
 /* Mantem organizacao dos controles sem forcar 5 colunas */
-#view-agendamentos .analyst-daily-header>div:last-child { flex-wrap:nowrap; gap:8px!important; }
+#view-agendamentos .analyst-daily-header>div:last-child:not(.agenda-deck-tabs) { flex-wrap:nowrap; gap:8px!important; }
 #view-agendamentos .agenda-header-order-tools { flex:0 0 auto; flex-wrap:nowrap; max-width:none; white-space:nowrap; }
 #view-agendamentos .analyst-daily-header .agenda-radar-open, #view-agendamentos .btn-header-send-agenda, #view-agendamentos .badge-card-os-ok { flex-shrink:0; white-space:nowrap; }
 #view-agendamentos .card-actions-row { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr) repeat(3,30px); gap:6px; align-items:stretch; }
@@ -4928,6 +4928,7 @@ body.role-analista .admin-only {
   min-width: 0 !important;
   flex: 1 1 auto !important;
   width: auto !important;
+  overflow: hidden !important;
 }
 
 #view-agendamentos .analyst-avatar-img,
@@ -5059,12 +5060,41 @@ body.role-analista .admin-only {
   color: #4ade80 !important;
   cursor: pointer !important;
 }
+#view-agendamentos .analyst-daily-header > .agenda-deck-tabs:last-child,
 #view-agendamentos .analyst-daily-header .agenda-deck-tabs {
   display: inline-flex !important;
+  flex-wrap: nowrap !important;
   gap: 5px !important;
   align-items: center !important;
+  justify-content: flex-start !important;
   flex: 0 0 auto !important;
+  width: auto !important;
+  max-width: 174px !important;
+  min-width: 0 !important;
+  overflow-x: auto !important;
+  overflow-y: hidden !important;
+  padding: 2px 2px 6px 2px !important;
   margin-left: auto !important;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(96, 165, 250, 0.7) rgba(15, 23, 42, 0.55);
+}
+
+#view-agendamentos .analyst-daily-header .agenda-deck-tabs::-webkit-scrollbar {
+  height: 6px;
+}
+
+#view-agendamentos .analyst-daily-header .agenda-deck-tabs::-webkit-scrollbar-track {
+  background: rgba(15, 23, 42, 0.55);
+  border-radius: 4px;
+}
+
+#view-agendamentos .analyst-daily-header .agenda-deck-tabs::-webkit-scrollbar-thumb {
+  background: rgba(96, 165, 250, 0.7);
+  border-radius: 4px;
+}
+
+#view-agendamentos .analyst-daily-header .agenda-deck-tabs::-webkit-scrollbar-thumb:hover {
+  background: rgba(96, 165, 250, 0.95);
 }
 
 #view-agendamentos .analyst-daily-header .agenda-deck-tab {

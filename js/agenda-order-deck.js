@@ -20,6 +20,12 @@
      const oldNav = header.querySelector('.agenda-deck-tabs');
      if(oldNav) oldNav.remove();
      header.append(nav);
+     nav.addEventListener('wheel', e => {
+      if (nav.scrollWidth > nav.clientWidth && e.deltaY !== 0) {
+       e.preventDefault();
+       nav.scrollLeft += e.deltaY;
+      }
+     }, { passive: false });
     }
     if(footer){
      body.append(footer);
@@ -51,10 +57,11 @@
       tabs[i].setAttribute('aria-selected',String(active));tabs[i].tabIndex=active?0:-1;
       if(tools[i])tools[i].hidden=!active;
      });
+     if(tabs[index] && typeof tabs[index].scrollIntoView==='function'){tabs[index].scrollIntoView({block:'nearest',inline:'nearest'});}
      if(animate){void orders[index].offsetWidth;orders[index].classList.add('is-deck-turning');}
      if(animate && window.AgendaCardLayout)window.AgendaCardLayout.fit();
     }
-    const remembered=orders.findIndex(order=>order.id===selected.get(key));activate(remembered>=0?remembered:0,false);
+    const remembered=orders.findIndex(order=>order.id===selected.get(key));activate(remembered>=0?remembered:0,false);if(remembered<0)nav.scrollLeft=0;
    });
   }
  };
